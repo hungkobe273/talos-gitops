@@ -9,4 +9,4 @@ resources:
   # - ghcr-pull-sealed.yaml   # added once the Sealed Secrets controller is up
 images:
   - name: ghcr.io/hungkobe273/talos-demo-app
-    newTag: sha-f1daafb # updated by talos-demo-app CI
+    newTag: sha-2d93e16 # updated by talos-demo-app CI
