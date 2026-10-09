@@ -1,0 +1,30 @@
+# App alerts evaluated by Prometheus and sent through Alertmanager.
+apiVersion: monitoring.coreos.com/v1
+kind: PrometheusRule
+metadata:
+  name: demo-app
+  namespace: demo
+spec:
+  groups:
+    - name: demo-app
+      rules:
+        - alert: DemoAppDown
+          expr: sum(up{namespace="demo", service="demo-app"}) == 0 or absent(up{namespace="demo", service="demo-app"})
+          for: 1m
+          labels:
+            severity: critical
+          annotations:
+            summary: "demo-app has no healthy target"
+            description: "Prometheus cannot scrape any demo-app pod for 1 minute."
+
+        - alert: DemoAppHighErrorRate
+          expr: |
+            sum(rate(demo_http_requests_total{namespace="demo", code=~"5.."}[2m]))
+              /
+            sum(rate(demo_http_requests_total{namespace="demo"}[2m])) > 0.1
+          for: 2m
+          labels:
+            severity: warning
+          annotations:
+            summary: "demo-app 5xx ratio above 10%"
+            description: "{{ $value | humanizePercentage }} of demo-app requests failed over the last 2 minutes."

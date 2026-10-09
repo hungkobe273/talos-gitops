@@ -1,0 +1,41 @@
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: monitoring
+  namespace: argocd
+  annotations:
+    argocd.argoproj.io/sync-wave: "-1"
+spec:
+  project: default
+  sources:
+    # 1) The chart itself, values taken from this repo ($values).
+    - repoURL: https://prometheus-community.github.io/helm-charts
+      chart: kube-prometheus-stack
+      targetRevision: 92.2.0
+      helm:
+        releaseName: kps
+        valueFiles:
+          - $values/platform/monitoring/values.yaml
+    # 2) This repo, only referenced for the values file above.
+    - repoURL: git@github.com:hungkobe273/talos-gitops.git
+      targetRevision: main
+      ref: values
+    # 3) SealedSecrets for this namespace (telegram-bot, grafana-admin).
+    - repoURL: git@github.com:hungkobe273/talos-gitops.git
+      targetRevision: main
+      path: platform/monitoring/secrets
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: monitoring
+  syncPolicy:
+    automated:
+      prune: true
+      selfHeal: true
+    managedNamespaceMetadata:
+      labels:
+        # node-exporter needs hostNetwork/hostPID/hostPath.
+        pod-security.kubernetes.io/enforce: privileged
+    syncOptions:
+      - CreateNamespace=true
+      # The operator CRDs are too large for client-side apply annotations.
+      - ServerSideApply=true

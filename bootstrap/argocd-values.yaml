@@ -1,0 +1,8 @@
+# argo-cd chart 10.10.1 (Argo CD v3.5.4) — installed once by hand with Helm:
+#   helm install argocd argo-cd --repo https://argoproj.github.io/argo-helm \
+#     --version 10.10.1 -n argocd --create-namespace -f bootstrap/argocd-values.yaml
+# Slim: no SSO (Dex) and no notifications controller; UI via port-forward.
+dex:
+  enabled: false
+notifications:
+  enabled: false
