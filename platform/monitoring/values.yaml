@@ -1,0 +1,172 @@
+# kube-prometheus-stack 92.2.0 — slim profile for the Talos lab.
+# Telegram bot token never appears here: it comes from the Secret
+# "telegram-bot" (key bot-token), created from a SealedSecret.
+
+# Talos runs etcd, scheduler, controller-manager and kube-proxy with metrics
+# bound to 127.0.0.1, so Prometheus cannot scrape them. Disable the scrapes and
+# their rules instead of living with permanent "...Down" alerts.
+kubeEtcd:
+  enabled: false
+kubeScheduler:
+  enabled: false
+kubeControllerManager:
+  enabled: false
+kubeProxy:
+  enabled: false
+windowsMonitoring:
+  enabled: false
+
+defaultRules:
+  rules:
+    etcd: false
+    kubeSchedulerAlerting: false
+    kubeSchedulerRecording: false
+    kubeControllerManager: false
+    kubeProxy: false
+    windows: false
+
+prometheus:
+  prometheusSpec:
+    retention: 3d
+    # Pick up ServiceMonitors / PodMonitors / PrometheusRules from every
+    # namespace, not only the ones labelled for this Helm release.
+    serviceMonitorSelectorNilUsesHelmValues: false
+    podMonitorSelectorNilUsesHelmValues: false
+    ruleSelectorNilUsesHelmValues: false
+    # No StorageClass in this cluster yet: data lives in emptyDir and is lost
+    # when the pod moves. Fine for a lab, not for production.
+    resources:
+      requests:
+        cpu: 100m
+        memory: 400Mi
+      limits:
+        memory: 1Gi
+
+alertmanager:
+  alertmanagerSpec:
+    # Mounted at /etc/alertmanager/secrets/telegram-bot/
+    secrets:
+      - telegram-bot
+    resources:
+      requests:
+        cpu: 10m
+        memory: 32Mi
+      limits:
+        memory: 128Mi
+  config:
+    global:
+      resolve_timeout: 5m
+    route:
+      receiver: telegram
+      group_by: [alertname, namespace]
+      group_wait: 30s
+      group_interval: 5m
+      repeat_interval: 4h
+      routes:
+        # Watchdog always fires (proves the pipeline is alive); keep it out of chat.
+        - receiver: "null"
+          matchers:
+            - alertname = "Watchdog"
+        - receiver: "null"
+          matchers:
+            - alertname = "InfoInhibitor"
+    inhibit_rules:
+      - source_matchers: [severity = "critical"]
+        target_matchers: [severity = "warning"]
+        equal: [alertname, namespace]
+    receivers:
+      - name: "null"
+      - name: telegram
+        telegram_configs:
+          - bot_token_file: /etc/alertmanager/secrets/telegram-bot/bot-token
+            chat_id: -5324289007
+            send_resolved: true
+            parse_mode: HTML
+            message: |-
+              [Alertmanager] {{ if eq .Status "firing" }}🔥 FIRING{{ else }}✅ RESOLVED{{ end }} ({{ .Alerts | len }})
+              {{ range .Alerts }}<b>{{ .Labels.alertname }}</b> [{{ .Labels.severity }}]
+              {{ with .Labels.namespace }}ns={{ . }} {{ end }}{{ with .Labels.pod }}pod={{ . }} {{ end }}{{ with .Labels.node }}node={{ . }}{{ end }}
+              {{ with .Annotations.summary }}{{ . | reReplaceAll "&" "&amp;" | reReplaceAll "<" "&lt;" | reReplaceAll ">" "&gt;" }}{{ else }}{{ .Annotations.description | reReplaceAll "&" "&amp;" | reReplaceAll "<" "&lt;" | reReplaceAll ">" "&gt;" }}{{ end }}
+              {{ end }}
+    templates: []
+
+grafana:
+  # Admin user/password come from a SealedSecret, not from values.
+  admin:
+    existingSecret: grafana-admin
+    userKey: admin-user
+    passwordKey: admin-password
+  envValueFrom:
+    TELEGRAM_BOT_TOKEN:
+      secretKeyRef:
+        name: telegram-bot
+        key: bot-token
+  resources:
+    requests:
+      cpu: 20m
+      memory: 128Mi
+    limits:
+      memory: 256Mi
+  # Grafana Alerting, provisioned as code. ${TELEGRAM_BOT_TOKEN} is expanded
+  # by Grafana from the env var above at start-up.
+  alerting:
+    contactpoints.yaml:
+      apiVersion: 1
+      contactPoints:
+        - orgId: 1
+          name: telegram
+          receivers:
+            - uid: telegram-group
+              type: telegram
+              settings:
+                bottoken: ${TELEGRAM_BOT_TOKEN}
+                chatid: "-5324289007"
+                # No custom message: the chart renders these files through
+                # Helm tpl, which would try to evaluate Grafana's {{ }} templates.
+    policies.yaml:
+      apiVersion: 1
+      policies:
+        - orgId: 1
+          receiver: telegram
+          group_by: [grafana_folder, alertname]
+          group_wait: 30s
+          group_interval: 5m
+          repeat_interval: 4h
+    rules.yaml:
+      apiVersion: 1
+      groups:
+        - orgId: 1
+          name: demo-app
+          folder: Demo App
+          interval: 1m
+          rules:
+            - uid: demo-app-p95-latency
+              title: DemoAppSlowP95
+              condition: C
+              data:
+                - refId: A
+                  relativeTimeRange:
+                    from: 300
+                    to: 0
+                  datasourceUid: prometheus
+                  model:
+                    refId: A
+                    instant: true
+                    expr: histogram_quantile(0.95, sum by (le) (rate(demo_http_request_duration_seconds_bucket{namespace="demo", route="GET /api/work"}[5m])))
+                - refId: C
+                  datasourceUid: __expr__
+                  model:
+                    refId: C
+                    type: threshold
+                    expression: A
+                    conditions:
+                      - evaluator:
+                          type: gt
+                          params: [0.5]
+              for: 2m
+              noDataState: OK
+              execErrState: Error
+              labels:
+                severity: warning
+              annotations:
+                summary: demo-app p95 latency of /api/work above 500ms for 2 minutes

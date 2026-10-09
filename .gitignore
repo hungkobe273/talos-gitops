@@ -1,0 +1,9 @@
+# Only encrypted SealedSecrets belong in this repo. Never commit plain Secrets,
+# keys, or cluster credentials.
+*.key
+*.pem
+*-plain.yaml
+*.secret.yaml
+kubeconfig
+talosconfig
+sealed-secrets-key*.yaml
