@@ -104,9 +104,9 @@ grafana:
   resources:
     requests:
       cpu: 20m
-      memory: 128Mi
-    limits:
       memory: 256Mi
+    limits:
+      memory: 512Mi
   # Grafana Alerting, provisioned as code. ${TELEGRAM_BOT_TOKEN} is expanded
   # by Grafana from the env var above at start-up.
   alerting:
