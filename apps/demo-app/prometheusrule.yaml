@@ -19,9 +19,9 @@ spec:
 
         - alert: DemoAppHighErrorRate
           expr: |
-            sum(rate(demo_http_requests_total{namespace="demo", code=~"5.."}[2m]))
+            sum(rate(demo_http_requests_total{namespace="demo", route="GET /api/work", code=~"5.."}[2m]))
               /
-            sum(rate(demo_http_requests_total{namespace="demo"}[2m])) > 0.1
+            sum(rate(demo_http_requests_total{namespace="demo", route="GET /api/work"}[2m])) > 0.1
           for: 2m
           labels:
             severity: warning
