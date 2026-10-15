@@ -1,0 +1,36 @@
+# Headlamp web UI. Reached only through `kubectl port-forward`; no Ingress.
+fullnameOverride: headlamp
+
+# The chart's default binds Headlamp's own ServiceAccount to cluster-admin.
+# Headlamp forwards each user's own token to the API server, so the pod
+# itself needs no rights. Login accounts live in platform/headlamp/rbac.
+clusterRoleBinding:
+  create: false
+
+# Required by the namespace's "restricted" Pod Security Standard.
+podSecurityContext:
+  seccompProfile:
+    type: RuntimeDefault
+securityContext:
+  runAsNonRoot: true
+  privileged: false
+  runAsUser: 100
+  runAsGroup: 101
+  allowPrivilegeEscalation: false
+  capabilities:
+    drop: ["ALL"]
+
+resources:
+  requests:
+    cpu: 10m
+    memory: 48Mi
+  limits:
+    memory: 192Mi
+
+# Default 1s probe timeout is too tight on the HDD-backed nodes.
+probes:
+  livenessProbe:
+    initialDelaySeconds: 30
+    timeoutSeconds: 5
+  readinessProbe:
+    timeoutSeconds: 5
