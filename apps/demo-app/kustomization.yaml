@@ -6,7 +6,7 @@ resources:
   - service.yaml
   - servicemonitor.yaml
   - prometheusrule.yaml
-  # - ghcr-pull-sealed.yaml   # added once the Sealed Secrets controller is up
+  - ghcr-pull-sealed.yaml
 images:
   - name: ghcr.io/hungkobe273/talos-demo-app
     newTag: sha-2d93e16 # updated by talos-demo-app CI
