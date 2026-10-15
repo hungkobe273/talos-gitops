@@ -107,6 +107,10 @@ grafana:
       memory: 256Mi
     limits:
       memory: 512Mi
+  # First start on the HDD runs hundreds of SQLite migrations (DB lives in an
+  # emptyDir); give it 5 minutes before the liveness probe may restart it.
+  livenessProbe:
+    initialDelaySeconds: 300
   # Grafana Alerting, provisioned as code. ${TELEGRAM_BOT_TOKEN} is expanded
   # by Grafana from the env var above at start-up.
   alerting:
