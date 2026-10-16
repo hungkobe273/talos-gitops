@@ -206,5 +206,7 @@ grafana:
     periodSeconds: 10
     timeoutSeconds: 10
     failureThreshold: 120
+  # Switching the live Deployment from RollingUpdate needed a one-off kubectl patch of
+  # spec.strategy to {type: Recreate}: the defaulted rollingUpdate block made the apply invalid.
   deploymentStrategy:
     type: Recreate
