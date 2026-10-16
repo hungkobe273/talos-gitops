@@ -13,7 +13,7 @@ flowchart TB
   subgraph LAN["LAN công ty 192.168.136.0/24, gw .1"]
     laptop["Laptop<br/>Windows 11"]
     mac["MacBook<br/>macOS"]
-    subgraph host2["kvm-host2 192.168.136.38<br/>Ubuntu 24.04, KVM/libvirt, i7-6700, 16 GB"]
+    subgraph host2["kvm-host2 192.168.136.38, Ubuntu 24.04, KVM/libvirt"]
       subgraph net["talos-net 10.10.10.0/24, NAT, gw .1"]
         vip(["VIP API 10.10.10.100:6443"])
         cp1["cp1 .11<br/>etcd, apiserver<br/>2 vCPU, 2 GB"]
