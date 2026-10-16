@@ -1,0 +1,17 @@
+# cert-manager for the internal CA (talos-internal-ca). CRDs are managed by the chart and kept on uninstall.
+crds:
+  enabled: true
+  keep: true
+resources:
+  requests: {cpu: 10m, memory: 64Mi}
+  limits: {memory: 256Mi}
+webhook:
+  resources:
+    requests: {cpu: 10m, memory: 32Mi}
+    limits: {memory: 128Mi}
+cainjector:
+  resources:
+    requests: {cpu: 10m, memory: 64Mi}
+    limits: {memory: 256Mi}
+startupapicheck:
+  enabled: false
