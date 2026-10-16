@@ -27,6 +27,12 @@ providers:
     enabled: false
   kubernetesIngress:
     enabled: true
+    # NodePort Service has no LB address to copy; publish the HAProxy entry IP instead so
+    # Ingress status (and Argo CD health) is set.
+    publishedService:
+      enabled: false
+    ingressEndpoint:
+      ip: 192.168.136.38
 ingressClass:
   enabled: true
   isDefaultClass: true
