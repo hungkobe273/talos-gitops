@@ -188,3 +188,23 @@ grafana:
       - secretName: grafana-tls
         hosts:
           - grafana.talos.internal
+  # Anonymous read-only access (decided by the mentor 2026-10-16). Network access is limited
+  # by the HAProxy ACL on kvm-host2; the admin account still signs in normally.
+  grafana.ini:
+    server:
+      root_url: https://grafana.talos.internal/
+    auth.anonymous:
+      enabled: true
+      org_name: Main Org.
+      org_role: Viewer
+  # A cold start on the HDD (SQLite migrations, plugin registration) can take >10 min;
+  # give it up to 20 min before liveness checks start, and never run two Grafanas at once.
+  startupProbe:
+    httpGet:
+      path: /api/health
+      port: grafana
+    periodSeconds: 10
+    timeoutSeconds: 10
+    failureThreshold: 120
+  deploymentStrategy:
+    type: Recreate
