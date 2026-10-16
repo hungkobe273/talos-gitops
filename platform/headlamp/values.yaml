@@ -1,4 +1,4 @@
-# Headlamp web UI. Reached only through `kubectl port-forward`; no Ingress.
+# Headlamp web UI. Reached through Traefik Ingress (headlamp.talos.internal) or kubectl port-forward.
 fullnameOverride: headlamp
 
 # The chart's default binds Headlamp's own ServiceAccount to cluster-admin.
@@ -34,3 +34,19 @@ probes:
     timeoutSeconds: 5
   readinessProbe:
     timeoutSeconds: 5
+
+# LAN access: HAProxy on kvm-host2 -> Traefik -> this Ingress. TLS from the internal CA.
+ingress:
+  enabled: true
+  ingressClassName: traefik
+  annotations:
+    cert-manager.io/cluster-issuer: talos-internal-ca
+  hosts:
+    - host: headlamp.talos.internal
+      paths:
+        - path: /
+          type: Prefix
+  tls:
+    - secretName: headlamp-tls
+      hosts:
+        - headlamp.talos.internal
