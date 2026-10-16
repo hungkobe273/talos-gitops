@@ -1,0 +1,35 @@
+# Ingress controller behind HAProxy on kvm-host2 (192.168.136.38:80/443 -> NodePort 30080/30443 on w1/w2).
+deployment:
+  replicas: 2
+topologySpreadConstraints:
+  - maxSkew: 1
+    topologyKey: kubernetes.io/hostname
+    whenUnsatisfiable: ScheduleAnyway
+    labelSelector:
+      matchLabels:
+        app.kubernetes.io/name: traefik
+service:
+  spec:
+    type: NodePort
+ports:
+  web:
+    nodePort: 30080
+    http:
+      redirections:
+        entryPoint:
+          to: websecure
+          scheme: https
+          permanent: true
+  websecure:
+    nodePort: 30443
+providers:
+  kubernetesCRD:
+    enabled: false
+  kubernetesIngress:
+    enabled: true
+ingressClass:
+  enabled: true
+  isDefaultClass: true
+resources:
+  requests: {cpu: 50m, memory: 64Mi}
+  limits: {memory: 256Mi}
