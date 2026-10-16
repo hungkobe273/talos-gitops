@@ -174,3 +174,17 @@ grafana:
                 severity: warning
               annotations:
                 summary: demo-app p95 latency of /api/work above 500ms for 2 minutes
+  # LAN access: HAProxy on kvm-host2 -> Traefik -> this Ingress. TLS from the internal CA.
+  ingress:
+    enabled: true
+    ingressClassName: traefik
+    annotations:
+      cert-manager.io/cluster-issuer: talos-internal-ca
+    hosts:
+      - grafana.talos.internal
+    path: /
+    pathType: Prefix
+    tls:
+      - secretName: grafana-tls
+        hosts:
+          - grafana.talos.internal
