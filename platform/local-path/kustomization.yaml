@@ -1,0 +1,100 @@
+# platform/local-path/kustomization.yaml — NHÁP.
+# local-path-provisioner v0.0.37 (Rancher, phát hành 05/08/2026, bản ổn định mới nhất lúc tra 20/10/2026).
+#
+# Vì sao không dùng v0.0.31 như ví dụ trong guide Talos:
+#   - < v0.0.34 dính CVE-2025-62878 (mức nghiêm trọng cao).
+#   - < v0.0.36 dính GHSA-7fxv-8wr2-mfc4 (ai sửa được ConfigMap local-path-config có thể bắt
+#     provisioner tạo helper pod nguy hiểm; v0.0.36 thêm bước kiểm tra template helper pod).
+#   Nguồn: https://github.com/rancher/local-path-provisioner/releases
+#   cần kiểm tra: tương thích K8s 1.37 (release notes không ghi dải phiên bản K8s; provisioner chỉ
+#   dùng API core/v1 và storage.k8s.io/v1 ổn định nên rủi ro thấp — thử bằng PVC test ở README).
+#
+# Bước chuẩn bị (Hưng, trên host2, trong ~/talos-gitops):
+#   mkdir -p platform/local-path/upstream
+#   curl -fsSL -o platform/local-path/upstream/local-path-storage-v0.0.37.yaml \
+#     https://raw.githubusercontent.com/rancher/local-path-provisioner/v0.0.37/deploy/local-path-storage.yaml
+#   sha256sum platform/local-path/upstream/local-path-storage-v0.0.37.yaml
+#   -> phải ra 9781b39c24f3f651bd6d6e41b561e04e4904bbdb6d4f8c7a6009df3a702dcd65
+#      (Phúc tải cùng URL lúc 20/10/2026 11:0x). Khác -> dừng, đọc diff trước khi dùng.
+#   kubectl kustomize platform/local-path | less     # render offline, không đụng cụm
+#
+# Namespace cần PSA "privileged", vì sao:
+#   Khi có PVC, provisioner tạo một helper pod (busybox) trong namespace local-path-storage, mount
+#   thư mục /var/mnt/local-path-provisioner của node bằng hostPath để mkdir/rm thư mục PV.
+#   PSA "baseline" và "restricted" đều CẤM volume hostPath -> helper pod bị từ chối, PVC Pending mãi.
+#   Đổi lại, namespace này phải được coi như vùng đặc quyền: chỉ admin được tạo pod ở đây.
+#   Bản thân pod provisioner không cần hostPath; chỉ helper pod cần.
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+
+resources:
+  - upstream/local-path-storage-v0.0.37.yaml
+  - storageclass-retain.yaml
+
+patches:
+  # 1) Nhãn PSA cho namespace (lý do ở trên).
+  - patch: |-
+      apiVersion: v1
+      kind: Namespace
+      metadata:
+        name: local-path-storage
+        labels:
+          pod-security.kubernetes.io/enforce: privileged
+          pod-security.kubernetes.io/warn: privileged
+
+  # 2) Đường dẫn dữ liệu trỏ vào UserVolumeConfig (talos/talos-patch-uservolume.yaml).
+  #    DEFAULT_PATH_FOR_NON_LISTED_NODES = mọi node dùng đường này. cp1 có taint control-plane
+  #    nên pod ứng dụng (và PV) không rơi vào cp1. Không liệt kê theo tên node vì tên node Talos
+  #    tự sinh (talos-hdl-7jo...), dựng lại worker là đổi tên.
+  #    Helper pod: ghim busybox 1.38.0 (bản upstream để trống tag = latest, mỗi lần kéo có thể khác).
+  #    Giữ nguyên phần còn lại của template upstream (v0.0.36+ từ chối template có privileged...).
+  - patch: |-
+      apiVersion: v1
+      kind: ConfigMap
+      metadata:
+        name: local-path-config
+        namespace: local-path-storage
+      data:
+        config.json: |-
+          {
+                  "nodePathMap":[
+                  {
+                          "node":"DEFAULT_PATH_FOR_NON_LISTED_NODES",
+                          "paths":["/var/mnt/local-path-provisioner"]
+                  }
+                  ]
+          }
+        helperPod.yaml: |-
+          apiVersion: v1
+          kind: Pod
+          metadata:
+            name: helper-pod
+          spec:
+            priorityClassName: system-node-critical
+            tolerations:
+              - key: node.kubernetes.io/disk-pressure
+                operator: Exists
+                effect: NoSchedule
+            containers:
+            - name: helper-pod
+              image: docker.io/library/busybox:1.38.0
+              imagePullPolicy: IfNotPresent
+
+  # 3) Resources cho provisioner (upstream không đặt). Số ước lượng, cần đo sau khi chạy
+  #    (Grafana: container_memory_working_set_bytes{namespace="local-path-storage"}).
+  #    Bỏ cờ --debug của upstream cho bớt log ghi xuống HDD.
+  - target:
+      kind: Deployment
+      name: local-path-provisioner
+    patch: |-
+      - op: replace
+        path: /spec/template/spec/containers/0/command
+        value: ["local-path-provisioner", "start", "--config", "/etc/config/config.json"]
+      - op: add
+        path: /spec/template/spec/containers/0/resources
+        value:
+          requests:
+            cpu: 10m
+            memory: 32Mi
+          limits:
+            memory: 128Mi

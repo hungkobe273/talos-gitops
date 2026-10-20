@@ -1,0 +1,38 @@
+# argocd-apps/local-path.yaml — NHÁP. Commit 1 của chuỗi Keycloak (sau khi đã áp UserVolumeConfig).
+#
+# Khác các app chart khác: local-path-provisioner không có chart chính thức trong repo Helm của
+# Rancher (chart nằm trong git repo của họ), nên dùng kustomize như guide Talos.
+# Manifest upstream được TẢI VỀ VÀ COMMIT vào repo (vendor) thay vì để kustomize kéo
+# github.com/...?ref= mỗi lần render: repo-server không phụ thuộc Internet/captive portal buổi
+# sáng, và Hưng đọc được đúng thứ sẽ áp (xem platform/local-path/README trong kustomization).
+#
+# Wave -1: cùng nhóm với cert-manager-issuers/monitoring, trước traefik (0) và app dùng PVC.
+# Nhắc lại (bảng quyết định H8): wave KHÔNG chờ app trước Healthy -> vẫn mỗi bước một commit.
+#
+# Lần đầu KHÔNG bật automated: commit xong, Hưng bấm Sync tay khi PSI io full < 20%.
+# Khi đã Healthy + test PVC đạt thì commit thứ hai thêm khối automated (đang để comment bên dưới).
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: local-path
+  namespace: argocd
+  annotations:
+    argocd.argoproj.io/sync-wave: "-1"
+spec:
+  project: default
+  source:
+    repoURL: git@github.com:hungkobe273/talos-gitops.git
+    targetRevision: main
+    path: platform/local-path
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: local-path-storage
+  # Không dùng CreateNamespace/managedNamespaceMetadata: Namespace local-path-storage nằm sẵn
+  # trong manifest upstream, nhãn PSA privileged được gắn bằng patch kustomize
+  # (platform/local-path/kustomization.yaml). Hai cơ chế cùng quản một Namespace sẽ giành nhau.
+  syncPolicy: {}
+  # Commit thứ hai (sau khi test PVC đạt) thay dòng trên bằng:
+  # syncPolicy:
+  #   automated:
+  #     prune: true
+  #     selfHeal: true
