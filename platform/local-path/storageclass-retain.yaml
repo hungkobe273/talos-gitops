@@ -1,0 +1,22 @@
+# StorageClass thứ hai, dành cho dữ liệu không được phép mất khi lỡ tay xóa PVC (PostgreSQL).
+#
+# Kiến thức:
+# - StorageClass "local-path" của upstream có reclaimPolicy: Delete -> xóa PVC là provisioner
+#   chạy helper pod `rm -rf` thư mục dữ liệu trên node. Hợp cho dữ liệu tạm (PVC test).
+# - "local-path-retain" dùng Retain -> xóa PVC thì PV chuyển Released, thư mục vẫn nằm trên node,
+#   phải dọn tay. Đổi lại không mất DB vì một lệnh delete nhầm.
+# - WaitForFirstConsumer: PV chỉ được tạo SAU khi scheduler đã chọn node cho pod. Từ đó pod
+#   bị "dính" vào node đó (PV có nodeAffinity). Đây là lý do DB không tự sang worker khác.
+# - Không đặt class nào làm default: mọi PVC phải ghi rõ storageClassName, tránh chart nào đó
+#   tự xin PVC mà mình không để ý.
+#
+# cần kiểm tra: provisioner nhận mọi StorageClass có provisioner rancher.io/local-path và dùng
+# nodePathMap mặc định cho cả class này (README upstream có mục "multiple storage classes"):
+# https://github.com/rancher/local-path-provisioner#configuration — thử bằng PVC test ở README.
+apiVersion: storage.k8s.io/v1
+kind: StorageClass
+metadata:
+  name: local-path-retain
+provisioner: rancher.io/local-path
+volumeBindingMode: WaitForFirstConsumer
+reclaimPolicy: Retain
