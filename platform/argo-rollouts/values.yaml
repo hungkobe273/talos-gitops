@@ -1,0 +1,18 @@
+# argo-rollouts chart 2.43.8 (app v1.10.1). Single HDD lab: keep it small.
+installCRDs: true
+keepCRDs: true
+crdAnnotations:
+  # Never let Argo CD prune the CRDs: deleting them deletes every Rollout.
+  argocd.argoproj.io/sync-options: ServerSideApply=true,Prune=false
+controller:
+  replicas: 1
+  resources:
+    requests:
+      cpu: 20m
+      memory: 64Mi
+    limits:
+      memory: 256Mi
+  metrics:
+    enabled: false
+dashboard:
+  enabled: false
