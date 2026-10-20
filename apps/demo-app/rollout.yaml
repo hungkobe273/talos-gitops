@@ -1,0 +1,31 @@
+# Blue-green for demo-app. The pod template comes from Deployment demo-app
+# (workloadRef), so CI still only bumps newTag in kustomization.yaml.
+apiVersion: argoproj.io/v1alpha1
+kind: Rollout
+metadata:
+  name: demo-app
+  namespace: demo
+  labels:
+    app.kubernetes.io/name: demo-app
+spec:
+  replicas: 2
+  revisionHistoryLimit: 3
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: demo-app
+  workloadRef:
+    apiVersion: apps/v1
+    kind: Deployment
+    name: demo-app
+    # Git sets the Deployment to replicas: 0 itself; the controller must not
+    # fight Argo CD selfHeal over it.
+    scaleDown: never
+  strategy:
+    blueGreen:
+      activeService: demo-app
+      previewService: demo-app-preview
+      # Manual promotion for now; analysis + auto promotion come in a later commit.
+      autoPromotionEnabled: false
+      # Keep the old version 10 min after promotion so a git revert can still
+      # switch back instantly (Argo CD polls 3-8 min on this cluster).
+      scaleDownDelaySeconds: 600
