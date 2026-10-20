@@ -1,0 +1,15 @@
+# Preview pods are not endpoints of Service demo-app during a rollout, so they
+# need their own scrape config (series get service="demo-app-preview").
+apiVersion: monitoring.coreos.com/v1
+kind: ServiceMonitor
+metadata:
+  name: demo-app-preview
+  namespace: demo
+spec:
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: demo-app-preview
+  endpoints:
+    - port: http
+      path: /metrics
+      interval: 15s

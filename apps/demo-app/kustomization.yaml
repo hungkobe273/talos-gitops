@@ -3,8 +3,12 @@ kind: Kustomization
 resources:
   - namespace.yaml
   - deployment.yaml
+  - rollout.yaml
   - service.yaml
+  - service-preview.yaml
+  - ingress.yaml
   - servicemonitor.yaml
+  - servicemonitor-preview.yaml
   - prometheusrule.yaml
   - ghcr-pull-sealed.yaml
 images:

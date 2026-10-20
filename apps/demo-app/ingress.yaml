@@ -1,0 +1,51 @@
+# demo.talos.internal -> active version, demo-preview.talos.internal -> preview.
+# Clients need both names in their hosts file (HAProxy passes any SNI).
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: demo-app
+  namespace: demo
+  annotations:
+    cert-manager.io/cluster-issuer: talos-internal-ca
+spec:
+  ingressClassName: traefik
+  tls:
+    - hosts:
+        - demo.talos.internal
+      secretName: demo-tls
+  rules:
+    - host: demo.talos.internal
+      http:
+        paths:
+          - path: /
+            pathType: Prefix
+            backend:
+              service:
+                name: demo-app
+                port:
+                  name: http
+---
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: demo-app-preview
+  namespace: demo
+  annotations:
+    cert-manager.io/cluster-issuer: talos-internal-ca
+spec:
+  ingressClassName: traefik
+  tls:
+    - hosts:
+        - demo-preview.talos.internal
+      secretName: demo-preview-tls
+  rules:
+    - host: demo-preview.talos.internal
+      http:
+        paths:
+          - path: /
+            pathType: Prefix
+            backend:
+              service:
+                name: demo-app-preview
+                port:
+                  name: http

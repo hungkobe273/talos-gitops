@@ -1,0 +1,16 @@
+# Preview Service: the controller points it at the new ReplicaSet while it
+# waits for promotion. Different name label so the old ServiceMonitor ignores it.
+apiVersion: v1
+kind: Service
+metadata:
+  name: demo-app-preview
+  namespace: demo
+  labels:
+    app.kubernetes.io/name: demo-app-preview
+spec:
+  selector:
+    app.kubernetes.io/name: demo-app
+  ports:
+    - name: http
+      port: 80
+      targetPort: http
