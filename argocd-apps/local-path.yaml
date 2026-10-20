@@ -30,9 +30,8 @@ spec:
   # Không dùng CreateNamespace/managedNamespaceMetadata: Namespace local-path-storage nằm sẵn
   # trong manifest upstream, nhãn PSA privileged được gắn bằng patch kustomize
   # (platform/local-path/kustomization.yaml). Hai cơ chế cùng quản một Namespace sẽ giành nhau.
-  syncPolicy: {}
-  # Commit thứ hai (sau khi test PVC đạt) thay dòng trên bằng:
-  # syncPolicy:
-  #   automated:
-  #     prune: true
-  #     selfHeal: true
+  # Sync tay lần đầu 20/10 15:34 (commit 73f6cf3); test PVC 2 class đạt 15:37 -> bật automated.
+  syncPolicy:
+    automated:
+      prune: true
+      selfHeal: true
