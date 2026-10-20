@@ -23,8 +23,10 @@ spec:
     server: https://kubernetes.default.svc
     namespace: argo-rollouts
   syncPolicy:
-    # First install: manual Sync while PSI is low (large CRDs, see 16/10 13:49).
-    # Enable automated after it is stable.
+    # First install was a manual Sync (20/10, PSI peak 7.7%); automated since.
+    automated:
+      prune: true
+      selfHeal: true
     managedNamespaceMetadata:
       labels:
         pod-security.kubernetes.io/enforce: restricted
