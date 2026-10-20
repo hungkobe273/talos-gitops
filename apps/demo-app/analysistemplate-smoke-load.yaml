@@ -1,0 +1,50 @@
+# Sends traffic to the preview Service while demo-app-error-rate measures it.
+# Succeeds when the Job exits 0 (preview /readyz must answer first).
+apiVersion: argoproj.io/v1alpha1
+kind: AnalysisTemplate
+metadata:
+  name: demo-app-smoke-load
+  namespace: demo
+spec:
+  metrics:
+    - name: smoke-load
+      provider:
+        job:
+          spec:
+            backoffLimit: 0
+            activeDeadlineSeconds: 420
+            template:
+              spec:
+                restartPolicy: Never
+                securityContext:
+                  runAsNonRoot: true
+                  runAsUser: 100
+                  runAsGroup: 101
+                  seccompProfile:
+                    type: RuntimeDefault
+                containers:
+                  - name: curl
+                    image: curlimages/curl:8.11.1
+                    command: ["/bin/sh", "-c"]
+                    args:
+                      - |
+                        set -e
+                        BASE="http://demo-app-preview.demo.svc"
+                        curl -fsS -o /dev/null "$BASE/readyz"
+                        i=0
+                        while [ "$i" -lt 480 ]; do
+                          curl -s -o /dev/null "$BASE/api/work" || true
+                          i=$((i+1))
+                          sleep 0.5
+                        done
+                    resources:
+                      requests:
+                        cpu: 10m
+                        memory: 16Mi
+                      limits:
+                        memory: 32Mi
+                    securityContext:
+                      allowPrivilegeEscalation: false
+                      readOnlyRootFilesystem: true
+                      capabilities:
+                        drop: ["ALL"]

@@ -10,6 +10,8 @@ resources:
   - servicemonitor.yaml
   - servicemonitor-preview.yaml
   - prometheusrule.yaml
+  - analysistemplate-smoke-load.yaml
+  - analysistemplate-error-rate.yaml
   - ghcr-pull-sealed.yaml
 images:
   - name: ghcr.io/hungkobe273/talos-demo-app
