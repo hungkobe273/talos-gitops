@@ -24,8 +24,16 @@ spec:
     blueGreen:
       activeService: demo-app
       previewService: demo-app-preview
-      # Manual promotion for now; analysis + auto promotion come in a later commit.
-      autoPromotionEnabled: false
+      # Promote automatically once the pre-promotion analysis passes;
+      # a failed analysis aborts and keeps the current version active.
+      autoPromotionEnabled: true
+      prePromotionAnalysis:
+        templates:
+          - templateName: demo-app-smoke-load
+          - templateName: demo-app-error-rate
+        args:
+          - name: preview-service
+            value: demo-app-preview
       # Keep the old version 10 min after promotion so a git revert can still
       # switch back instantly (Argo CD polls 3-8 min on this cluster).
       scaleDownDelaySeconds: 600

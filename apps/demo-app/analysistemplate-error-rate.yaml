@@ -1,0 +1,29 @@
+# 5xx ratio of /api/work on the preview Service; same formula and threshold
+# as alert DemoAppHighErrorRate, 1m window because preview pods are new.
+apiVersion: argoproj.io/v1alpha1
+kind: AnalysisTemplate
+metadata:
+  name: demo-app-error-rate
+  namespace: demo
+spec:
+  args:
+    - name: preview-service
+  metrics:
+    - name: error-rate
+      initialDelay: 60s
+      interval: 30s
+      count: 6
+      failureLimit: 1
+      # Empty result (no traffic) or NaN counts as a failure.
+      successCondition: len(result) > 0 && result[0] <= 0.1
+      provider:
+        prometheus:
+          address: http://kps-kube-prometheus-stack-prometheus.monitoring.svc:9090
+          timeout: 20
+          query: |
+            (
+              sum(rate(demo_http_requests_total{namespace="demo", service="{{args.preview-service}}", route="GET /api/work", code=~"5.."}[1m]))
+              or vector(0)
+            )
+            /
+            sum(rate(demo_http_requests_total{namespace="demo", service="{{args.preview-service}}", route="GET /api/work"}[1m]))
