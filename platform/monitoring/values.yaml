@@ -106,7 +106,7 @@ grafana:
       cpu: 20m
       memory: 384Mi
     limits:
-      memory: 1Gi
+      memory: 1536Mi
   # First start on the HDD runs hundreds of SQLite migrations (DB lives in an
   # emptyDir); give it 5 minutes before the liveness probe may restart it.
   livenessProbe:
