@@ -1,0 +1,54 @@
+# Rebalance pods after a cold start: the first worker to become Ready
+# takes every Pending pod (incident 20/10: 21 pods on w2, 1 on w1).
+kind: CronJob
+schedule: "*/10 * * * *"
+startingDeadlineSeconds: 300
+successfulJobsHistoryLimit: 1
+failedJobsHistoryLimit: 1
+# Chart default is system-cluster-critical; not needed here.
+priorityClassName: ""
+resources:
+  requests:
+    cpu: 20m
+    memory: 64Mi
+  limits:
+    cpu: 200m
+    memory: 256Mi
+podSecurityContext:
+  seccompProfile:
+    type: RuntimeDefault
+deschedulerPolicy:
+  # Only the two workers; cp1 is tainted and cannot take app pods.
+  nodeSelector: "!node-role.kubernetes.io/control-plane"
+  # Few evictions per run so the HDD is not flooded with restarts.
+  maxNoOfPodsToEvictPerNode: 3
+  maxNoOfPodsToEvictTotal: 3
+  profiles:
+    - name: balance
+      pluginConfig:
+        - name: DefaultEvictor
+          args:
+            nodeFit: true
+            podProtections:
+              # Grafana/Prometheus use emptyDir; allow moving them.
+              defaultDisabled:
+                - "PodsWithLocalStorage"
+              extraEnabled:
+                - "PodsWithPVC"
+        - name: RemoveDuplicates
+        - name: LowNodeUtilization
+          args:
+            # % of allocatable, by requests. Balanced today: w1 19/24/7, w2 15/10/15.
+            thresholds:
+              cpu: 10
+              memory: 10
+              pods: 5
+            targetThresholds:
+              cpu: 25
+              memory: 25
+              pods: 15
+      plugins:
+        balance:
+          enabled:
+            - RemoveDuplicates
+            - LowNodeUtilization
