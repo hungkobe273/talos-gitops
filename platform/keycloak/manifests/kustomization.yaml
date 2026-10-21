@@ -1,0 +1,21 @@
+# platform/keycloak/manifests — đi kèm chart keycloakx (source thứ 3 của app keycloak). NHÁP.
+#
+# - ConfigMap keycloak-realm: sinh từ file realm-import.json (bản nháp nằm ở
+#   design/keycloak-draft/realm-import.json; khi commit chép vào thư mục này).
+#   Khóa trong ConfigMap đặt tên "talos-realm.json" vì docs Keycloak yêu cầu file realm import
+#   tên dạng <realm>-realm.json (https://www.keycloak.org/server/importExport).
+#   disableNameSuffixHash: tên ConfigMap cố định để values.yaml tham chiếu được. Hệ quả: sửa realm
+#   KHÔNG tự rollout Keycloak — mà cũng không cần, vì import bỏ qua realm đã tồn tại.
+# - 2 SealedSecret: Hưng tạo theo secrets-plan.md rồi đặt vào đây trước khi commit.
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+namespace: keycloak
+resources:
+  - keycloak-bootstrap-admin-sealed.yaml
+  - keycloak-oidc-clients-sealed.yaml
+configMapGenerator:
+  - name: keycloak-realm
+    files:
+      - talos-realm.json=realm-import.json
+generatorOptions:
+  disableNameSuffixHash: true
