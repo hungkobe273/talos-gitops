@@ -26,9 +26,11 @@ spec:
     server: https://kubernetes.default.svc
     namespace: keycloak
   syncPolicy:
-    # automated:        # bật ở commit sau, khi pod Ready và đo IO 10 phút ổn
-    #   prune: true
-    #   selfHeal: true
+    # Sync tay lần đầu 21/10 07:58 (commit 6bed7f3), pod Ready sau 52 s, đo 10 phút ổn -> bật automated.
+    # prune không xóa PVC (PVC do StatefulSet tạo, không thuộc app) và không xóa namespace.
+    automated:
+      prune: true
+      selfHeal: true
     managedNamespaceMetadata:
       labels:
         pod-security.kubernetes.io/enforce: restricted
