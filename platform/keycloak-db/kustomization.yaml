@@ -1,0 +1,12 @@
+# platform/keycloak-db — PostgreSQL 18 một instance cho Keycloak. NHÁP.
+#
+# keycloak-db-sealed.yaml KHÔNG có trong bản nháp: Hưng tạo trên host2 bằng kubeseal theo
+# secrets-plan.md (Secret keycloak-db, khóa `password`). Thiếu file này thì kustomize build lỗi,
+# nên tạo file trước rồi mới commit.
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+namespace: keycloak
+resources:
+  - keycloak-db-sealed.yaml
+  - service.yaml
+  - statefulset.yaml
