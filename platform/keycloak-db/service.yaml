@@ -1,0 +1,21 @@
+# Headless Service (clusterIP: None) cho StatefulSet keycloak-db.
+# Một Service làm cả hai việc: (1) serviceName bắt buộc của StatefulSet, (2) địa chỉ Keycloak kết
+# nối: keycloak-db.keycloak.svc:5432 -> DNS trả thẳng IP pod, không qua kube-proxy.
+# Chỉ 1 pod nên headless hay ClusterIP đều được; headless bớt một object.
+#
+# Lưu ý: Flannel KHÔNG thực thi NetworkPolicy, nên mọi pod trong cụm đều kết nối được cổng 5432.
+# Bảo vệ duy nhất là mật khẩu (scram-sha-256). Chấp nhận cho lab; ghi vào rủi ro.
+apiVersion: v1
+kind: Service
+metadata:
+  name: keycloak-db
+  labels:
+    app.kubernetes.io/name: keycloak-db
+spec:
+  clusterIP: None
+  selector:
+    app.kubernetes.io/name: keycloak-db
+  ports:
+    - name: postgres
+      port: 5432
+      targetPort: postgres

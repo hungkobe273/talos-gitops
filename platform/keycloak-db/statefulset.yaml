@@ -1,0 +1,133 @@
+# StatefulSet PostgreSQL cho Keycloak — NHÁP.
+#
+# Image: docker.io/library/postgres:18.6 (Debian trixie; tag 18.6 cập nhật 07/10/2026 trên Docker Hub).
+#   Keycloak 26.8.x hỗ trợ PostgreSQL 14–18, bản được kiểm thử là 18 (https://www.keycloak.org/server/db).
+#   cần kiểm tra trước khi commit: còn bản 18.x mới hơn không (https://hub.docker.com/_/postgres/tags).
+#
+# Điểm khác biệt quan trọng của image postgres từ bản 18 (docs image):
+#   PGDATA mặc định = /var/lib/postgresql/18/docker và VOLUME = /var/lib/postgresql.
+#   => Mount PVC vào /var/lib/postgresql (KHÔNG phải .../data như hướng dẫn cũ cho <= 17).
+#   Lợi ích: lên major 19 sau này dùng pg_upgrade --link trong cùng volume được.
+#   https://github.com/docker-library/docs/blob/master/postgres/README.md (mục PGDATA)
+#
+# Chạy không root (PSA restricted): uid/gid 999 = user postgres có sẵn trong image Debian, nên
+# initdb tìm thấy user trong /etc/passwd (docs image, mục "Arbitrary --user").
+# Thư mục PV do helper pod local-path tạo với quyền 0777 (script setup upstream: mkdir -m 0777),
+# nên uid 999 tự tạo được 18/docker bên trong; entrypoint chmod 700 thư mục PGDATA.
+# cần kiểm tra lần chạy đầu: log pod có "initdb" thành công, không "Permission denied".
+# fsGroup KHÔNG có tác dụng với PV kiểu hostPath của local-path, nên không dựa vào nó.
+#
+# Giảm ghi đĩa cho HDD (thiết kế mục 2.2):
+#   synchronous_commit=off: commit trả về trước khi WAL xuống đĩa; crash có thể mất vài trăm ms
+#   giao dịch cuối, KHÔNG làm hỏng DB. Tuyệt đối không đặt fsync=off (cái đó mới hỏng DB khi
+#   mất điện, mà host2 đã mất điện 16/10).
+# Giảm RAM: shared_buffers 64MB (mặc định 128MB), max_connections 30 (Keycloak đặt pool tối đa 10,
+#   xem values Keycloak; 30 chừa chỗ cho pg_dump và psql khi gỡ lỗi).
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  name: keycloak-db
+  labels:
+    app.kubernetes.io/name: keycloak-db
+    app.kubernetes.io/part-of: keycloak
+spec:
+  serviceName: keycloak-db
+  replicas: 1
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: keycloak-db
+  # Giữ PVC khi xóa/scale StatefulSet (đây cũng là mặc định; ghi rõ để người đọc biết).
+  persistentVolumeClaimRetentionPolicy:
+    whenDeleted: Retain
+    whenScaled: Retain
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/name: keycloak-db
+        app.kubernetes.io/part-of: keycloak
+    spec:
+      automountServiceAccountToken: false
+      enableServiceLinks: false
+      # Cho postgres đủ thời gian tắt sạch (preStop bên dưới) trước khi bị SIGKILL.
+      terminationGracePeriodSeconds: 60
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 999
+        runAsGroup: 999
+        seccompProfile:
+          type: RuntimeDefault
+      containers:
+        - name: postgres
+          image: docker.io/library/postgres:18.6
+          imagePullPolicy: IfNotPresent
+          args:
+            - -c
+            - synchronous_commit=off
+            - -c
+            - shared_buffers=64MB
+            - -c
+            - max_connections=30
+          env:
+            - name: POSTGRES_USER
+              value: keycloak
+            - name: POSTGRES_DB
+              value: keycloak
+            # Chỉ dùng ở LẦN KHỞI TẠO đầu tiên (thư mục PGDATA trống). Đổi Secret sau đó KHÔNG đổi
+            # mật khẩu trong DB; phải ALTER USER bằng psql (xem secrets-plan.md, mục xoay vòng).
+            - name: POSTGRES_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: keycloak-db
+                  key: password
+          ports:
+            - name: postgres
+              containerPort: 5432
+          securityContext:
+            allowPrivilegeEscalation: false
+            capabilities:
+              drop: ["ALL"]
+          resources:
+            requests:
+              cpu: 50m
+              memory: 192Mi
+            limits:
+              memory: 384Mi
+          # Kubernetes gửi SIGTERM = "smart shutdown": postgres chờ mọi client tự ngắt, mà pool của
+          # Keycloak giữ kết nối -> dễ hết 60 s rồi bị SIGKILL, sáng hôm sau phải crash recovery.
+          # preStop ép "fast shutdown" (ngắt client, checkpoint, tắt sạch). Có ích lúc tắt cụm 17:00.
+          # cần kiểm tra: lần tắt đầu, log có "database system is shut down" trước khi pod biến mất.
+          lifecycle:
+            preStop:
+              exec:
+                command: ["/bin/sh", "-c", "pg_ctl -D \"$PGDATA\" -m fast -w -t 50 stop"]
+          # Probe bằng pg_isready tới 127.0.0.1: chỉ hỏi "server có nhận kết nối không",
+          # không đăng nhập nên không cần mật khẩu.
+          startupProbe:
+            exec:
+              command: ["pg_isready", "-U", "keycloak", "-d", "keycloak", "-h", "127.0.0.1"]
+            periodSeconds: 10
+            timeoutSeconds: 5
+            failureThreshold: 60      # tới 10 phút cho lần initdb/crash recovery trên HDD
+          readinessProbe:
+            exec:
+              command: ["pg_isready", "-U", "keycloak", "-d", "keycloak", "-h", "127.0.0.1"]
+            periodSeconds: 10
+            timeoutSeconds: 5
+          livenessProbe:
+            exec:
+              command: ["pg_isready", "-U", "keycloak", "-d", "keycloak", "-h", "127.0.0.1"]
+            periodSeconds: 30
+            timeoutSeconds: 10
+            failureThreshold: 6       # HDD nghẽn vài phút không nên làm postgres bị kill
+          volumeMounts:
+            - name: data
+              mountPath: /var/lib/postgresql
+  volumeClaimTemplates:
+    - metadata:
+        name: data
+      spec:
+        accessModes: ["ReadWriteOnce"]
+        storageClassName: local-path-retain
+        resources:
+          requests:
+            storage: 5Gi   # chỉ là khai báo; local-path không giới hạn dung lượng thật

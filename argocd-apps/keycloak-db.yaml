@@ -1,0 +1,37 @@
+# argocd-apps/keycloak-db.yaml — NHÁP. Commit 2 của chuỗi Keycloak (sau khi local-path đạt).
+#
+# PostgreSQL 1 instance cho Keycloak (quyết định K3/H13: local-path + PostgreSQL đơn).
+# Tự viết StatefulSet với image chính thức postgres, không dùng chart Bitnami (image cũ đã
+# chuyển sang bitnamilegacy, không còn cập nhật) và chưa dùng CloudNativePG (thêm operator + CRD
+# lớn, để dành khi có SSD).
+#
+# App này TẠO namespace keycloak (CreateNamespace + PSA restricted). App keycloak (wave 3) dùng
+# lại namespace, KHÔNG khai báo managedNamespaceMetadata lần nữa để hai app không giành nhau.
+#
+# Wave 2: sau demo-app/headlamp (1). Lần đầu Sync tay, chưa bật automated (giống local-path).
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: keycloak-db
+  namespace: argocd
+  annotations:
+    argocd.argoproj.io/sync-wave: "2"
+spec:
+  project: default
+  source:
+    repoURL: git@github.com:hungkobe273/talos-gitops.git
+    targetRevision: main
+    path: platform/keycloak-db
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: keycloak
+  syncPolicy:
+    # automated:        # bật ở commit sau, khi pod Ready và đo IO 10 phút ổn
+    #   prune: true
+    #   selfHeal: true
+    managedNamespaceMetadata:
+      labels:
+        pod-security.kubernetes.io/enforce: restricted
+        pod-security.kubernetes.io/warn: restricted
+    syncOptions:
+      - CreateNamespace=true
