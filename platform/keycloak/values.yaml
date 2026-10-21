@@ -1,0 +1,212 @@
+# codecentric/keycloakx 7.4.0 — Keycloak 26.8.1 cho cụm talos-kvm. NHÁP, chưa áp.
+#
+# Bối cảnh: Traefik (Ingress, NodePort sau HAProxy TCP passthrough) kết thúc TLS bằng cert do
+# ClusterIssuer talos-internal-ca cấp, rồi chuyển HTTP vào Keycloak cổng 8080 ("edge termination").
+# Mọi giá trị bí mật đến từ Secret (SealedSecret trong platform/keycloak/manifests và
+# platform/keycloak-db), không có trong file này.
+#
+# Lưu ý cú pháp chart: các khóa extraEnv, extraEnvFrom, extraVolumes, extraVolumeMounts, probe,
+# affinity là CHUỖI YAML (dấu `|`) vì chart chạy qua `tpl`. Không viết dạng list/map thường.
+# Values gốc của chart: https://github.com/codecentric/helm-charts/blob/keycloakx-7.4.0/charts/keycloakx/values.yaml
+
+# Tên ngắn, cố định: StatefulSet "keycloak", Service "keycloak-http", Secret TLS "keycloak-tls".
+# (Mặc định chart ghép release + chart = "keycloak-keycloakx".)
+fullnameOverride: keycloak
+
+replicas: 1
+
+image:
+  repository: quay.io/keycloak/keycloak
+  tag: "26.8.1"            # ghim bằng appVersion của chart 7.4.0; nâng cấp = sửa cả 2 chỗ
+
+# "start" (chế độ production) + nạp realm từ /opt/keycloak/data/import khi khởi động.
+# Image chính thức có ENTRYPOINT kc.sh nhưng không có lệnh mặc định -> phải ghi rõ.
+# Vì chưa dùng image "optimized" (K10 để sau), mỗi lần start Keycloak tự build lại Quarkus
+# (thêm 20–60 s CPU + đọc đĩa). startupProbe bên dưới đã tính phần này.
+command:
+  - /opt/keycloak/bin/kc.sh
+  - start
+  - --import-realm
+
+# Không cần biến môi trường kiểu Docker link (KEYCLOAK_DB_PORT...), bớt rác trong env.
+enableServiceLinks: false
+
+serviceAccount:
+  create: true
+  # Keycloak không gọi Kubernetes API (cache dùng jdbc-ping qua DB, không dùng KUBE_PING).
+  automountServiceAccountToken: false
+
+# --- PSA restricted (namespace keycloak) ---
+podSecurityContext:
+  runAsNonRoot: true
+  seccompProfile:
+    type: RuntimeDefault
+securityContext:
+  runAsUser: 1000          # user keycloak trong image chính thức
+  runAsNonRoot: true
+  allowPrivilegeEscalation: false
+  capabilities:
+    drop: ["ALL"]
+
+# Init container chờ PostgreSQL mở cổng 5432 rồi mới chạy Keycloak. Có ích mỗi sáng khởi động lạnh:
+# Keycloak không crash-loop vì DB lên chậm. securityContext đặt đủ cho PSA restricted
+# (mặc định của chart thiếu capabilities.drop -> bị PSA từ chối).
+dbchecker:
+  enabled: true
+  image:
+    repository: docker.io/busybox
+    tag: "1.37"            # mặc định của chart 7.4.0
+  securityContext:
+    runAsUser: 1000
+    runAsGroup: 1000
+    runAsNonRoot: true
+    allowPrivilegeEscalation: false
+    capabilities:
+      drop: ["ALL"]
+
+# --- Database ---
+# Chart sinh KC_DB, KC_DB_URL_HOST/PORT/DATABASE, KC_DB_USERNAME, KC_DB_PASSWORD (từ Secret).
+database:
+  vendor: postgres
+  hostname: keycloak-db    # Service headless của platform/keycloak-db, cùng namespace
+  port: 5432
+  database: keycloak
+  username: keycloak       # không phải bí mật; mật khẩu mới là bí mật
+  existingSecret: keycloak-db
+  existingSecretKey: password
+
+# Cache: giữ mặc định của chart (KC_CACHE=ispn, KC_CACHE_STACK=jdbc-ping) dù chỉ 1 replica.
+# Thiết kế 19/10 định dùng KC_CACHE=local, nhưng docs Keycloak ghi `local` "intended only for
+# development and testing" (https://www.keycloak.org/server/caching). jdbc-ping tìm node qua
+# chính DB, 1 replica thì cụm Infinispan chỉ có 1 thành viên. Đổi lại tốn thêm ít RAM.
+# cần kiểm tra: RAM thật sau 1 ngày chạy; nếu sát limit mới cân nhắc lại `local`.
+cache:
+  stack: default
+
+# Sau Traefik: đọc X-Forwarded-* (Traefik gửi X-Forwarded-For/Proto/Host, không gửi `Forwarded`).
+# Mặc định chart là "forwarded" -> phải đổi, nếu không Keycloak tưởng mình chạy http và sinh
+# redirect sai. http.enabled bắt buộc khi TLS kết thúc ở proxy (docs reverse proxy).
+# https://www.keycloak.org/server/reverseproxy
+proxy:
+  enabled: true
+  mode: xforwarded
+  http:
+    enabled: true
+
+metrics:
+  enabled: true            # /metrics trên cổng quản trị 9000, KHÔNG đưa ra Ingress
+health:
+  enabled: true            # /health/* trên cổng 9000, dùng cho probe
+
+http:
+  # Mặc định chart là "/auth" (tương thích Keycloak cũ). Đặt "/" để URL issuer là
+  # https://keycloak.talos.internal/realms/talos, khớp mọi đoạn cấu hình OIDC trong oidc-integration.md.
+  relativePath: "/"
+
+extraEnv: |
+  # URL công khai cố định (hostname v2). Issuer trong token luôn là https://keycloak.talos.internal/realms/talos
+  # bất kể request đi từ trình duyệt hay từ pod trong cụm. https://www.keycloak.org/server/hostname
+  - name: KC_HOSTNAME
+    value: https://keycloak.talos.internal
+  # Chỉ tin header X-Forwarded-* đến từ dải IP pod (Traefik là pod). Docs: lớp bảo vệ yếu, nhưng
+  # chặn được việc pod khác giả header. Đã kiểm 20/10 15:05: Flannel "Network": "10.244.0.0/16",
+  # node .21 10.244.3.0/24, .22 10.244.4.0/24, cp1 10.244.0.0/24.
+  - name: KC_PROXY_TRUSTED_ADDRESSES
+    value: 10.244.0.0/16
+  # Pool kết nối DB: mặc định tối đa 100, quá nhiều cho postgres max_connections=30 và RAM nhỏ.
+  - name: KC_DB_POOL_INITIAL_SIZE
+    value: "2"
+  - name: KC_DB_POOL_MIN_SIZE
+    value: "2"
+  - name: KC_DB_POOL_MAX_SIZE
+    value: "10"
+  # Heap JVM: image mặc định MaxRAMPercentage=70, InitialRAMPercentage=50 (docs containers) ->
+  # limit 1Gi cho heap ~717 MiB + ~300 MiB ngoài heap => dễ chạm limit và bị OOMKilled.
+  # Hạ còn 50% (~512 MiB heap) cho lab ít người dùng. Biến JAVA_OPTS_KC_HEAP thay hẳn bộ mặc định.
+  # https://www.keycloak.org/server/containers
+  # cần kiểm tra (đo): jvm_memory_used_bytes trên /metrics và working set của pod sau 1 ngày.
+  - name: JAVA_OPTS_KC_HEAP
+    value: "-XX:MaxRAMPercentage=50 -XX:InitialRAMPercentage=25"
+  # Tài khoản admin TẠM trong realm master (KC 26: KC_BOOTSTRAP_ADMIN_*). Chỉ được tạo khi DB
+  # chưa có admin nào. Sau khi tạo admin thật -> xóa tài khoản tạm (README bước 3).
+  - name: KC_BOOTSTRAP_ADMIN_USERNAME
+    valueFrom:
+      secretKeyRef:
+        name: keycloak-bootstrap-admin
+        key: username
+  - name: KC_BOOTSTRAP_ADMIN_PASSWORD
+    valueFrom:
+      secretKeyRef:
+        name: keycloak-bootstrap-admin
+        key: password
+
+# Biến GRAFANA_CLIENT_SECRET, ARGOCD_CLIENT_SECRET, HEADLAMP_CLIENT_SECRET cho placeholder
+# ${...} trong file realm import (chỉ dùng ở lần import đầu).
+extraEnvFrom: |
+  - secretRef:
+      name: keycloak-oidc-clients
+
+extraVolumes: |
+  - name: realm-import
+    configMap:
+      name: keycloak-realm
+extraVolumeMounts: |
+  - name: realm-import
+    mountPath: /opt/keycloak/data/import
+    readOnly: true
+
+resources:
+  requests:
+    cpu: 250m
+    memory: 768Mi
+  limits:
+    cpu: "1"               # giữ JVM không chiếm hết 2 vCPU của worker lúc build/khởi động
+    memory: 1Gi
+
+# Probe: đường dẫn/cổng giữ như chart (cổng 9000 "http-internal", /health/...), chỉ nới thời gian
+# cho HDD. startupProbe: 30 s + 120 x 10 s = ~20 phút, giống bài học Grafana 16/10.
+startupProbe: |
+  httpGet:
+    path: '{{ tpl (coalesce .Values.http.managementRelativePath .Values.http.relativePath) $ | trimSuffix "/" }}/health'
+    port: '{{ .Values.http.internalPort }}'
+    scheme: '{{ .Values.http.internalScheme }}'
+  initialDelaySeconds: 30
+  periodSeconds: 10
+  timeoutSeconds: 5
+  failureThreshold: 120
+livenessProbe: |
+  httpGet:
+    path: '{{ tpl (coalesce .Values.http.managementRelativePath .Values.http.relativePath) $ | trimSuffix "/" }}/health/live'
+    port: '{{ .Values.http.internalPort }}'
+    scheme: '{{ .Values.http.internalScheme }}'
+  periodSeconds: 20
+  timeoutSeconds: 5
+  failureThreshold: 6
+readinessProbe: |
+  httpGet:
+    path: '{{ tpl (coalesce .Values.http.managementRelativePath .Values.http.relativePath) $ | trimSuffix "/" }}/health/ready'
+    port: '{{ .Values.http.internalPort }}'
+    scheme: '{{ .Values.http.internalScheme }}'
+  periodSeconds: 10
+  timeoutSeconds: 5
+  failureThreshold: 3
+
+# --- Ingress, giống mẫu kps-grafana (D6): chỉ cần ingressClassName traefik + annotation cert-manager.
+ingress:
+  enabled: true
+  ingressClassName: traefik
+  servicePort: http        # Service keycloak-http cổng 80 -> container 8080
+  annotations:
+    cert-manager.io/cluster-issuer: talos-internal-ca
+  rules:
+    - host: keycloak.talos.internal
+      paths:
+        # Mở cả "/" (gồm /admin và realm master) vì HAProxy đã giới hạn IP nguồn .51/.59/.60.
+        # Docs khuyên chỉ mở /realms/, /resources/, /.well-known/ — muốn chặn theo đường dẫn cần
+        # Middleware Traefik (chưa có CRD vì Traefik cài skipCrds). Ghi vào rủi ro, làm sau.
+        - path: /
+          pathType: Prefix
+  tls:
+    - hosts:
+        - keycloak.talos.internal
+      secretName: keycloak-tls

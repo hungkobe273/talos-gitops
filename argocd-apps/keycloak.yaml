@@ -1,0 +1,46 @@
+# argocd-apps/keycloak.yaml — NHÁP. Commit 3 của chuỗi Keycloak (sau khi keycloak-db Ready).
+#
+# Chart: codecentric/keycloakx 7.4.0 (phát hành 14/10/2026, appVersion = Keycloak 26.8.1, image
+# chính thức quay.io/keycloak/keycloak). Chọn chart thay vì Keycloak Operator theo thiết kế mục 2.1:
+# không CRD lớn (bài học sự cố cert-manager 16/10), hợp mẫu multi-source đang dùng.
+# Chart.yaml 7.4.0 không khai báo kubeVersion -> không có ràng buộc phiên bản K8s; vẫn cần
+# `helm template` offline trên host2 trước khi commit (README bước 3).
+# Nguồn: https://github.com/codecentric/helm-charts/releases , https://www.keycloak.org/downloads
+#
+# Namespace keycloak đã do app keycloak-db tạo (PSA restricted) -> app này KHÔNG CreateNamespace,
+# KHÔNG managedNamespaceMetadata.
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: keycloak
+  namespace: argocd
+  annotations:
+    argocd.argoproj.io/sync-wave: "3"
+spec:
+  project: default
+  sources:
+    # 1) Chart, values lấy từ repo này ($values).
+    - repoURL: https://codecentric.github.io/helm-charts
+      chart: keycloakx
+      targetRevision: 7.4.0
+      helm:
+        releaseName: keycloak
+        valueFiles:
+          - $values/platform/keycloak/values.yaml
+    # 2) Repo này, chỉ để tham chiếu file values.
+    - repoURL: git@github.com:hungkobe273/talos-gitops.git
+      targetRevision: main
+      ref: values
+    # 3) ConfigMap realm `talos` + SealedSecrets (bootstrap admin, client secrets).
+    - repoURL: git@github.com:hungkobe273/talos-gitops.git
+      targetRevision: main
+      path: platform/keycloak/manifests
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: keycloak
+  syncPolicy: {}
+  # Bật automated ở commit sau, khi Keycloak đã Ready và đăng nhập admin được:
+  # syncPolicy:
+  #   automated:
+  #     prune: true
+  #     selfHeal: true
