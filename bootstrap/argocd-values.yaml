@@ -28,6 +28,8 @@ configs:
       clientID: argocd
       clientSecret: $argocd-oidc-keycloak:clientSecret
       requestedScopes: ["openid", "profile", "email"]
+      # Log out also ends the Keycloak session; Argo CD sends post_logout_redirect_uri=https://argocd.talos.internal
+      logoutURL: https://keycloak.talos.internal/realms/talos/protocol/openid-connect/logout?id_token_hint={{token}}&post_logout_redirect_uri={{logoutRedirectURL}}
       rootCA: |
         -----BEGIN CERTIFICATE-----
         MIIBszCCAVqgAwIBAgIUA3ct+b3dSfmubNulaFMfmnDkqy0wCgYIKoZIzj0EAwIw
