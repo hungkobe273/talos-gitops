@@ -50,3 +50,33 @@ ingress:
     - secretName: headlamp-tls
       hosts:
         - headlamp.talos.internal
+
+# OIDC login via Keycloak (design/headlamp-oidc.md). Needs the KubeAuthenticationConfig jwt block on cp1
+# (~/talos-kvm/patch-authn-oidc.yaml); token login with the headlamp-viewer/admin SAs keeps working.
+config:
+  oidc:
+    secret:
+      create: false              # client id/secret/issuer/scopes come from SealedSecret S6 (rbac/headlamp-oidc-sealed.yaml)
+    externalSecret:
+      enabled: true
+      name: headlamp-oidc
+      hasScopes: true
+    callbackURL: https://headlamp.talos.internal/oidc-callback   # makes the chart add -oidc-callback-url
+    usePKCE: true                # client headlamp requires PKCE S256
+env:
+  - name: OIDC_CALLBACK_URL      # externalSecret mode does not set these two itself
+    value: https://headlamp.talos.internal/oidc-callback
+  - name: OIDC_USE_PKCE
+    value: "true"
+  - name: SSL_CERT_FILE          # trust talos-internal-ca when calling Keycloak
+    value: /etc/headlamp-ca/ca.crt
+  - name: GODEBUG                # AAAA NXDOMAIN workaround, as for Grafana (runbook 3.12)
+    value: netdns=go
+volumes:
+  - name: talos-internal-ca
+    configMap:
+      name: talos-internal-ca
+volumeMounts:
+  - name: talos-internal-ca
+    mountPath: /etc/headlamp-ca
+    readOnly: true
