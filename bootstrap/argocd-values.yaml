@@ -53,6 +53,10 @@ configs:
       g, talos-viewers, role:readonly
 
 server:
+  metrics:
+    enabled: true
+    serviceMonitor:
+      enabled: true
   ingress:
     enabled: true
     ingressClassName: traefik
@@ -60,3 +64,15 @@ server:
       cert-manager.io/cluster-issuer: talos-internal-ca
     # TLS Secret name is fixed by the chart: argocd-server-tls (cert-manager creates it).
     tls: true
+
+# Metrics for kps Prometheus (2026-10-22, design/argocd-followup.md c): Service + ServiceMonitor only, pods unchanged.
+controller:
+  metrics:
+    enabled: true
+    serviceMonitor:
+      enabled: true
+repoServer:
+  metrics:
+    enabled: true
+    serviceMonitor:
+      enabled: true
