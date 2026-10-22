@@ -52,7 +52,15 @@ configs:
       g, talos-admins, role:admin
       g, talos-viewers, role:readonly
 
+# Requests/limits (2026-10-22 scan): working set max 1h controller 459Mi, repo 82Mi, server 42Mi,
+# appset 34Mi, redis 19Mi. Request ~ usage so the scheduler sees it; limit ~2x as a runaway cap. No CPU limit.
 server:
+  resources:
+    requests:
+      cpu: 20m
+      memory: 64Mi
+    limits:
+      memory: 256Mi
   metrics:
     enabled: true
     serviceMonitor:
@@ -67,6 +75,12 @@ server:
 
 # Metrics for kps Prometheus (2026-10-22, design/argocd-followup.md c): Service + ServiceMonitor only, pods unchanged.
 controller:
+  resources:
+    requests:
+      cpu: 100m
+      memory: 512Mi
+    limits:
+      memory: 1Gi
   metrics:
     enabled: true
     serviceMonitor:
@@ -92,7 +106,27 @@ controller:
             summary: Argo CD app {{ $labels.name }} is OutOfSync
             description: Application {{ $labels.name }} has been OutOfSync for 30 minutes (auto-sync failing or a manual change).
 repoServer:
+  resources:
+    requests:
+      cpu: 50m
+      memory: 128Mi
+    limits:
+      memory: 512Mi
   metrics:
     enabled: true
     serviceMonitor:
       enabled: true
+applicationSet:
+  resources:
+    requests:
+      cpu: 10m
+      memory: 64Mi
+    limits:
+      memory: 256Mi
+redis:
+  resources:
+    requests:
+      cpu: 10m
+      memory: 32Mi
+    limits:
+      memory: 128Mi
