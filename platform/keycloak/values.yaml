@@ -133,6 +133,9 @@ extraEnv: |
   # cần kiểm tra (đo): jvm_memory_used_bytes trên /metrics và working set của pod sau 1 ngày.
   - name: JAVA_OPTS_KC_HEAP
     value: "-XX:MaxRAMPercentage=50 -XX:InitialRAMPercentage=25"
+  # http_server_requests_seconds_bucket for the latency panels of the Keycloak dashboard (2026-10-22).
+  - name: KC_HTTP_METRICS_HISTOGRAMS_ENABLED
+    value: "true"
   # Tài khoản admin TẠM trong realm master (KC 26: KC_BOOTSTRAP_ADMIN_*). Chỉ được tạo khi DB
   # chưa có admin nào. Sau khi tạo admin thật -> xóa tài khoản tạm (README bước 3).
   - name: KC_BOOTSTRAP_ADMIN_USERNAME
