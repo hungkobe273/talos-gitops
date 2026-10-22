@@ -71,6 +71,26 @@ controller:
     enabled: true
     serviceMonitor:
       enabled: true
+    # Alerts -> Telegram via the common Alertmanager route. OutOfSync gets 30m: auto-sync and CI commits settle within minutes.
+    rules:
+      enabled: true
+      spec:
+        - alert: ArgoAppDegraded
+          expr: argocd_app_info{health_status="Degraded"} == 1
+          for: 15m
+          labels:
+            severity: warning
+          annotations:
+            summary: Argo CD app {{ $labels.name }} is Degraded
+            description: Application {{ $labels.name }} has been Degraded for 15 minutes.
+        - alert: ArgoAppOutOfSync
+          expr: argocd_app_info{sync_status="OutOfSync"} == 1
+          for: 30m
+          labels:
+            severity: warning
+          annotations:
+            summary: Argo CD app {{ $labels.name }} is OutOfSync
+            description: Application {{ $labels.name }} has been OutOfSync for 30 minutes (auto-sync failing or a manual change).
 repoServer:
   metrics:
     enabled: true
