@@ -71,6 +71,12 @@ alertmanager:
           matchers:
             - alertname = "InfoInhibitor"
     inhibit_rules:
+      # keycloak-db down takes Keycloak down too: send only the root cause (2026-10-22).
+      - source_matchers:
+          - alertname = "KeycloakDbDown"
+        target_matchers:
+          - alertname = "KeycloakDown"
+        equal: [namespace]
       - source_matchers: [severity = "critical"]
         target_matchers: [severity = "warning"]
         equal: [alertname, namespace]
