@@ -18,6 +18,38 @@ configs:
     # Traefik terminates TLS; argocd-server speaks plain HTTP behind it (Ingress then targets port 80).
     server.insecure: true
 
+  # SSO via Keycloak realm "talos" (2026-10-22). Local "admin" stays enabled as the fallback.
+  # clientSecret comes from Secret argocd-oidc-keycloak (SealedSecret S5, bootstrap/), label part-of=argocd.
+  # No "groups" in requestedScopes: the groups mapper sits on the argocd client itself.
+  cm:
+    oidc.config: |
+      name: Keycloak
+      issuer: https://keycloak.talos.internal/realms/talos
+      clientID: argocd
+      clientSecret: $argocd-oidc-keycloak:clientSecret
+      requestedScopes: ["openid", "profile", "email"]
+      rootCA: |
+        -----BEGIN CERTIFICATE-----
+        MIIBszCCAVqgAwIBAgIUA3ct+b3dSfmubNulaFMfmnDkqy0wCgYIKoZIzj0EAwIw
+        ODEWMBQGA1UEChMNdGFsb3Mta3ZtIGxhYjEeMBwGA1UEAxMVdGFsb3Mta3ZtIGlu
+        dGVybmFsIENBMB4XDTI2MTAxNjA2NTEzMFoXDTM2MTAxMzA2NTEzMFowODEWMBQG
+        A1UEChMNdGFsb3Mta3ZtIGxhYjEeMBwGA1UEAxMVdGFsb3Mta3ZtIGludGVybmFs
+        IENBMFkwEwYHKoZIzj0CAQYIKoZIzj0DAQcDQgAEFhBc+Hg7EIQTx6fVJt7jNI2f
+        pu4t0dqTi+baV3FI7SZk3SX2BunJzcT/19HNZAy5ocSQ9tLAb7hQwzBgEM6EsKNC
+        MEAwDgYDVR0PAQH/BAQDAgKkMA8GA1UdEwEB/wQFMAMBAf8wHQYDVR0OBBYEFK7d
+        doDbcrQa85E+qWM7TKvs736sMAoGCCqGSM49BAMCA0cAMEQCIGbITibE6zNQTJIO
+        zuYI5WWKK0KnbJdzQK/3F7VgA8bKAiAWbUqh9WEXPOKVa3XDhs+ata9Vwlt9qDOE
+        v5YPJ9ilyQ==
+        -----END CERTIFICATE-----
+
+  # Keycloak groups claim -> Argo CD built-in roles; users in no group see nothing.
+  rbac:
+    policy.default: ""
+    scopes: "[groups]"
+    policy.csv: |
+      g, talos-admins, role:admin
+      g, talos-viewers, role:readonly
+
 server:
   ingress:
     enabled: true
