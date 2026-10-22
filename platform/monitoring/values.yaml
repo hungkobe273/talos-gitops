@@ -27,6 +27,17 @@ defaultRules:
 
 prometheus:
   prometheusSpec:
+    # Prefer a node without Keycloak pods (keycloak + keycloak-db live on w1); preferred, so 1 worker still works.
+    affinity:
+      podAntiAffinity:
+        preferredDuringSchedulingIgnoredDuringExecution:
+          - weight: 100
+            podAffinityTerm:
+              topologyKey: kubernetes.io/hostname
+              namespaceSelector:
+                matchLabels:
+                  kubernetes.io/metadata.name: keycloak
+              labelSelector: {}
     retention: 3d
     # Pick up ServiceMonitors / PodMonitors / PrometheusRules from every
     # namespace, not only the ones labelled for this Helm release.
@@ -44,6 +55,17 @@ prometheus:
 
 alertmanager:
   alertmanagerSpec:
+    # Prefer a node without Keycloak pods (keycloak + keycloak-db live on w1); preferred, so 1 worker still works.
+    affinity:
+      podAntiAffinity:
+        preferredDuringSchedulingIgnoredDuringExecution:
+          - weight: 100
+            podAffinityTerm:
+              topologyKey: kubernetes.io/hostname
+              namespaceSelector:
+                matchLabels:
+                  kubernetes.io/metadata.name: keycloak
+              labelSelector: {}
     # Mounted at /etc/alertmanager/secrets/telegram-bot/
     secrets:
       - telegram-bot
@@ -272,7 +294,8 @@ grafana:
       port: grafana
     periodSeconds: 10
     timeoutSeconds: 10
-    failureThreshold: 120
+    # 5 min: grafana.db is on a PVC since 2026-10-22, restarts take 26 s - 2.5 min (was 120 = 20 min for 813 migrations).
+    failureThreshold: 30
   # Switching the live Deployment from RollingUpdate needed a one-off kubectl patch of
   # spec.strategy to {type: Recreate}: the defaulted rollingUpdate block made the apply invalid.
   deploymentStrategy:
