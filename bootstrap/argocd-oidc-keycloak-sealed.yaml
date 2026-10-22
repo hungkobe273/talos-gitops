@@ -1,0 +1,15 @@
+---
+apiVersion: bitnami.com/v1alpha1
+kind: SealedSecret
+metadata:
+  name: argocd-oidc-keycloak
+  namespace: argocd
+spec:
+  encryptedData:
+    clientSecret: AgDBDLaXIO3liFzZi9/HmWrsLRouaRsrcoqgnddDvpHuyenT3hd4fRrgIFvAwBfeWM0J41FxqCCPdSUxdK68WzJx2CKMnStn/PzBuhUjLkdpSp2kOG7kZvRF++gaFE+517sv8nMMiMF38yDSyOxFef0xb5lv8rxnrderTSyvpmuPTXUHdNvkwDlJ0y6hi2rdwkjyvulz/yYpE8fRzHC3a9eb5JjPFglKEfOUruPxtEZI8mDgcfKLEU6kPuizzflm6XkEiUHTrX5NKId/HorI3Rp3ly2NYHQlmjR9WQLM1yzpdesYwQlDT7HbrWfdiB4llK0fHbK2SpM7Abvjbaa6TYTVlB6MHh9ulCfJybYW7lqUcwXkHvc6JXA6YZ1Y4nBQ1+LSkvxLWMBuG5se9hS9GbZv5Og4xzQ062Q1mBzrqSSMORAXBxMKhA042AGamV0SdP78VPiOY8of7Sk1NLNLnP6ZjV3G1BMJWcqqsMmM3aZ38lKxvUdiqVQNxurgMzmxu89J3S2dX9JpKXXQLnhmYIlDOE97CyRYVmVV7ePs739hE/fDHkSSGlLVhTNj4yIMiM67aAJ/DAxEQSvw1fdujlPQ8MvFXzS5/k4UDbhwLJOIQAJaytE9+fpl73I2cOmR50JyQGMYWjutmMF3KpRmZIVGid2yS0iBowJ0Mx/MYFo4LsGpQhYNIxxQh57U2BjzJANxqpF9fIrcmr8ieKD+4IS2ohfvMBs3cf1zimGp40KmlpxfO211uHsozSsBCAoO2vjJ+WYNEJ0TI+4/tODgfUHO
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/part-of: argocd
+      name: argocd-oidc-keycloak
+      namespace: argocd
