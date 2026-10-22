@@ -155,6 +155,34 @@ extraVolumeMounts: |
     mountPath: /opt/keycloak/data/import
     readOnly: true
 
+# Scheduling. Chart default = required anti-affinity to itself per node + preferred per zone (no zones here).
+# Added 22/10: prefer a node WITHOUT Grafana. After cold starts the scheduler kept stacking
+# Keycloak (limit 1Gi) and Grafana (limit 1536Mi) on the same worker (21/10 on w1, 22/10 on w2).
+# Preferred only: with one worker down, both still run on the remaining one.
+# The labels are written out (chart selector labels for release "keycloak").
+affinity: |
+  podAntiAffinity:
+    requiredDuringSchedulingIgnoredDuringExecution:
+      - labelSelector:
+          matchLabels:
+            app.kubernetes.io/name: keycloakx
+            app.kubernetes.io/instance: keycloak
+          matchExpressions:
+            - key: app.kubernetes.io/component
+              operator: NotIn
+              values:
+                - test
+        topologyKey: kubernetes.io/hostname
+    preferredDuringSchedulingIgnoredDuringExecution:
+      - weight: 100
+        podAffinityTerm:
+          labelSelector:
+            matchLabels:
+              app.kubernetes.io/name: grafana
+          namespaces:
+            - monitoring
+          topologyKey: kubernetes.io/hostname
+
 resources:
   requests:
     cpu: 250m
