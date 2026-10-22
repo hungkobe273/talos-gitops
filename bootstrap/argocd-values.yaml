@@ -1,8 +1,28 @@
-# argo-cd chart 10.10.1 (Argo CD v3.5.4) — installed once by hand with Helm:
-#   helm install argocd argo-cd --repo https://argoproj.github.io/argo-helm \
-#     --version 10.10.1 -n argocd --create-namespace -f bootstrap/argocd-values.yaml
-# Slim: no SSO (Dex) and no notifications controller; UI via port-forward.
+# argo-cd chart 10.10.1 (Argo CD v3.5.4) — installed by hand with Helm (D10, checked 2026-10-22:
+# release "argocd" rev 1, no Application manages it, live values == this file). Change = edit, commit, then:
+#   helm upgrade argocd argo-cd --repo https://argoproj.github.io/argo-helm \
+#     --version 10.10.1 -n argocd -f bootstrap/argocd-values.yaml
+# Slim: no Dex (OIDC goes straight to Keycloak) and no notifications controller.
 dex:
   enabled: false
 notifications:
   enabled: false
+
+# LAN access (K6, 2026-10-22): HAProxy on kvm-host2 -> Traefik -> this Ingress, TLS from the internal CA.
+# global.domain also sets url: https://argocd.talos.internal in argocd-cm (needed for OIDC redirects).
+global:
+  domain: argocd.talos.internal
+
+configs:
+  params:
+    # Traefik terminates TLS; argocd-server speaks plain HTTP behind it (Ingress then targets port 80).
+    server.insecure: true
+
+server:
+  ingress:
+    enabled: true
+    ingressClassName: traefik
+    annotations:
+      cert-manager.io/cluster-issuer: talos-internal-ca
+    # TLS Secret name is fixed by the chart: argocd-server-tls (cert-manager creates it).
+    tls: true
