@@ -1,0 +1,25 @@
+# Headlamp OIDC (design/headlamp-oidc.md): kube-apiserver maps Keycloak groups to "oidc:<group>".
+# No effect until the KubeAuthenticationConfig jwt block is applied on cp1.
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  name: oidc-talos-admins-cluster-admin
+roleRef: { apiGroup: rbac.authorization.k8s.io, kind: ClusterRole, name: cluster-admin }
+subjects:
+  - { apiGroup: rbac.authorization.k8s.io, kind: Group, name: "oidc:talos-admins" }
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  name: oidc-talos-viewers-view
+roleRef: { apiGroup: rbac.authorization.k8s.io, kind: ClusterRole, name: view }
+subjects:
+  - { apiGroup: rbac.authorization.k8s.io, kind: Group, name: "oidc:talos-viewers" }
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  name: oidc-talos-viewers-cluster-read
+roleRef: { apiGroup: rbac.authorization.k8s.io, kind: ClusterRole, name: headlamp-cluster-read }
+subjects:
+  - { apiGroup: rbac.authorization.k8s.io, kind: Group, name: "oidc:talos-viewers" }
