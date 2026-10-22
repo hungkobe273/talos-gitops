@@ -1,0 +1,33 @@
+# Alert rules for Keycloak (2026-10-22, design/keycloak-monitoring.md). kps picks up every PrometheusRule
+# (ruleSelector {}); Alertmanager routes all alerts to Telegram. Applied after the ServiceMonitor had up == 1,
+# otherwise absent() would fire.
+apiVersion: monitoring.coreos.com/v1
+kind: PrometheusRule
+metadata:
+  name: keycloak
+  namespace: keycloak
+spec:
+  groups:
+    - name: keycloak
+      rules:
+        # for 5m: a cold start takes 1-2.5 min plus dbchecker waiting for keycloak-db; 1m would fire on every restart.
+        - alert: KeycloakDown
+          expr: |
+            sum(up{namespace="keycloak", service="keycloak-http"}) == 0
+              or absent(up{namespace="keycloak", service="keycloak-http"})
+          for: 5m
+          labels:
+            severity: critical
+          annotations:
+            summary: Keycloak has no healthy target
+            description: Prometheus cannot scrape Keycloak (keycloak-http:9000/metrics) for 5 minutes. SSO login for Grafana/Argo CD is down; local admin and anonymous Grafana still work.
+        # PostgreSQL has no exporter, so use kube-state-metrics.
+        - alert: KeycloakDbDown
+          expr: |
+            kube_statefulset_status_replicas_ready{namespace="keycloak", statefulset="keycloak-db"} < 1
+          for: 5m
+          labels:
+            severity: critical
+          annotations:
+            summary: keycloak-db has no ready replica
+            description: PostgreSQL for Keycloak is not ready for 5 minutes. It is pinned to w1 (local-path PV); check node w1 first.
