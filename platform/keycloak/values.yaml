@@ -95,6 +95,12 @@ proxy:
 
 metrics:
   enabled: true            # /metrics trên cổng quản trị 9000, KHÔNG đưa ra Ingress
+# Prometheus (kps) scrapes keycloak-http:9000/metrics (2026-10-22, design/keycloak-monitoring.md).
+# kps selects every ServiceMonitor (selector {}), so no extra labels. Alert rules: manifests/prometheusrule.yaml.
+serviceMonitor:
+  enabled: true
+  interval: 30s            # chart default 10s; 30s = kps default, lighter on the HDD
+  scrapeTimeout: 10s
 health:
   enabled: true            # /health/* trên cổng 9000, dùng cho probe
 
