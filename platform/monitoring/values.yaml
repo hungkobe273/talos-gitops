@@ -91,6 +91,24 @@ alertmanager:
     templates: []
 
 grafana:
+  # Grafana DB (SQLite) on a PV (K7, 2026-10-22, design/grafana-pvc.md): keeps Keycloak-login users and
+  # skips the ~813 migrations on every new pod. The local-path PV pins Grafana to w2 for good; keep
+  # deploymentStrategy Recreate (only one process may open grafana.db). PV is Retain: a prune keeps the dir.
+  persistence:
+    enabled: true
+    type: pvc
+    storageClassName: local-path-retain
+    accessModes:
+      - ReadWriteOnce
+    size: 1Gi
+  affinity:
+    nodeAffinity:
+      requiredDuringSchedulingIgnoredDuringExecution:
+        nodeSelectorTerms:
+          - matchExpressions:
+              - key: kubernetes.io/hostname
+                operator: In
+                values: ["talos-iv6-z5m"]   # w2: keep Grafana off the Keycloak + keycloak-db node
   # Admin user/password come from a SealedSecret, not from values.
   admin:
     existingSecret: grafana-admin
