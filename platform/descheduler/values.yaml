@@ -38,15 +38,17 @@ deschedulerPolicy:
         - name: RemoveDuplicates
         - name: LowNodeUtilization
           args:
-            # % of allocatable, by requests. Balanced today: w1 19/24/7, w2 15/10/15.
+            # % of allocatable, by requests. 22/10 cold start: w1 15/9/5 (not
+            # underutilized with 10/10/5), w2 50/58/25. Balanced ~31/33/14 sits
+            # between the two bands, so nothing moves once spread.
             thresholds:
-              cpu: 10
-              memory: 10
-              pods: 5
+              cpu: 20
+              memory: 20
+              pods: 10
             targetThresholds:
-              cpu: 25
-              memory: 25
-              pods: 15
+              cpu: 40
+              memory: 40
+              pods: 20
       plugins:
         balance:
           enabled:
