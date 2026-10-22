@@ -304,3 +304,27 @@ grafana:
   # spec.strategy to {type: Recreate}: the defaulted rollingUpdate block made the apply invalid.
   deploymentStrategy:
     type: Recreate
+
+# Requests/limits for the small components (2026-10-22 scan, working set max 1h: operator 25Mi,
+# kube-state-metrics 28Mi, node-exporter ~30Mi). Request ~ usage, memory limit ~4x, no CPU limit.
+prometheusOperator:
+  resources:
+    requests:
+      cpu: 10m
+      memory: 48Mi
+    limits:
+      memory: 192Mi
+kube-state-metrics:
+  resources:
+    requests:
+      cpu: 10m
+      memory: 48Mi
+    limits:
+      memory: 192Mi
+prometheus-node-exporter:
+  resources:
+    requests:
+      cpu: 10m
+      memory: 32Mi
+    limits:
+      memory: 128Mi
