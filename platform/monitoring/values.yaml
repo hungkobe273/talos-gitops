@@ -28,6 +28,8 @@ defaultRules:
 prometheus:
   prometheusSpec:
     # Prefer a node without Keycloak pods (keycloak + keycloak-db live on w1); preferred, so 1 worker still works.
+    # The chart's default podAntiAffinity "soft" overrides affinity.podAntiAffinity, so switch it off (1 replica anyway).
+    podAntiAffinity: ""
     affinity:
       podAntiAffinity:
         preferredDuringSchedulingIgnoredDuringExecution:
@@ -56,6 +58,8 @@ prometheus:
 alertmanager:
   alertmanagerSpec:
     # Prefer a node without Keycloak pods (keycloak + keycloak-db live on w1); preferred, so 1 worker still works.
+    # The chart's default podAntiAffinity "soft" overrides affinity.podAntiAffinity, so switch it off (1 replica anyway).
+    podAntiAffinity: ""
     affinity:
       podAntiAffinity:
         preferredDuringSchedulingIgnoredDuringExecution:
