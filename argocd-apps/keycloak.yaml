@@ -38,9 +38,8 @@ spec:
   destination:
     server: https://kubernetes.default.svc
     namespace: keycloak
-  syncPolicy: {}
-  # Bật automated ở commit sau, khi Keycloak đã Ready và đăng nhập admin được:
-  # syncPolicy:
-  #   automated:
-  #     prune: true
-  #     selfHeal: true
+  # Sync tay lần đầu 21/10 09:13 (commit 172e3d0); Ready, đăng nhập admin + Grafana SSO đạt -> bật automated 22/10.
+  syncPolicy:
+    automated:
+      prune: true
+      selfHeal: true
