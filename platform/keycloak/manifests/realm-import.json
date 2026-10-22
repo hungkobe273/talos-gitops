@@ -85,7 +85,7 @@
         "https://argocd.talos.internal"
       ],
       "attributes": {
-        "post.logout.redirect.uris": "https://argocd.talos.internal/login"
+        "post.logout.redirect.uris": "https://argocd.talos.internal"
       },
       "protocolMappers": [
         {
