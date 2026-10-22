@@ -14,6 +14,7 @@ resources:
   - keycloak-bootstrap-admin-sealed.yaml
   - keycloak-oidc-clients-sealed.yaml
   - prometheusrule.yaml
+  - keycloak-dashboard-configmap.yaml
 configMapGenerator:
   - name: keycloak-realm
     files:
