@@ -40,6 +40,3 @@ spec:
     namespace: keycloak
   # Sync tay lần đầu 21/10 09:13 (commit 172e3d0); Ready, đăng nhập admin + Grafana SSO đạt -> bật automated 22/10.
   syncPolicy:
-    automated:
-      prune: true
-      selfHeal: true
