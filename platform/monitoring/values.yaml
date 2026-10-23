@@ -27,27 +27,37 @@ defaultRules:
 
 prometheus:
   prometheusSpec:
-    # Prefer a node without Keycloak pods (keycloak + keycloak-db live on w1); preferred, so 1 worker still works.
-    # The chart's default podAntiAffinity "soft" overrides affinity.podAntiAffinity, so switch it off (1 replica anyway).
+    # Pinned to w1 (talos-hdl-7jo), the opposite worker from Grafana (PV on w2):
+    # if either worker dies, half of the monitoring stack survives, and when w2
+    # dies Prometheus + Alertmanager still send the node-down alert. Required,
+    # because local-path creates the PV on whatever node the pod lands on first.
+    # The chart's default podAntiAffinity "soft" would override affinity, so off.
     podAntiAffinity: ""
     affinity:
-      podAntiAffinity:
-        preferredDuringSchedulingIgnoredDuringExecution:
-          - weight: 100
-            podAffinityTerm:
-              topologyKey: kubernetes.io/hostname
-              namespaceSelector:
-                matchLabels:
-                  kubernetes.io/metadata.name: keycloak
-              labelSelector: {}
-    retention: 3d
+      nodeAffinity:
+        requiredDuringSchedulingIgnoredDuringExecution:
+          nodeSelectorTerms:
+            - matchExpressions:
+                - key: kubernetes.io/hostname
+                  operator: In
+                  values: ["talos-hdl-7jo"]
+    # ~350 MB/day at ~2.6k samples/s (23/10); whichever limit is hit first wins.
+    retention: 7d
+    retentionSize: 3GB
+    # TSDB on a local-path-retain PVC (survives restarts; PV pinned to w1).
+    storageSpec:
+      volumeClaimTemplate:
+        spec:
+          storageClassName: local-path-retain
+          accessModes: ["ReadWriteOnce"]
+          resources:
+            requests:
+              storage: 5Gi
     # Pick up ServiceMonitors / PodMonitors / PrometheusRules from every
     # namespace, not only the ones labelled for this Helm release.
     serviceMonitorSelectorNilUsesHelmValues: false
     podMonitorSelectorNilUsesHelmValues: false
     ruleSelectorNilUsesHelmValues: false
-    # No StorageClass in this cluster yet: data lives in emptyDir and is lost
-    # when the pod moves. Fine for a lab, not for production.
     resources:
       requests:
         cpu: 100m
