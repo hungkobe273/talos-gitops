@@ -21,13 +21,13 @@ spec:
           annotations:
             summary: Keycloak has no healthy target
             description: Prometheus cannot scrape Keycloak (keycloak-http:9000/metrics) for 5 minutes. SSO login for Grafana/Argo CD is down; local admin and anonymous Grafana still work.
-        # PostgreSQL has no exporter, so use kube-state-metrics.
-        - alert: KeycloakDbDown
+        # DB is external (Supabase). Keycloak readiness includes the DB check, so NotReady = DB/Internet/Keycloak problem.
+        - alert: KeycloakNotReady
           expr: |
-            kube_statefulset_status_replicas_ready{namespace="keycloak", statefulset="keycloak-db"} < 1
+            kube_statefulset_status_replicas_ready{namespace="keycloak", statefulset="keycloak"} < 1
           for: 5m
           labels:
             severity: critical
           annotations:
-            summary: keycloak-db has no ready replica
-            description: PostgreSQL for Keycloak is not ready for 5 minutes. It is pinned to w1 (local-path PV); check node w1 first.
+            summary: Keycloak is not ready (DB on Supabase unreachable?)
+            description: keycloak-0 not Ready for 5 minutes. Readiness checks the DB (Supabase via session pooler). Check host2 Internet/captive portal first, then Supabase project status (paused after 7 days idle), then keycloak-0 logs. Local admin for Grafana/Argo CD still works.
