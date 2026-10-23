@@ -15,4 +15,4 @@ resources:
   - ghcr-pull-sealed.yaml
 images:
   - name: ghcr.io/hungkobe273/talos-demo-app
-    newTag: sha-3f4e095 # updated by talos-demo-app CI
+    newTag: sha-f57abe4 # updated by talos-demo-app CI
