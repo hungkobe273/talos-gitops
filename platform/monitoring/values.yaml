@@ -299,7 +299,7 @@ grafana:
       tls_client_ca: /etc/grafana/talos-ca/ca.crt
     auth:
       # Also end the Keycloak session when signing out of Grafana.
-      signout_redirect_url: https://keycloak.talos.internal/realms/talos/protocol/openid-connect/logout?post_logout_redirect_uri=https%3A%2F%2Fgrafana.talos.internal%2Flogin
+      signout_redirect_url: https://keycloak.talos.internal/realms/talos/protocol/openid-connect/logout?post_logout_redirect_uri=https%3A%2F%2Fgrafana.talos.internal%2Flogin&client_id=grafana
   # A cold start on the HDD (SQLite migrations, plugin registration) can take >10 min;
   # give it up to 20 min before liveness checks start, and never run two Grafanas at once.
   startupProbe:
