@@ -28,6 +28,11 @@ spec:
           mutateDigest: false
           verifyDigest: false
           required: true
+          # Registry login for reading signatures from the private ghcr repo (secret in ns
+          # kyverno). The chart's global --imagePullSecrets flag alone was not used for
+          # Deployment checks (autogen rule): those failed with ghcr UNAUTHORIZED.
+          imageRegistryCredentials:
+            secrets: ["ghcr-pull"]
           attestors:
             - count: 1
               entries:
