@@ -13,6 +13,7 @@ resources:
   - analysistemplate-smoke-load.yaml
   - analysistemplate-error-rate.yaml
   - ghcr-pull-sealed.yaml
+  - externalsecret.yaml
 images:
   - name: ghcr.io/hungkobe273/talos-demo-app
     newTag: jenkins-sha-80c0487 # updated by talos-demo-app Jenkins

@@ -45,9 +45,11 @@ spec:
           ports:
             - name: http
               containerPort: 8080
-          env:
-            - name: ERROR_RATE
-              value: "0"
+          # Environment (".env") comes from Vault through External Secrets
+          # (externalsecret.yaml -> Secret demo-app-env).
+          envFrom:
+            - secretRef:
+                name: demo-app-env
           readinessProbe:
             httpGet:
               path: /readyz
