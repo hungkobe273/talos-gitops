@@ -1,0 +1,134 @@
+# PostgreSQL for Harbor (used by the chart as an "external" database, so the password
+# comes from SealedSecret harbor-secrets instead of plain text in values).
+# Same pattern as platform/keycloak-db/statefulset.yaml: postgres 18 runs as uid 999,
+# PVC on local-path-retain mounted at /var/lib/postgresql, synchronous_commit=off and a
+# small shared_buffers for the single HDD, fast shutdown in preStop. Pinned to w2 with
+# the rest of Harbor. Harbor creates its tables in database "registry" on first start.
+apiVersion: v1
+kind: Service
+metadata:
+  name: harbor-postgres
+  labels:
+    app.kubernetes.io/name: harbor-postgres
+spec:
+  clusterIP: None
+  selector:
+    app.kubernetes.io/name: harbor-postgres
+  ports:
+    - name: postgres
+      port: 5432
+      targetPort: postgres
+---
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  name: harbor-postgres
+  labels:
+    app.kubernetes.io/name: harbor-postgres
+    app.kubernetes.io/part-of: harbor
+spec:
+  serviceName: harbor-postgres
+  replicas: 1
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: harbor-postgres
+  persistentVolumeClaimRetentionPolicy:
+    whenDeleted: Retain
+    whenScaled: Retain
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/name: harbor-postgres
+        app.kubernetes.io/part-of: harbor
+    spec:
+      nodeSelector:
+        kubernetes.io/hostname: talos-iv6-z5m
+      automountServiceAccountToken: false
+      enableServiceLinks: false
+      terminationGracePeriodSeconds: 60
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 999
+        runAsGroup: 999
+        seccompProfile:
+          type: RuntimeDefault
+      containers:
+        - name: postgres
+          image: docker.io/library/postgres:18.6
+          imagePullPolicy: IfNotPresent
+          args: ["-c", "synchronous_commit=off", "-c", "shared_buffers=32MB", "-c", "max_connections=60"]
+          env:
+            - name: POSTGRES_USER
+              value: harbor
+            - name: POSTGRES_DB
+              value: registry
+            # Only used by the first initdb; changing the Secret later needs ALTER USER.
+            - name: POSTGRES_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: harbor-secrets
+                  key: POSTGRES_PASSWORD
+          ports:
+            - name: postgres
+              containerPort: 5432
+          securityContext:
+            allowPrivilegeEscalation: false
+            capabilities:
+              drop: ["ALL"]
+          resources:
+            requests:
+              cpu: 30m
+              memory: 128Mi
+            limits:
+              memory: 384Mi
+          lifecycle:
+            preStop:
+              exec:
+                command: ["/bin/sh", "-c", "pg_ctl -D \"$PGDATA\" -m fast -w -t 50 stop"]
+          startupProbe:
+            exec:
+              command: ["pg_isready", "-U", "harbor", "-d", "registry", "-h", "127.0.0.1"]
+            periodSeconds: 10
+            timeoutSeconds: 5
+            failureThreshold: 60
+          readinessProbe:
+            exec:
+              command: ["pg_isready", "-U", "harbor", "-d", "registry", "-h", "127.0.0.1"]
+            periodSeconds: 10
+            timeoutSeconds: 5
+          livenessProbe:
+            exec:
+              command: ["pg_isready", "-U", "harbor", "-d", "registry", "-h", "127.0.0.1"]
+            periodSeconds: 30
+            timeoutSeconds: 10
+            failureThreshold: 6
+          volumeMounts:
+            - name: data
+              mountPath: /var/lib/postgresql
+  volumeClaimTemplates:
+    - metadata:
+        name: data
+      spec:
+        accessModes: ["ReadWriteOnce"]
+        storageClassName: local-path-retain
+        resources:
+          requests:
+            storage: 2Gi
+---
+# Only Harbor's own pods may talk to its database.
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: harbor-postgres
+spec:
+  podSelector:
+    matchLabels:
+      app.kubernetes.io/name: harbor-postgres
+  policyTypes: ["Ingress"]
+  ingress:
+    - from:
+        - podSelector:
+            matchLabels:
+              app: harbor
+      ports:
+        - port: 5432

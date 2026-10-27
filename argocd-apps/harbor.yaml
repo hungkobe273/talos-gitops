@@ -1,0 +1,44 @@
+# Harbor: self-hosted private container registry (mentor 27/10: "dựng thêm cho anh 1 cái
+# private repository ... giống docker hub nhưng mà là private ... tools open source có thể
+# triển khai self host, không sử dụng trên cloud"; "sử dụng harbor cũng được").
+# UI and registry API at https://harbor.talos.internal (Traefik, internal CA).
+# Phase 1: Harbor itself. Next: pull-replication of talos-demo-app (+ cosign signatures)
+# from ghcr, cluster pulls from Harbor, Keycloak OIDC login.
+# Secrets: SealedSecret harbor-secrets (platform/harbor/make-secrets.sh), no password in Git.
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: harbor
+  namespace: argocd
+  annotations:
+    argocd.argoproj.io/sync-wave: "2"
+spec:
+  project: default
+  sources:
+    - repoURL: https://helm.goharbor.io
+      chart: harbor
+      targetRevision: 1.19.2
+      helm:
+        releaseName: harbor
+        valueFiles:
+          - $values/platform/harbor/values.yaml
+    - repoURL: git@github.com:hungkobe273/talos-gitops.git
+      targetRevision: main
+      ref: values
+    # PostgreSQL, NetworkPolicy, SealedSecret harbor-secrets.
+    - repoURL: git@github.com:hungkobe273/talos-gitops.git
+      targetRevision: main
+      path: platform/harbor/manifests
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: harbor
+  syncPolicy:
+    automated:
+      prune: true
+      selfHeal: true
+    managedNamespaceMetadata:
+      labels:
+        pod-security.kubernetes.io/enforce: baseline
+        pod-security.kubernetes.io/warn: restricted
+    syncOptions:
+      - CreateNamespace=true
