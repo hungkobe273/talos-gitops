@@ -4,8 +4,9 @@
 # later never reaches the live realm by itself. The file stays the source of truth for a rebuild.
 # Usage on host2: cd ~/talos-gitops && git pull -q --rebase && sh platform/keycloak/upsert-client.sh <clientId>
 #
-# - Client secret: key <CLIENTID>_CLIENT_SECRET of Secret keycloak/keycloak-oidc-clients (SealedSecret
+# - Client secret (OIDC clients): key <CLIENTID>_CLIENT_SECRET of Secret keycloak/keycloak-oidc-clients (SealedSecret
 #   manifests/keycloak-oidc-clients-sealed.yaml), the same value the import placeholder ${...} gets.
+#   SAML clients have no secret (Keycloak signs, the SP checks with the realm certificate).
 # - Admin login: hung-admin (realm master), password from ~/talos-kvm/keycloak-admin-password.txt.
 # - Password and client JSON travel over stdin only (not argv, not a file); kcadm runs with --no-config,
 #   so no admin token is left in the pod.
@@ -17,8 +18,8 @@ client=${1:?usage: upsert-client.sh <clientId>}
 dir=$(dirname "$0")
 var=$(printf '%s' "$client" | tr 'a-z-' 'A-Z_')_CLIENT_SECRET
 
+# Empty for clients without a secret placeholder (SAML clients); python below refuses a missing secret.
 secret=$(kubectl -n keycloak get secret keycloak-oidc-clients -o go-template="{{with index .data \"$var\"}}{{base64decode .}}{{end}}")
-[ -n "$secret" ] || { echo "Secret keycloak/keycloak-oidc-clients has no key $var (SealedSecret not synced yet?)" >&2; exit 1; }
 password=$(head -n 1 "$HOME/talos-kvm/keycloak-admin-password.txt" | tr -d '\r\n')
 [ -n "$password" ] || { echo "empty Keycloak admin password file" >&2; exit 1; }
 
@@ -33,6 +34,8 @@ if not found:
     sys.exit("client %s not in %s" % (client, path))
 c = found[0]
 if c.get("secret") == "${%s}" % var:
+    if not secret:
+        sys.exit("Secret keycloak/keycloak-oidc-clients has no key %s (SealedSecret not synced yet?)" % var)
     c["secret"] = secret
 print(json.dumps(c))
 ' "$dir/manifests/realm-import.json" "$client" "$var")

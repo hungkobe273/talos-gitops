@@ -186,6 +186,231 @@
           }
         }
       ]
+    },
+    {
+      "clientId": "sonarqube",
+      "name": "SonarQube",
+      "enabled": true,
+      "protocol": "saml",
+      "frontchannelLogout": true,
+      "rootUrl": "http://localhost:19000",
+      "baseUrl": "http://localhost:19000/",
+      "redirectUris": [
+        "http://localhost:19000/oauth2/callback/saml"
+      ],
+      "attributes": {
+        "saml_assertion_consumer_url_post": "http://localhost:19000/oauth2/callback/saml",
+        "saml.force.post.binding": "true",
+        "saml.server.signature": "true",
+        "saml.assertion.signature": "true",
+        "saml.signature.algorithm": "RSA_SHA256",
+        "saml.client.signature": "false",
+        "saml.encrypt": "false",
+        "saml.authnstatement": "true",
+        "saml_name_id_format": "username",
+        "saml.force.name.id.format": "true"
+      },
+      "protocolMappers": [
+        {
+          "name": "login",
+          "protocol": "saml",
+          "protocolMapper": "saml-user-property-mapper",
+          "consentRequired": false,
+          "config": {
+            "user.attribute": "username",
+            "attribute.name": "login",
+            "attribute.nameformat": "Basic",
+            "friendly.name": "login"
+          }
+        },
+        {
+          "name": "name",
+          "protocol": "saml",
+          "protocolMapper": "saml-user-property-mapper",
+          "consentRequired": false,
+          "config": {
+            "user.attribute": "username",
+            "attribute.name": "name",
+            "attribute.nameformat": "Basic",
+            "friendly.name": "name"
+          }
+        },
+        {
+          "name": "email",
+          "protocol": "saml",
+          "protocolMapper": "saml-user-property-mapper",
+          "consentRequired": false,
+          "config": {
+            "user.attribute": "email",
+            "attribute.name": "email",
+            "attribute.nameformat": "Basic",
+            "friendly.name": "email"
+          }
+        },
+        {
+          "name": "groups",
+          "protocol": "saml",
+          "protocolMapper": "saml-group-membership-mapper",
+          "consentRequired": false,
+          "config": {
+            "attribute.name": "groups",
+            "attribute.nameformat": "Basic",
+            "friendly.name": "groups",
+            "single": "true",
+            "full.path": "false"
+          }
+        }
+      ]
+    },
+    {
+      "clientId": "gitlab",
+      "name": "GitLab",
+      "enabled": true,
+      "protocol": "saml",
+      "frontchannelLogout": true,
+      "rootUrl": "http://localhost:18081",
+      "baseUrl": "http://localhost:18081/",
+      "redirectUris": [
+        "http://localhost:18081/users/auth/saml/callback"
+      ],
+      "attributes": {
+        "saml_assertion_consumer_url_post": "http://localhost:18081/users/auth/saml/callback",
+        "saml.force.post.binding": "true",
+        "saml.server.signature": "true",
+        "saml.assertion.signature": "true",
+        "saml.signature.algorithm": "RSA_SHA256",
+        "saml.client.signature": "false",
+        "saml.encrypt": "false",
+        "saml.authnstatement": "true",
+        "saml_name_id_format": "username",
+        "saml.force.name.id.format": "true"
+      },
+      "protocolMappers": [
+        {
+          "name": "login",
+          "protocol": "saml",
+          "protocolMapper": "saml-user-property-mapper",
+          "consentRequired": false,
+          "config": {
+            "user.attribute": "username",
+            "attribute.name": "login",
+            "attribute.nameformat": "Basic",
+            "friendly.name": "login"
+          }
+        },
+        {
+          "name": "name",
+          "protocol": "saml",
+          "protocolMapper": "saml-user-property-mapper",
+          "consentRequired": false,
+          "config": {
+            "user.attribute": "username",
+            "attribute.name": "name",
+            "attribute.nameformat": "Basic",
+            "friendly.name": "name"
+          }
+        },
+        {
+          "name": "email",
+          "protocol": "saml",
+          "protocolMapper": "saml-user-property-mapper",
+          "consentRequired": false,
+          "config": {
+            "user.attribute": "email",
+            "attribute.name": "email",
+            "attribute.nameformat": "Basic",
+            "friendly.name": "email"
+          }
+        },
+        {
+          "name": "groups",
+          "protocol": "saml",
+          "protocolMapper": "saml-group-membership-mapper",
+          "consentRequired": false,
+          "config": {
+            "attribute.name": "groups",
+            "attribute.nameformat": "Basic",
+            "friendly.name": "groups",
+            "single": "true",
+            "full.path": "false"
+          }
+        }
+      ]
+    },
+    {
+      "clientId": "jenkins",
+      "name": "Jenkins",
+      "enabled": true,
+      "protocol": "saml",
+      "frontchannelLogout": true,
+      "rootUrl": "http://localhost:18080",
+      "baseUrl": "http://localhost:18080/",
+      "redirectUris": [
+        "http://localhost:18080/securityRealm/finishLogin"
+      ],
+      "attributes": {
+        "saml_assertion_consumer_url_post": "http://localhost:18080/securityRealm/finishLogin",
+        "saml.force.post.binding": "true",
+        "saml.server.signature": "true",
+        "saml.assertion.signature": "true",
+        "saml.signature.algorithm": "RSA_SHA256",
+        "saml.client.signature": "false",
+        "saml.encrypt": "false",
+        "saml.authnstatement": "true",
+        "saml_name_id_format": "username",
+        "saml.force.name.id.format": "true"
+      },
+      "protocolMappers": [
+        {
+          "name": "login",
+          "protocol": "saml",
+          "protocolMapper": "saml-user-property-mapper",
+          "consentRequired": false,
+          "config": {
+            "user.attribute": "username",
+            "attribute.name": "login",
+            "attribute.nameformat": "Basic",
+            "friendly.name": "login"
+          }
+        },
+        {
+          "name": "name",
+          "protocol": "saml",
+          "protocolMapper": "saml-user-property-mapper",
+          "consentRequired": false,
+          "config": {
+            "user.attribute": "username",
+            "attribute.name": "name",
+            "attribute.nameformat": "Basic",
+            "friendly.name": "name"
+          }
+        },
+        {
+          "name": "email",
+          "protocol": "saml",
+          "protocolMapper": "saml-user-property-mapper",
+          "consentRequired": false,
+          "config": {
+            "user.attribute": "email",
+            "attribute.name": "email",
+            "attribute.nameformat": "Basic",
+            "friendly.name": "email"
+          }
+        },
+        {
+          "name": "groups",
+          "protocol": "saml",
+          "protocolMapper": "saml-group-membership-mapper",
+          "consentRequired": false,
+          "config": {
+            "attribute.name": "groups",
+            "attribute.nameformat": "Basic",
+            "friendly.name": "groups",
+            "single": "true",
+            "full.path": "false"
+          }
+        }
+      ]
     }
   ]
 }
