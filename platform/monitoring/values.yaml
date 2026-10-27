@@ -107,9 +107,9 @@ alertmanager:
           matchers:
             - alertname = "InfoInhibitor"
     inhibit_rules:
-      # Keycloak NotReady (often DB/Internet) also trips KeycloakDown: send only one message.
+      # keycloak-db down takes Keycloak down too: send only the root cause (2026-10-22).
       - source_matchers:
-          - alertname = "KeycloakNotReady"
+          - alertname = "KeycloakDbDown"
         target_matchers:
           - alertname = "KeycloakDown"
         equal: [namespace]

@@ -68,11 +68,11 @@ dbchecker:
 # Chart sinh KC_DB, KC_DB_URL_HOST/PORT/DATABASE, KC_DB_USERNAME, KC_DB_PASSWORD (từ Secret).
 database:
   vendor: postgres
-  hostname: aws-0-ap-southeast-1.pooler.supabase.com   # Supabase session pooler (IPv4). NOT 6543 = transaction mode
+  hostname: keycloak-db    # Service headless của platform/keycloak-db, cùng namespace
   port: 5432
   database: keycloak
-  username: keycloak.nxeicvwzwjtbvqlsbznr   # Supavisor format <role>.<project ref>
-  existingSecret: keycloak-supabase
+  username: keycloak       # không phải bí mật; mật khẩu mới là bí mật
+  existingSecret: keycloak-db
   existingSecretKey: password
 
 # Cache: giữ mặc định của chart (KC_CACHE=ispn, KC_CACHE_STACK=jdbc-ping) dù chỉ 1 replica.
@@ -119,16 +119,13 @@ extraEnv: |
   # node .21 10.244.3.0/24, .22 10.244.4.0/24, cp1 10.244.0.0/24.
   - name: KC_PROXY_TRUSTED_ADDRESSES
     value: 10.244.0.0/16
-  # TLS to Supabase: pgjdbc defaults to sslmode=prefer. Postgres needs the "?" prefix.
-  - name: KC_DB_URL_PROPERTIES
-    value: "?sslmode=verify-full&sslrootcert=/opt/keycloak/supabase-ca/supabase-ca.crt"
-  # DB pool: default max 100. Supavisor session mode holds one server connection per client -> keep it small.
+  # Pool kết nối DB: mặc định tối đa 100, quá nhiều cho postgres max_connections=30 và RAM nhỏ.
   - name: KC_DB_POOL_INITIAL_SIZE
-    value: "1"
+    value: "2"
   - name: KC_DB_POOL_MIN_SIZE
-    value: "1"
+    value: "2"
   - name: KC_DB_POOL_MAX_SIZE
-    value: "5"
+    value: "10"
   # Heap JVM: image mặc định MaxRAMPercentage=70, InitialRAMPercentage=50 (docs containers) ->
   # limit 1Gi cho heap ~717 MiB + ~300 MiB ngoài heap => dễ chạm limit và bị OOMKilled.
   # Hạ còn 50% (~512 MiB heap) cho lab ít người dùng. Biến JAVA_OPTS_KC_HEAP thay hẳn bộ mặc định.
@@ -162,15 +159,9 @@ extraVolumes: |
   - name: realm-import
     configMap:
       name: keycloak-realm
-  - name: supabase-ca
-    configMap:
-      name: supabase-ca
 extraVolumeMounts: |
   - name: realm-import
     mountPath: /opt/keycloak/data/import
-    readOnly: true
-  - name: supabase-ca
-    mountPath: /opt/keycloak/supabase-ca
     readOnly: true
 
 # Scheduling. Chart default = required anti-affinity to itself per node + preferred per zone (no zones here).
