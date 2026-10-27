@@ -11,8 +11,8 @@ metadata:
   annotations:
     argocd.argoproj.io/sync-wave: "1"
 spec:
-  # Warn-tested 27/10 next to the old ClusterPolicy (signed and non-demo images pass).
-  validationActions: [Deny]
+  # Warn while it runs next to the old ClusterPolicy; Deny once checked.
+  validationActions: [Warn]
   webhookConfiguration:
     timeoutSeconds: 15
   matchConstraints:
