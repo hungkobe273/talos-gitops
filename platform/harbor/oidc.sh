@@ -42,3 +42,5 @@ hc -X PUT "$API/configurations" --data @/tmp/harbor-oidc.json -o /dev/null -w 'c
 # Ask Harbor to reach Keycloak's discovery document now (DNS/CA problems show here).
 hc -X POST "$API/system/oidc/ping" -d '{"url":"https://keycloak.talos.internal/realms/talos","verify_cert":true}' -o /dev/null -w 'oidc ping: %{http_code}\n'
 hc "$API/configurations" | python3 -c 'import json,sys;c=json.load(sys.stdin);print("auth_mode =", c["auth_mode"]["value"], "| endpoint =", c["oidc_endpoint"]["value"], "| admin group =", c["oidc_admin_group"]["value"])'
+# Group talos-viewers = Guest (pull/read) on project talos. 409 = already a member.
+hc -X POST "$API/projects/talos/members" -d '{"role_id":3,"member_group":{"group_name":"talos-viewers","group_type":3}}' -o /dev/null -w 'talos-viewers as Guest on talos: %{http_code}\n'
