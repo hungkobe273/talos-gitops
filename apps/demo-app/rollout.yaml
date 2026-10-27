@@ -31,6 +31,8 @@ spec:
         templates:
           - templateName: demo-app-smoke-load
           - templateName: demo-app-error-rate
+          # DAST (OWASP ZAP baseline) on the preview, added 27/10.
+          - templateName: demo-app-zap-baseline
         args:
           - name: preview-service
             value: demo-app-preview

@@ -1,0 +1,90 @@
+# DAST before promotion: OWASP ZAP baseline scan (spider + passive rules, no attacks) of
+# the preview version, through its Service, while blue is still serving users.
+# Exit 0 = pass. Rules listed as FAIL in zap-rules.tsv (below) fail the analysis and abort
+# the rollout; every other finding is a WARN, printed in the Job log and ignored (-I).
+#
+# Cost on this cluster: the image is ~1.15 GB compressed, so it is pinned to w2 (most
+# free memory) and pulled there once (IfNotPresent); the first rollout after this change
+# waits for that pull. Memory limit 1 GiB (the JVM sizes its heap from it).
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: demo-app-zap-rules
+  namespace: demo
+data:
+  # rule-id <TAB> IGNORE|WARN|FAIL <TAB> name. Unlisted rules stay WARN.
+  zap-rules.tsv: |
+    10010	FAIL	(Cookie No HttpOnly Flag)
+    10011	FAIL	(Cookie Without Secure Flag)
+    10023	FAIL	(Information Disclosure - Debug Error Messages)
+    10098	FAIL	(Cross-Domain Misconfiguration)
+    90022	FAIL	(Application Error Disclosure)
+---
+apiVersion: argoproj.io/v1alpha1
+kind: AnalysisTemplate
+metadata:
+  name: demo-app-zap-baseline
+  namespace: demo
+spec:
+  metrics:
+    - name: zap-baseline
+      provider:
+        job:
+          spec:
+            backoffLimit: 0
+            activeDeadlineSeconds: 900
+            template:
+              spec:
+                restartPolicy: Never
+                affinity:
+                  nodeAffinity:
+                    preferredDuringSchedulingIgnoredDuringExecution:
+                      - weight: 100
+                        preference:
+                          matchExpressions:
+                            - key: kubernetes.io/hostname
+                              operator: In
+                              values: ["talos-iv6-z5m"]
+                securityContext:
+                  runAsNonRoot: true
+                  runAsUser: 1000
+                  runAsGroup: 1000
+                  fsGroup: 1000
+                  seccompProfile:
+                    type: RuntimeDefault
+                containers:
+                  - name: zap
+                    image: ghcr.io/zaproxy/zaproxy:2.17.0
+                    imagePullPolicy: IfNotPresent
+                    command: ["/bin/sh", "-c"]
+                    args:
+                      - |
+                        set -e
+                        cp /rules/zap-rules.tsv /zap/wrk/zap-rules.tsv
+                        # -I: warnings do not fail; -m 1: spider 1 minute; -T 5: whole scan max 5 min.
+                        zap-baseline.py -t http://demo-app-preview.demo.svc/ -c zap-rules.tsv -I -m 1 -T 5 -s
+                    resources:
+                      requests:
+                        cpu: 200m
+                        memory: 512Mi
+                      limits:
+                        memory: 1Gi
+                    securityContext:
+                      allowPrivilegeEscalation: false
+                      capabilities:
+                        drop: ["ALL"]
+                    volumeMounts:
+                      - name: wrk
+                        mountPath: /zap/wrk
+                      - name: home
+                        mountPath: /home/zap
+                      - name: rules
+                        mountPath: /rules
+                volumes:
+                  - name: wrk
+                    emptyDir: {}
+                  - name: home
+                    emptyDir: {}
+                  - name: rules
+                    configMap:
+                      name: demo-app-zap-rules

@@ -12,6 +12,7 @@ resources:
   - prometheusrule.yaml
   - analysistemplate-smoke-load.yaml
   - analysistemplate-error-rate.yaml
+  - analysistemplate-zap-baseline.yaml
   - ghcr-pull-sealed.yaml
   - externalsecret.yaml
 images:
