@@ -45,6 +45,22 @@ server:
     size: 1Gi
     storageClass: local-path-retain
 
+  # LAN access for the UI (login with Keycloak, platform/vault/oidc.sh): HAProxy on kvm-host2 -> Traefik
+  # -> Service vault-active. TLS from the internal CA ends at Traefik; Traefik -> Vault is plain HTTP
+  # inside the pod network (global.tlsDisable). No paths = "/" (UI under /ui, API under /v1).
+  ingress:
+    enabled: true
+    ingressClassName: traefik
+    annotations:
+      cert-manager.io/cluster-issuer: talos-internal-ca
+    activeService: true
+    hosts:
+      - host: vault.talos.internal
+    tls:
+      - secretName: vault-tls
+        hosts:
+          - vault.talos.internal
+
   # KMS service-account key, mounted at /vault/userconfig/vault-kms/credentials.json.
   extraVolumes:
     - type: secret
