@@ -15,6 +15,9 @@ metadata:
   namespace: argocd
   annotations:
     argocd.argoproj.io/sync-wave: "1"
+    # The policies.kyverno.io CRDs always showed OutOfSync with the client-side diff,
+    # while `kubectl diff --server-side` found no change; compare on the server instead.
+    argocd.argoproj.io/compare-options: ServerSideDiff=true
 spec:
   project: default
   sources:
