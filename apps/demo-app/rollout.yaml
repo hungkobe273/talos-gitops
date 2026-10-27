@@ -10,6 +10,9 @@ metadata:
 spec:
   replicas: 2
   revisionHistoryLimit: 3
+  # Default 600 s is shorter than a cold pre-promotion analysis (ZAP image pull ~10+ min
+  # on this HDD + office link): the rollout then shows Degraded although nothing failed.
+  progressDeadlineSeconds: 1800
   selector:
     matchLabels:
       app.kubernetes.io/name: demo-app
