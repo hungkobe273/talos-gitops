@@ -1,0 +1,55 @@
+# Replaces ClusterPolicy verify-demo-app-signature (kyverno.io/v1 ClusterPolicy is
+# deprecated since Kyverno 1.17). Same rule, CEL style: pods (and, through autogen,
+# Deployments) in namespace demo may only run ghcr.io/hungkobe273/talos-demo-app images
+# signed by Jenkins' cosign key (platform/cosign/cosign.pub). Images that do not match
+# matchImageReferences (curl, ZAP in the analysis Jobs) are not checked.
+# No transparency log: Jenkins signs with --tlog-upload=false.
+apiVersion: policies.kyverno.io/v1
+kind: ImageValidatingPolicy
+metadata:
+  name: demo-app-signed-by-jenkins
+  annotations:
+    argocd.argoproj.io/sync-wave: "1"
+spec:
+  # Warn while it runs next to the old ClusterPolicy; Deny once checked.
+  validationActions: [Warn]
+  webhookConfiguration:
+    timeoutSeconds: 15
+  matchConstraints:
+    namespaceSelector:
+      matchLabels:
+        kubernetes.io/metadata.name: demo
+    resourceRules:
+      - apiGroups: [""]
+        apiVersions: ["v1"]
+        operations: ["CREATE", "UPDATE"]
+        resources: ["pods"]
+  autogen:
+    podControllers:
+      controllers: ["deployments"]
+  matchImageReferences:
+    - glob: "ghcr.io/hungkobe273/talos-demo-app*"
+  # Private ghcr repo: Kyverno reads signatures with this pull secret (ns kyverno).
+  credentials:
+    secrets: ["ghcr-pull"]
+  validationConfigurations:
+    required: true
+    # Leave the pod spec alone (Argo Rollouts / Argo CD compare it); only check.
+    mutateDigest: false
+    verifyDigest: false
+  attestors:
+    - name: jenkins
+      cosign:
+        key:
+          data: |
+            -----BEGIN PUBLIC KEY-----
+            MFkwEwYHKoZIzj0CAQYIKoZIzj0DAQcDQgAED3YADGvwzRT3FY5j1ZOWe/O3pkAV
+            NLmFCJig8KLX2maRA3IZhUU/trTlTowy7+8n8cqgC9TJlWZBm4AN34MtVQ==
+            -----END PUBLIC KEY-----
+        ctlog:
+          insecureIgnoreTlog: true
+          insecureIgnoreSCT: true
+  validations:
+    - expression: >-
+        images.containers.map(image, verifyImageSignatures(image, [attestors.jenkins])).all(e, e > 0)
+      message: "demo-app image is not signed by Jenkins (cosign key platform/cosign/cosign.pub)"
