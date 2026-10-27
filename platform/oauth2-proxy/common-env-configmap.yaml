@@ -1,5 +1,6 @@
 # Settings shared by both oauth2-proxy instances (env form of the flags, OAUTH2_PROXY_<config name>).
 # Docs: https://oauth2-proxy.github.io/oauth2-proxy/configuration/providers/keycloak_oidc
+# Pods read it only at start: after a change bump the config-rev annotation in prometheus.yaml/alertmanager.yaml.
 apiVersion: v1
 kind: ConfigMap
 metadata:
@@ -18,6 +19,8 @@ data:
   OAUTH2_PROXY_HTTP_ADDRESS: 0.0.0.0:4180
   # Behind Traefik (X-Forwarded-*), TLS ends at Traefik.
   OAUTH2_PROXY_REVERSE_PROXY: "true"
+  # Trust X-Forwarded-* only from the pod network (Traefik is a pod), same as KC_PROXY_TRUSTED_ADDRESSES.
+  OAUTH2_PROXY_TRUSTED_PROXY_IPS: 10.244.0.0/16
   OAUTH2_PROXY_COOKIE_SECURE: "true"
   OAUTH2_PROXY_COOKIE_EXPIRE: 8h
   OAUTH2_PROXY_SKIP_PROVIDER_BUTTON: "true"

@@ -16,6 +16,8 @@ spec:
       app.kubernetes.io/instance: alertmanager
   template:
     metadata:
+      annotations:
+        talos/config-rev: "2"   # bump when oauth2-proxy-common changes (env is read at start only)
       labels:
         app.kubernetes.io/name: oauth2-proxy
         app.kubernetes.io/instance: alertmanager
