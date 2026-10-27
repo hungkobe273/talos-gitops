@@ -1,0 +1,119 @@
+# https://prometheus.talos.internal -> Traefik -> oauth2-proxy-prometheus (login with Keycloak, talos-admins only) -> http://kps-kube-prometheus-stack-prometheus.monitoring.svc:9090
+# Traefik has no Middleware CRDs here (installed with skipCrds), so oauth2-proxy is the reverse proxy itself,
+# not a ForwardAuth endpoint. Break-glass when Keycloak is down: kubectl port-forward / API proxy (runbook 3.16).
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: oauth2-proxy-prometheus
+  labels:
+    app.kubernetes.io/name: oauth2-proxy
+    app.kubernetes.io/instance: prometheus
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: oauth2-proxy
+      app.kubernetes.io/instance: prometheus
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/name: oauth2-proxy
+        app.kubernetes.io/instance: prometheus
+    spec:
+      automountServiceAccountToken: false
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 65532
+        runAsGroup: 65532
+        seccompProfile:
+          type: RuntimeDefault
+      containers:
+        - name: oauth2-proxy
+          image: quay.io/oauth2-proxy/oauth2-proxy:v7.15.5
+          args:
+            - --upstream=http://kps-kube-prometheus-stack-prometheus.monitoring.svc:9090
+            - --redirect-url=https://prometheus.talos.internal/oauth2/callback
+            - --cookie-name=_oauth2_prometheus
+          envFrom:
+            - configMapRef:
+                name: oauth2-proxy-common
+          env:
+            - name: OAUTH2_PROXY_CLIENT_SECRET
+              valueFrom:
+                secretKeyRef:
+                  name: oauth2-proxy
+                  key: client-secret
+            - name: OAUTH2_PROXY_COOKIE_SECRET
+              valueFrom:
+                secretKeyRef:
+                  name: oauth2-proxy
+                  key: cookie-secret
+          ports:
+            - name: http
+              containerPort: 4180
+          readinessProbe:
+            httpGet:
+              path: /ready
+              port: http
+            periodSeconds: 10
+          livenessProbe:
+            httpGet:
+              path: /ping
+              port: http
+            periodSeconds: 20
+          resources:
+            requests:
+              cpu: 10m
+              memory: 32Mi
+            limits:
+              memory: 128Mi
+          securityContext:
+            allowPrivilegeEscalation: false
+            readOnlyRootFilesystem: true
+            capabilities:
+              drop: ["ALL"]
+          volumeMounts:
+            - name: talos-ca
+              mountPath: /etc/talos-ca
+              readOnly: true
+      volumes:
+        - name: talos-ca
+          configMap:
+            name: talos-internal-ca
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: oauth2-proxy-prometheus
+spec:
+  selector:
+    app.kubernetes.io/name: oauth2-proxy
+    app.kubernetes.io/instance: prometheus
+  ports:
+    - name: http
+      port: 80
+      targetPort: http
+---
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: prometheus
+  annotations:
+    cert-manager.io/cluster-issuer: talos-internal-ca
+spec:
+  ingressClassName: traefik
+  tls:
+    - hosts:
+        - prometheus.talos.internal
+      secretName: prometheus-tls
+  rules:
+    - host: prometheus.talos.internal
+      http:
+        paths:
+          - path: /
+            pathType: Prefix
+            backend:
+              service:
+                name: oauth2-proxy-prometheus
+                port:
+                  name: http

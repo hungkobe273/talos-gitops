@@ -1,0 +1,12 @@
+# oauth2-proxy in front of the Prometheus and Alertmanager UIs (login with Keycloak, group talos-admins only).
+# Keycloak client "oauth2-proxy" (platform/keycloak/manifests/realm-import.json, pushed with upsert-client.sh).
+# oauth2-proxy-sealed.yaml: client-secret (same value as keycloak-oidc-clients/OAUTH2_PROXY_CLIENT_SECRET) + cookie-secret.
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+namespace: oauth2-proxy
+resources:
+  - oauth2-proxy-sealed.yaml
+  - talos-internal-ca-configmap.yaml
+  - common-env-configmap.yaml
+  - prometheus.yaml
+  - alertmanager.yaml

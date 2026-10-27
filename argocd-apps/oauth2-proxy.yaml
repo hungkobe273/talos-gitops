@@ -1,0 +1,29 @@
+# oauth2-proxy: Keycloak login (group talos-admins only) in front of the Prometheus and Alertmanager UIs,
+# https://prometheus.talos.internal and https://alertmanager.talos.internal. Manifests: platform/oauth2-proxy.
+# Wave 4: after keycloak (3); pods start without Keycloak too, only logins wait for it.
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: oauth2-proxy
+  namespace: argocd
+  annotations:
+    argocd.argoproj.io/sync-wave: "4"
+spec:
+  project: default
+  source:
+    repoURL: git@github.com:hungkobe273/talos-gitops.git
+    targetRevision: main
+    path: platform/oauth2-proxy
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: oauth2-proxy
+  syncPolicy:
+    automated:
+      prune: true
+      selfHeal: true
+    managedNamespaceMetadata:
+      labels:
+        pod-security.kubernetes.io/enforce: restricted
+        pod-security.kubernetes.io/warn: restricted
+    syncOptions:
+      - CreateNamespace=true
