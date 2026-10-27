@@ -16,4 +16,4 @@ resources:
   - externalsecret.yaml
 images:
   - name: ghcr.io/hungkobe273/talos-demo-app
-    newTag: jenkins-sha-03111d7 # updated by talos-demo-app Jenkins
+    newTag: jenkins-sha-77c775b # updated by talos-demo-app Jenkins
