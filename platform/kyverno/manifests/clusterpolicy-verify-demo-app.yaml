@@ -1,0 +1,43 @@
+# Pods in namespace demo may only run ghcr.io/hungkobe273/talos-demo-app images signed by
+# Jenkins (cosign key pair on jenkins-1, public half below = platform/cosign/cosign.pub).
+# Jenkins signs only digests that passed every scan, so "signed" means "went through the
+# pipeline". No transparency log: signatures were made with --tlog-upload=false.
+# Starts in Audit (report, admit) to check it on live pods; switch failureAction to
+# Enforce after the first clean audit.
+apiVersion: kyverno.io/v1
+kind: ClusterPolicy
+metadata:
+  name: verify-demo-app-signature
+  annotations:
+    argocd.argoproj.io/sync-wave: "1"
+spec:
+  background: false
+  webhookTimeoutSeconds: 15
+  rules:
+    - name: signed-by-jenkins
+      match:
+        any:
+          - resources:
+              kinds: ["Pod"]
+              namespaces: ["demo"]
+      verifyImages:
+        - imageReferences:
+            - "ghcr.io/hungkobe273/talos-demo-app*"
+          failureAction: Audit
+          # Leave the pod spec alone (Argo Rollouts and Argo CD compare it); only check.
+          mutateDigest: false
+          verifyDigest: false
+          required: true
+          attestors:
+            - count: 1
+              entries:
+                - keys:
+                    publicKeys: |-
+                      -----BEGIN PUBLIC KEY-----
+                      MFkwEwYHKoZIzj0CAQYIKoZIzj0DAQcDQgAED3YADGvwzRT3FY5j1ZOWe/O3pkAV
+                      NLmFCJig8KLX2maRA3IZhUU/trTlTowy7+8n8cqgC9TJlWZBm4AN34MtVQ==
+                      -----END PUBLIC KEY-----
+                    rekor:
+                      ignoreTlog: true
+                    ctlog:
+                      ignoreSCT: true

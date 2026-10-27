@@ -1,0 +1,73 @@
+# Kyverno: admission policies. First (and for now only) job: pods in namespace demo may
+# only run talos-demo-app images that Jenkins signed with cosign (key in
+# platform/cosign/cosign.pub), so an image pushed to ghcr by anyone else, or one that
+# failed the pipeline's scans (those are never signed), is rejected by the API server.
+#
+# Kept small for this cluster's RAM: only the admission controller runs (no background,
+# cleanup or reports controller), and its webhooks only see namespace demo, so a Kyverno
+# outage can only block demo-app pods, never the rest of the cluster.
+# Policy + ghcr pull secret (Kyverno must read signatures from the private registry):
+# platform/kyverno/manifests.
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: kyverno
+  namespace: argocd
+  annotations:
+    argocd.argoproj.io/sync-wave: "1"
+spec:
+  project: default
+  sources:
+    - repoURL: https://kyverno.github.io/kyverno
+      chart: kyverno
+      targetRevision: 3.9.1
+      helm:
+        releaseName: kyverno
+        valuesObject:
+          admissionController:
+            replicas: 1
+            container:
+              resources:
+                requests:
+                  cpu: 50m
+                  memory: 128Mi
+                limits:
+                  memory: 384Mi
+          backgroundController:
+            enabled: false
+          cleanupController:
+            enabled: false
+          reportsController:
+            enabled: false
+          # Helm pre-delete hook; Argo CD does not run it, and it would linger as an orphan Job.
+          webhooksCleanup:
+            enabled: false
+          config:
+            webhooks:
+              namespaceSelector:
+                matchExpressions:
+                  - key: kubernetes.io/metadata.name
+                    operator: In
+                    values: ["demo"]
+          # Registry login used when Kyverno fetches signatures (secret in ns kyverno).
+          existingImagePullSecrets:
+            - ghcr-pull
+    - repoURL: git@github.com:hungkobe273/talos-gitops.git
+      targetRevision: main
+      path: platform/kyverno/manifests
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: kyverno
+  syncPolicy:
+    automated:
+      prune: true
+      selfHeal: true
+    managedNamespaceMetadata:
+      labels:
+        pod-security.kubernetes.io/enforce: restricted
+        pod-security.kubernetes.io/warn: restricted
+    syncOptions:
+      - CreateNamespace=true
+      # Kyverno CRDs are very large: client-side apply would overflow the annotation.
+      - ServerSideApply=true
+      - SkipDryRunOnMissingResource=true
