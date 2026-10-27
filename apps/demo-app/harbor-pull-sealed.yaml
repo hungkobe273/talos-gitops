@@ -1,0 +1,14 @@
+---
+apiVersion: bitnami.com/v1alpha1
+kind: SealedSecret
+metadata:
+  name: harbor-pull
+  namespace: demo
+spec:
+  encryptedData:
+    .dockerconfigjson: AgC8zO8bon40nRCZlazN/YaOy1vGMovHUrIWCxoMQzUEc4JlN03t65kxSeXnxuombnbrWXgO4B6Uy6I8fIIc/agNW70BfY/d8kNj3r12uwvtmUlQ94kf2f9oW+G3Wkng1ENYg0/hN1XVKtP6I23OpwraNPVQGrkHac+AXprmg/kIEsyx71S0sPuRTljajQKnoF5odBoMxXJO7M3H04P4GWPD7PXqQxd3BwosedCmd8ZfRrEGduF3AwcOoYwGF62fDB/eCHfnc0jobsPvLjJruvyfNqWGl31Ylkp4X4rNVwb6Aj3KBKlbFcfLTBPI6IIelDmwJf0N6bwKGuifFT96rjczo17SjrbSNohhI8DNcocD7idwMUeHyLfeDxif1s+3Z9s6b2369OCYfvwnJm7rgawbkD4SMLimH2EBAmQ0MfocDm/Nb1e+xuy+mo0ivVx/qPSXUEUdyHiTNoplS9hbso15c81zbM0cxtO6CkxbxuoAlj+/UMZznj+H+xKY8hZMxToCJ3JvV8PmbrFl4tAsHTX8cDsh0O0G34sxgkGm2gBEAWqJa8FGaZi3Iw1t0Zola0KJoNXf+MaXC8L6h1ifV9tboOIdZjvl06A7O63+Oapm1O/2J2snJMG1bBySO4wwBSqsyfQU1cnIsbms3UrrYZeXdSWPDgSYGLS6jWzv0R6K2Z+WoE1SCus2FI/N5cqxKNiT3iSFDsjJXogGjOmF3Ms5lyuPt1V2uiciOQ6kemSZYpNCklGpXculLHaXvC4WhwcC9ZzqQQtNULNPo3JN2TdePr/VzsXVt8++J8PjnRAs2JmHKXhZYGrej1I8bY4GE7V16Rh9qsvmdhUDpP5YCQUViIJwH46Y0RyjH6VrTtLNojjmk9s3i+ePY6KBvE+GDcvkcQRzGUoObLMSVZHAGb9Lh6zGjn0cmbYBwOAxkgYcAWufgxlELmc3oBzZ78b0dm8cSYTOXo1JB1lYvMwCi/l+
+  template:
+    metadata:
+      name: harbor-pull
+      namespace: demo
+    type: kubernetes.io/dockerconfigjson
