@@ -11,6 +11,9 @@ data:
   OAUTH2_PROXY_OIDC_ISSUER_URL: https://keycloak.talos.internal/realms/talos
   OAUTH2_PROXY_CLIENT_ID: oauth2-proxy
   OAUTH2_PROXY_CODE_CHALLENGE_METHOD: S256
+  # keycloak-oidc asks for "openid email profile groups" by default; realm talos has no "groups" client
+  # scope (the groups mapper sits on the client itself) -> Keycloak answers invalid_scope. Same as Argo CD.
+  OAUTH2_PROXY_SCOPE: openid email profile
   # Only group talos-admins (groups claim, short names: mapper full.path=false). Anyone else gets 403.
   OAUTH2_PROXY_ALLOWED_GROUPS: talos-admins
   OAUTH2_PROXY_EMAIL_DOMAINS: "*"
