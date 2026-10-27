@@ -2,8 +2,8 @@
 # Jenkins (cosign key pair on jenkins-1, public half below = platform/cosign/cosign.pub).
 # Jenkins signs only digests that passed every scan, so "signed" means "went through the
 # pipeline". No transparency log: signatures were made with --tlog-upload=false.
-# Starts in Audit (report, admit) to check it on live pods; switch failureAction to
-# Enforce after the first clean audit.
+# Audit 27/10 13:06-13:15: live image jenkins-sha-77c775b verified, so Enforce since 27/10:
+# an unsigned demo-app image is rejected at pod creation.
 apiVersion: kyverno.io/v1
 kind: ClusterPolicy
 metadata:
@@ -23,7 +23,7 @@ spec:
       verifyImages:
         - imageReferences:
             - "ghcr.io/hungkobe273/talos-demo-app*"
-          failureAction: Audit
+          failureAction: Enforce
           # Leave the pod spec alone (Argo Rollouts and Argo CD compare it); only check.
           mutateDigest: false
           verifyDigest: false
