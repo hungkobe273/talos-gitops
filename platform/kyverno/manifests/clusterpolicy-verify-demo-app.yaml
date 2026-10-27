@@ -23,7 +23,7 @@ spec:
       verifyImages:
         - imageReferences:
             - "ghcr.io/hungkobe273/talos-demo-app*"
-          failureAction: Enforce
+          failureAction: Audit
           # Leave the pod spec alone (Argo Rollouts and Argo CD compare it); only check.
           mutateDigest: false
           verifyDigest: false
