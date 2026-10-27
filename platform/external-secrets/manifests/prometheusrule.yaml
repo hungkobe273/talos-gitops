@@ -1,0 +1,19 @@
+# An ExternalSecret that cannot sync keeps the old Secret, so apps run on stale values
+# and new pods of a new app would not start. Telegram via the shared Alertmanager route.
+apiVersion: monitoring.coreos.com/v1
+kind: PrometheusRule
+metadata:
+  name: external-secrets
+  namespace: external-secrets
+spec:
+  groups:
+    - name: external-secrets
+      rules:
+        - alert: ExternalSecretNotSynced
+          expr: externalsecret_status_condition{condition="Ready", status="False"} == 1
+          for: 15m
+          labels:
+            severity: warning
+          annotations:
+            summary: "ExternalSecret {{ $labels.namespace }}/{{ $labels.name }} is not syncing"
+            description: "Check the ClusterSecretStore vault (kubectl get clustersecretstore vault) and the Vault path."

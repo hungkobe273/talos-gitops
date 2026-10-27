@@ -91,3 +91,31 @@ server:
         service_registration "kubernetes" {}
     disruptionBudget:
       enabled: false
+
+# Metrics (listener telemetry block above allows unauthenticated /v1/sys/metrics) and alerts,
+# routed to Telegram by the shared Alertmanager route like every other rule.
+serverTelemetry:
+  serviceMonitor:
+    enabled: true
+    interval: 30s
+  prometheusRules:
+    enabled: true
+    rules:
+      - alert: VaultSealed
+        # After a restart the KMS auto-unseal takes seconds; 5 minutes sealed means KMS or
+        # its credentials are broken, and apps cannot refresh their secrets.
+        expr: vault_core_unsealed == 0
+        for: 5m
+        labels:
+          severity: critical
+        annotations:
+          summary: "Vault {{ $labels.pod }} is sealed"
+          description: "Check GCP KMS access (SealedSecret vault-kms, roles on key talos-vault/vault-unseal) and vault-0 logs."
+      - alert: VaultDown
+        expr: absent(vault_core_unsealed)
+        for: 10m
+        labels:
+          severity: critical
+        annotations:
+          summary: "No Vault metrics for 10 minutes"
+          description: "vault-0 is not running or not scraped (namespace vault)."
