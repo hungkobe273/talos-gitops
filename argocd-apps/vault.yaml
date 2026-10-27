@@ -1,0 +1,49 @@
+# HashiCorp Vault: stores application secrets (.env values) for apps on this cluster
+# (mentor 27/10: "vault triển khai cho k8s ... lưu trữ sensitive data cho ứng dụng").
+# Design: TTS_QTDV/design/bao-mat-cicd-vault.md.
+#
+# - 1 server pod, integrated Raft storage on local-path-retain (Raft, not "file", so
+#   `vault operator raft snapshot save` works for the 16:45 backup).
+# - Auto-unseal with GCP Cloud KMS (key talos-vault/vault-unseal, asia-southeast1):
+#   the cluster is shut down every evening, so Vault would otherwise come up sealed.
+#   KMS credentials = SealedSecret vault/vault-kms (service account vault-unseal,
+#   role cryptoKeyEncrypterDecrypter on that one key only).
+# - Injector off: apps get secrets through External Secrets Operator instead.
+# - Init (once, by hand) creates recovery keys + root token; store them like the GPG key.
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: vault
+  namespace: argocd
+  annotations:
+    argocd.argoproj.io/sync-wave: "1"
+spec:
+  project: default
+  sources:
+    - repoURL: https://helm.releases.hashicorp.com
+      chart: vault
+      targetRevision: 0.34.1
+      helm:
+        releaseName: vault
+        valueFiles:
+          - $values/platform/vault/values.yaml
+    - repoURL: git@github.com:hungkobe273/talos-gitops.git
+      targetRevision: main
+      ref: values
+    # SealedSecret with the KMS service-account key.
+    - repoURL: git@github.com:hungkobe273/talos-gitops.git
+      targetRevision: main
+      path: platform/vault/secrets
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: vault
+  syncPolicy:
+    automated:
+      prune: true
+      selfHeal: true
+    managedNamespaceMetadata:
+      labels:
+        pod-security.kubernetes.io/enforce: baseline
+        pod-security.kubernetes.io/warn: restricted
+    syncOptions:
+      - CreateNamespace=true

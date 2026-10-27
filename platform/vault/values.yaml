@@ -1,0 +1,93 @@
+# Values for hashicorp/vault 0.34.1 (Vault 2.0.4). See argocd-apps/vault.yaml for the why.
+global:
+  enabled: true
+  # TLS inside the cluster is off for the lab (traffic stays on the pod network).
+  # Production: tls_disable = 0 with a cert-manager certificate.
+  tlsDisable: true
+
+injector:
+  enabled: false
+
+csi:
+  enabled: false
+
+ui:
+  enabled: true
+
+server:
+  # Request ~ expected usage, memory limit as a runaway cap (cluster has little spare RAM).
+  resources:
+    requests:
+      cpu: 50m
+      memory: 128Mi
+    limits:
+      memory: 512Mi
+
+  # Prefer w2 (most free memory); not required, so Vault still starts if w2 is down
+  # before the PVC exists. Once the PVC is bound, the PV's node affinity pins it.
+  affinity: |
+    nodeAffinity:
+      preferredDuringSchedulingIgnoredDuringExecution:
+        - weight: 100
+          preference:
+            matchExpressions:
+              - key: kubernetes.io/hostname
+                operator: In
+                values: ["talos-iv6-z5m"]
+
+  dataStorage:
+    enabled: true
+    size: 2Gi
+    storageClass: local-path-retain
+
+  auditStorage:
+    enabled: true
+    size: 1Gi
+    storageClass: local-path-retain
+
+  # KMS service-account key, mounted at /vault/userconfig/vault-kms/credentials.json.
+  extraVolumes:
+    - type: secret
+      name: vault-kms
+
+  standalone:
+    enabled: false
+
+  ha:
+    enabled: true
+    replicas: 1
+    raft:
+      enabled: true
+      setNodeId: true
+      config: |
+        ui = true
+
+        listener "tcp" {
+          tls_disable     = 1
+          address         = "[::]:8200"
+          cluster_address = "[::]:8201"
+          telemetry {
+            unauthenticated_metrics_access = true
+          }
+        }
+
+        storage "raft" {
+          path = "/vault/data"
+        }
+
+        seal "gcpckms" {
+          credentials = "/vault/userconfig/vault-kms/credentials.json"
+          project     = "project-df6719af-b37c-4a54-b3b"
+          region      = "asia-southeast1"
+          key_ring    = "talos-vault"
+          crypto_key  = "vault-unseal"
+        }
+
+        telemetry {
+          prometheus_retention_time = "30s"
+          disable_hostname          = true
+        }
+
+        service_registration "kubernetes" {}
+    disruptionBudget:
+      enabled: false
