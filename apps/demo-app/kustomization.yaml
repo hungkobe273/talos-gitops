@@ -21,4 +21,4 @@ images:
     # Pulled from the in-cluster Harbor copy (pull replication from ghcr every 10 min,
     # signatures included). Back to ghcr: delete this line.
     newName: harbor.talos.internal/talos/talos-demo-app
-    newTag: jenkins-sha-0b7a09c # updated by talos-demo-app Jenkins
+    newTag: jenkins-sha-14df872 # updated by talos-demo-app Jenkins
