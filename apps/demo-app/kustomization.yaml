@@ -14,6 +14,7 @@ resources:
   - analysistemplate-error-rate.yaml
   - analysistemplate-zap-baseline.yaml
   - ghcr-pull-sealed.yaml
+  - harbor-pull-sealed.yaml
   - externalsecret.yaml
 images:
   - name: ghcr.io/hungkobe273/talos-demo-app

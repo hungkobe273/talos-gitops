@@ -36,6 +36,19 @@ spec:
                   memory: 128Mi
                 limits:
                   memory: 384Mi
+              # Trust the internal CA (harbor.talos.internal) on top of the image's system CAs.
+              # Not caCertificates.data: that replaces the system bundle and would break ghcr.io.
+              extraEnvVars:
+                - name: SSL_CERT_DIR
+                  value: /etc/ssl/certs:/etc/talos-ca
+            extraVolumes:
+              - name: talos-internal-ca
+                secret:
+                  secretName: talos-internal-ca
+            extraVolumeMounts:
+              - name: talos-internal-ca
+                mountPath: /etc/talos-ca
+                readOnly: true
           backgroundController:
             enabled: false
           cleanupController:
