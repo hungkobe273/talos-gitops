@@ -42,5 +42,8 @@ kubectl create secret generic harbor-secrets -n harbor --dry-run=client -o yaml 
 # the chart generates a new pair on every render, so every Argo CD sync would rotate it.
 T=$(mktemp -d); trap 'rm -rf "$T"' EXIT
 openssl req -x509 -newkey rsa:4096 -nodes -days 3650 -subj "/CN=harbor-token-service"   -keyout "$T/tls.key" -out "$T/tls.crt" 2>/dev/null
+# Harbor core only reads PKCS#1 ("BEGIN RSA PRIVATE KEY"); OpenSSL 3 writes PKCS#8, which
+# made /service/token answer 500 ("unable to get PrivateKey from PEM type: PRIVATE KEY").
+openssl rsa -in "$T/tls.key" -traditional -out "$T/tls.key" 2>/dev/null
 echo "---"
 kubectl create secret tls harbor-token-cert -n harbor --cert="$T/tls.crt" --key="$T/tls.key"   --dry-run=client -o yaml | kubeseal --controller-name sealed-secrets-controller --controller-namespace kube-system --format yaml
