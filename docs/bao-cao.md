@@ -79,7 +79,7 @@ Host2 bị tắt khoảng 17:00 mỗi ngày nên cụm được bật/tắt có 
 | 15/10 sáng | Host thiếu RAM, dùng swap; etcd bầu leader liên tục | Giảm RAM CP 2560 → 2048 MB, swappiness 10, nới timeout etcd. Gốc là HDD (khoảng 33 fsync/s từ 3 etcd). |
 | 15/10 14:14 | Grafana limit 256Mi thrash page cache, đọc đĩa 23–40 MB/s, IO 30%, cả 3 apiserver unready | Nâng Grafana lên 512Mi; gỡ rollout bị kẹt bằng cách scale ReplicaSet cũ về 0. |
 | 16/10 sáng | Portal hết hạn, host mất Internet; Talos chờ đồng bộ giờ mãi nên etcd không chạy, không có VIP | Cụm lấy giờ từ host2 qua KVM PTP, `bootTimeout` 2 phút; host2 đổi NTP sang Cloudflare. |
-| 16/10 10:34–10:45 | Grafana chạm limit 512Mi, đọc lại đĩa liên tục, HDD nghẽn, API cụm gián đoạn | Nâng Grafana lên request 384Mi / limit 1Gi (commit `3675921`). Chi tiết bên dưới. |
+| 16/10 10:34–10:45 | Grafana chạm limit 512Mi, đọc lại đĩa liên tục, HDD nghẽn, API cụm gián đoạn | Nâng Grafana lên request 384Mi / limit 1Gi (commit `3bc3f8e`). Chi tiết bên dưới. |
 
 **Chi tiết sự cố 16/10 10:34–10:45**
 
