@@ -1,0 +1,18 @@
+# Copy of demo/harbor-pull (Harbor robot talos+demo-pull, pull only) for Kyverno, which
+# reads cosign signatures from harbor.talos.internal with it (ImageValidatingPolicy
+# credentials.secrets). Re-seal from demo/harbor-pull if the robot is recreated.
+# Generated from the live Secret, piped straight into kubeseal (see runbook 3.16).
+---
+apiVersion: bitnami.com/v1alpha1
+kind: SealedSecret
+metadata:
+  name: harbor-pull
+  namespace: kyverno
+spec:
+  encryptedData:
+    .dockerconfigjson: AgAN0uMuX5MH+XqlPZdRWNqmHOVANFxA1zDQOqQRfwY4AcpWvfNpjSFI9cJOyBBDbW10WTG3/e5nc8AAQi4ycr9zSRJ9seTC9FUYl+JgxILu+3lfCQnyy0pLnV5tQmnPGWUIvs4UNFRTYBVX3Tc6XFuIRRxUDxt3Sj3YKd9gg+ZG7SzRSEG03CCflMOObsv74CCl0cjj1bqZS/IdElw4Mnt7SWuvCBSaMaX2g8UHn2MpWL8s4noiZH9vHyQC0LvFdSyP8wqbBXLC/tPk9HcQ5qyMTFg4Acl8GOVrcnz+nlnRW1CUpudOoqmZDKwRM6YlGB1wqMaeMcrFbU/tKFmve5FZz7042va4ElzRHuw9CuqL5kkz6QEXQLRQm+wIQDCkbPJnV3eGwQ2j5jMbKp21ljyPW6ioiRj6Zk+X+VrphDLZZL70ndKdXSEVdty/QJbq/qyEZEz633oyI5YIkrA8cj48nUvrt7FUrDZnsVol1AKpIP2PYHJuZ/1cgZ6whrROJgGWXHzA+fiG1jXVGZDx/EWXZIR0AtUh9a7axGVhudcnH2wcE3XHUqGHUE9WdbKoQpyLXIenV+XotfZ7Pq377MajQ9b0YPsLPiURpYBqHbAfr12DskDrLBRjYTMpxnxKensoUGyuHvs0zhizdIL9i8SJ8MUVXzmEn7p3aT6BUXybjczOEHieDNRvU/KWy/hgbE6zbGWkWKJajH4vSGtfJQ3l6l9vXA2ao3EANWhIT/IxDcRG8Sy8oTB/etS0jj0ieMppduEIMpj1KHToi1NN1zhffkK2AzFsD7yEvKY3CTZjVk7sYxk7YTQrsBQG7hNWR1lLQat44B27SQVVOGMevSno9x776j/lZrUGU0lygoUODAlihmw+kI/kK5gM/EaqG1QwY8orP6Ija2IzPiHLzAW70gTVKQwwIHKyiolefttOlDm24LBU5npbzSgqtuDE40BkS+MstQL7HCXFfIso0DOf
+  template:
+    metadata:
+      name: harbor-pull
+      namespace: kyverno
+    type: kubernetes.io/dockerconfigjson

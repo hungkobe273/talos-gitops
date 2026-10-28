@@ -1,7 +1,7 @@
 # Replaces ClusterPolicy verify-demo-app-signature (kyverno.io/v1 ClusterPolicy is
 # deprecated since Kyverno 1.17). Same rule, CEL style: pods (and, through autogen,
-# Deployments) in namespace demo may only run ghcr.io/hungkobe273/talos-demo-app images
-# signed by Jenkins' cosign key (platform/cosign/cosign.pub). Images that do not match
+# Deployments) in namespace demo may only run talos-demo-app images (ghcr.io or the Harbor
+# copy) signed by Jenkins' cosign key (platform/cosign/cosign.pub). Images that do not match
 # matchImageReferences (curl, ZAP in the analysis Jobs) are not checked.
 # No transparency log: Jenkins signs with --tlog-upload=false.
 apiVersion: policies.kyverno.io/v1
@@ -29,9 +29,11 @@ spec:
       controllers: ["deployments"]
   matchImageReferences:
     - glob: "ghcr.io/hungkobe273/talos-demo-app*"
-  # Private ghcr repo: Kyverno reads signatures with this pull secret (ns kyverno).
+    # Harbor pull-replicates the ghcr images together with their cosign signatures.
+    - glob: "harbor.talos.internal/talos/talos-demo-app*"
+  # Private registries: Kyverno reads signatures with these pull secrets (ns kyverno).
   credentials:
-    secrets: ["ghcr-pull"]
+    secrets: ["ghcr-pull", "harbor-pull"]
   validationConfigurations:
     required: true
     # Leave the pod spec alone (Argo Rollouts / Argo CD compare it); only check.

@@ -68,6 +68,7 @@ spec:
           # Registry login used when Kyverno fetches signatures (secret in ns kyverno).
           existingImagePullSecrets:
             - ghcr-pull
+            - harbor-pull
     - repoURL: git@github.com:hungkobe273/talos-gitops.git
       targetRevision: main
       path: platform/kyverno/manifests
