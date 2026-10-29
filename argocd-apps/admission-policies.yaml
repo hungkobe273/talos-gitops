@@ -1,0 +1,21 @@
+# Cluster-wide admission rules written as native ValidatingAdmissionPolicy (no webhook,
+# evaluated by kube-apiserver). First rule: every container requests memory.
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: admission-policies
+  namespace: argocd
+  annotations:
+    argocd.argoproj.io/sync-wave: "0"
+spec:
+  project: default
+  source:
+    repoURL: git@github.com:hungkobe273/talos-gitops.git
+    targetRevision: main
+    path: platform/admission-policies
+  destination:
+    server: https://kubernetes.default.svc
+  syncPolicy:
+    automated:
+      prune: true
+      selfHeal: true

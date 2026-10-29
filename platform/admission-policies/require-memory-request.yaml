@@ -1,0 +1,46 @@
+# Every container (init containers too) must request memory. Without a request the scheduler
+# does not count the pod's RAM, so it can pack a node until Talos OOM-kills pods (29/10 on w2).
+#
+# Native ValidatingAdmissionPolicy (CEL, evaluated inside kube-apiserver): no webhook, so it
+# keeps working when Kyverno is down. Kyverno's webhook stays limited to namespace demo.
+#
+# kube-system is excluded: its pods (flannel, apiserver, ...) are managed by Talos.
+# Rollout: Warn + Audit first (29/10), Deny once no pod is reported.
+apiVersion: admissionregistration.k8s.io/v1
+kind: ValidatingAdmissionPolicy
+metadata:
+  name: require-memory-request
+spec:
+  failurePolicy: Fail
+  matchConstraints:
+    resourceRules:
+      - apiGroups: [""]
+        apiVersions: ["v1"]
+        operations: ["CREATE"]
+        resources: ["pods"]
+  validations:
+    - expression: >-
+        object.spec.containers.all(c, has(c.resources) && has(c.resources.requests) &&
+          'memory' in c.resources.requests) &&
+        (!has(object.spec.initContainers) || object.spec.initContainers.all(c,
+          has(c.resources) && has(c.resources.requests) && 'memory' in c.resources.requests))
+      messageExpression: >-
+        'every container needs resources.requests.memory (missing in: ' +
+        (object.spec.containers + (has(object.spec.initContainers) ? object.spec.initContainers : []))
+          .filter(c, !has(c.resources) || !has(c.resources.requests) || !('memory' in c.resources.requests))
+          .map(c, c.name).join(', ') + ')'
+      reason: Invalid
+---
+apiVersion: admissionregistration.k8s.io/v1
+kind: ValidatingAdmissionPolicyBinding
+metadata:
+  name: require-memory-request
+spec:
+  policyName: require-memory-request
+  validationActions: [Warn, Audit]
+  matchResources:
+    namespaceSelector:
+      matchExpressions:
+        - key: kubernetes.io/metadata.name
+          operator: NotIn
+          values: ["kube-system"]
