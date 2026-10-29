@@ -22,7 +22,7 @@ jenkins: "Jenkins trên Google Cloud" {
   sign: "6. cosign\nký image"
   gitleaks -> test -> sonar -> build -> trivy -> sign: {class: luong}
 }
-ghcr: "GHCR" {class: db; icon: ${si}/github}
+ghcr: "GHCR\nnhận image đã ký" {class: db; icon: ${si}/github}
 gitops: "talos-gitops\nnewTag mới" {class: ngoai; icon: ${si}/github}
 argocd: "Argo CD\nđồng bộ Rollout" {class: nentang; icon: ${cncf}/argo/icon/color/argo-icon-color.svg}
 harbor: "Harbor nội bộ\nreplicate 10 phút/lần" {class: nentang; icon: ${cncf}/harbor/icon/color/harbor-icon-color.svg}
@@ -32,7 +32,7 @@ active: "Bản active\nnhận traffic; bản cũ giữ 10 phút" {class: ungdung
 
 dev -> github: {class: luong}
 github -> jenkins.gitleaks: "poll 5 phút" {class: luong}
-jenkins.sign -> ghcr: "image đã ký" {class: luong}
+jenkins.sign -> ghcr: {class: luong}
 jenkins.sign -> gitops: "sửa tag" {class: luong}
 gitops -> argocd: {class: luong}
 ghcr -> harbor: "kèm chữ ký" {class: luong}
