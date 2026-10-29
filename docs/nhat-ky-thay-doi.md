@@ -4,6 +4,12 @@ Ghi mỗi thay đổi về hạ tầng, cấu hình cụm hoặc ứng dụng: n
 
 Thay đổi nằm ngoài repo này (host2, cấu hình Talos) cũng ghi ở đây, vì repo không chứa file cấu hình Talos (có secret).
 
+## 29/10/2026
+
+| Thay đổi | Lý do | Commit |
+|---|---|---|
+| Viết lại `docs/kien-truc.md` theo hiện trạng: 1 control plane, Jenkins deploy, Harbor, Kyverno, Vault, SSO Keycloak | Sơ đồ cũ (16/10) không còn đúng | commit này |
+
 ## 16/10/2026
 
 | Thay đổi | Lý do | Commit |
