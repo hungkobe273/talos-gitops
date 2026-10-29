@@ -17,6 +17,7 @@ resources:
   - keycloak-dashboard-configmap.yaml
   - supabase-ca-configmap.yaml
   - keycloak-supabase-sealed.yaml
+  - harbor-pull-sealed.yaml
 configMapGenerator:
   - name: keycloak-realm
     files:

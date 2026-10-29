@@ -5,6 +5,7 @@
 #    cluster's demo/ghcr-pull secret)
 #  - pull replication "ghcr-demo-app": ghcr hungkobe273/talos-demo-app -> talos/talos-demo-app,
 #    every 10 minutes, all tags (images and cosign signature artifacts)
+#  - pull replication "ghcr-keycloak": ghcr hungkobe273/talos-keycloak -> talos/talos-keycloak, hourly
 # Talks to harbor-core through kubectl port-forward; the admin password and the ghcr token
 # are read on host2 and only passed in request bodies/headers, never printed.
 set -eu
@@ -44,20 +45,24 @@ PY
 else echo "registry: exists ($RID)"; fi
 hc -X GET "$API/registries/$RID/info" -o /dev/null -w 'registry reachable: %{http_code}\n'
 
-# 3) pull replication policy
-PID=$(hc "$API/replication/policies?name=ghcr-demo-app" | python3 -c 'import json,sys;r=[x for x in json.load(sys.stdin) if x["name"]=="ghcr-demo-app"];print(r[0]["id"] if r else "")')
-if [ -z "$PID" ]; then
-  cat > /tmp/harbor-pol.json <<JSON
-{"name":"ghcr-demo-app","description":"talos-demo-app images + cosign signatures from ghcr",
+# 3) pull replication policies: policy <name> <ghcr repo> <cron> <description>
+policy() {
+  PID=$(hc "$API/replication/policies?name=$1" | python3 -c 'import json,sys;r=[x for x in json.load(sys.stdin) if x["name"]=="'"$1"'"];print(r[0]["id"] if r else "")')
+  if [ -z "$PID" ]; then
+    cat > /tmp/harbor-pol.json <<JSON
+{"name":"$1","description":"$4",
  "src_registry":{"id":$RID},"dest_namespace":"talos","dest_namespace_replace_count":1,
- "filters":[{"type":"name","value":"hungkobe273/talos-demo-app"}],
- "trigger":{"type":"scheduled","trigger_settings":{"cron":"0 */10 * * * *"}},
+ "filters":[{"type":"name","value":"$2"}],
+ "trigger":{"type":"scheduled","trigger_settings":{"cron":"$3"}},
  "override":true,"enabled":true,"speed":-1,"copy_by_chunk":false}
 JSON
-  hc -X POST "$API/replication/policies" --data @/tmp/harbor-pol.json -o /dev/null -w 'policy: %{http_code}\n'
-  rm -f /tmp/harbor-pol.json
-  PID=$(hc "$API/replication/policies?name=ghcr-demo-app" | python3 -c 'import json,sys;print([x for x in json.load(sys.stdin) if x["name"]=="ghcr-demo-app"][0]["id"])')
-else echo "policy: exists ($PID)"; fi
-
-# 4) run it once now
-hc -X POST "$API/replication/executions" -d "{\"policy_id\":$PID}" -o /dev/null -w 'execution started: %{http_code}\n'
+    hc -X POST "$API/replication/policies" --data @/tmp/harbor-pol.json -o /dev/null -w "policy $1: %{http_code}\n"
+    rm -f /tmp/harbor-pol.json
+    PID=$(hc "$API/replication/policies?name=$1" | python3 -c 'import json,sys;print([x for x in json.load(sys.stdin) if x["name"]=="'"$1"'"][0]["id"])')
+  else echo "policy $1: exists ($PID)"; fi
+  # run it once now
+  hc -X POST "$API/replication/executions" -d "{\"policy_id\":$PID}" -o /dev/null -w "execution $1 started: %{http_code}\n"
+}
+policy ghcr-demo-app hungkobe273/talos-demo-app "0 */10 * * * *" "talos-demo-app images + cosign signatures from ghcr"
+# Optimized Keycloak image (platform/keycloak/image, built by GitHub Actions). Changes rarely: hourly.
+policy ghcr-keycloak hungkobe273/talos-keycloak "0 0 * * * *" "optimized Keycloak image from ghcr"

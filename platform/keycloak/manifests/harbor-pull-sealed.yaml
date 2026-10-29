@@ -1,0 +1,17 @@
+# Copy of demo/harbor-pull (Harbor robot talos+demo-pull, pull only on project talos) so
+# Keycloak can pull the optimized image harbor.talos.internal/talos/talos-keycloak.
+# Re-seal from demo/harbor-pull if the robot is recreated (runbook 3.17).
+---
+apiVersion: bitnami.com/v1alpha1
+kind: SealedSecret
+metadata:
+  name: harbor-pull
+  namespace: keycloak
+spec:
+  encryptedData:
+    .dockerconfigjson: AgCDxO6aqelCciaMafPpTs2Jexspa9WFmojayZbJGC2oFfEX0kyiiQwP6xGqKxJN4fGfhFpQlnXZH0e+SSW3A96McI+y10V8N94Wa+Mvp1qMi3MQ+XrsZ9ed9DQz9MuG2qC0Np9LDIPbil8p6+/vk+i5dSSZTOM5GN/k1K1rCnGLcFin7kgMEw+emqajMi3c52QChG11TxFFcpzOdrVFheTHbpWsb7PIKl/ONLOKM7gDco2XtvGUC6HYayj0ABj9PLQuFseKoxKZoLcyMf/c/O9poQ1q6Nk0y0anSRADglfLbId/W2j0OItcD9x+YD1NZY0Jzuw60y/WP15zCsbsAPiy6F6Pxv26MpoaxsklqoRtoFO70UZbq7+BsdabuuxSQishO7rbpMlMnk3Fyvq34VZ4+6doWo2+HL/tvpT8GTxzsSWpTJ9YyoPFU1LGPehKiQq2OEzvtfcbUQQWdAOc5u5vYqepalCf0SUxn4UT+QszC7xSJIFsJZycgNTAqGskf14bPP6mCmJ2h8wSv5il3JmyImiUQcIqdBD4qzIv7CcQ/nQjIaGLFVUnAogTRWOdpBdKoV25a/kqo/TeSgA/ADoD+ALivdF7X1MXPMTWeG1AlnYWUZzpncdAIGeirnDE/EfUppAj56KzTgroWe7YN7w3BLbOCTIoviYESa4viVWOypkTSK66fbh/hjCSmxtFMTfWm1y/P++/8BAkmokLRTT6wGutLt08+YTcrMbo+oIYNcsIpOokIHoqMQ46lZsS+u1oaHearAh5EAl48X+r5Zo63yjYuEytQVVhwNn1fou8oY1Y35iNtB5VqSFH8Snm5O2telS7oDGN54VLtaJrO1+V6P7MSinSdMs0AHlqX2NpUv6DMZrLocdsU+Mk8p4SZEaIZB5g57ZppNIrbmjIEKAPPlU7lNuy/0XwbVzqi5vihB2XErSFjyEpSYG3Y8RjysUfX60ZZjaQDOu6TgxcXjDi
+  template:
+    metadata:
+      name: harbor-pull
+      namespace: keycloak
+    type: kubernetes.io/dockerconfigjson
