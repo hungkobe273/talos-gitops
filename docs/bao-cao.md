@@ -1,122 +1,106 @@
-# Báo cáo hiện trạng lab Kubernetes HA (cụm talos-kvm)
+# Báo cáo hiện trạng cụm talos-kvm
 
-Người thực hiện: Hưng, Phúc. Cập nhật: 16/10/2026.
+Người thực hiện: Hưng, Phúc. Cập nhật: 29/10/2026.
 
-File này là báo cáo tổng hợp, cập nhật mỗi khi có thay đổi lớn. Chi tiết từng thay đổi theo ngày ở [nhat-ky-thay-doi.md](nhat-ky-thay-doi.md); sơ đồ ở [kien-truc.md](kien-truc.md); link Grafana, Headlamp ở [truy-cap.md](truy-cap.md).
+File này là báo cáo tổng hợp, cập nhật mỗi khi có thay đổi lớn. Chi tiết từng thay đổi theo ngày ở [nhat-ky-thay-doi.md](nhat-ky-thay-doi.md); sơ đồ và thành phần ở [kien-truc.md](kien-truc.md); cách vào các giao diện ở [truy-cap.md](truy-cap.md).
 
 ## Tóm tắt
 
-- Cụm 3 control plane + 2 worker chạy trên một máy KVM (kvm-host2 `192.168.136.38`), API qua VIP `10.10.10.100:6443`.
-- Đã có GitOps (Argo CD, app-of-apps), CI/CD cho app mẫu (GitHub Actions, GHCR private), giám sát và cảnh báo về Telegram, backup etcd tự động hằng ngày có cảnh báo khi lỗi.
-- Nút thắt lớn nhất là ổ HDD duy nhất: đã gây 2 lần API cụm gián đoạn (15/10 và 16/10). Đề xuất chính: xin SSD cho đĩa VM.
+- Cụm Talos 1 control plane + 2 worker trên một máy KVM (kvm-host2 `192.168.136.38`), API qua VIP `10.10.10.100:6443`. cp2, cp3 đã tắt từ 20/10 để tiết kiệm RAM và IO.
+- GitOps bằng Argo CD (18 app). Jenkins trên Google Cloud là deployer: quét bảo mật, build, ký image, rồi sửa tag trong repo này. Argo Rollouts triển khai blue-green có smoke test, phân tích tỉ lệ lỗi và quét ZAP.
+- Cụm kéo image từ Harbor nội bộ; Kyverno chỉ cho chạy image có chữ ký của Jenkins. Secret của ứng dụng nằm ở Vault. Đăng nhập tập trung bằng Keycloak cho 8 công cụ.
+- Giám sát và cảnh báo về Telegram, watchdog ngoài cụm, backup hằng ngày mã hóa lên Backblaze B2.
+- Nút thắt lớn nhất vẫn là ổ HDD duy nhất: lúc khởi động lạnh, IO có thể làm etcd chậm và API gián đoạn ngắn (gặp lại sáng 29/10).
 
 ## 1. Mục tiêu
 
-Dựng một cụm Kubernetes có tính sẵn sàng cao và vận hành theo cách làm của môi trường production:
+Dựng và vận hành một cụm Kubernetes theo cách làm của môi trường production:
 
-- Control plane HA: 3 node etcd, API server sau một địa chỉ VIP.
-- Triển khai bằng GitOps, ứng dụng có pipeline CI/CD từ commit đến cụm.
-- Không để lộ secret trong Git, phân quyền truy cập rõ ràng.
-- Có giám sát, cảnh báo, quy trình vận hành hằng ngày và backup.
+- Triển khai bằng GitOps; code có pipeline CI/CD từ commit đến cụm, có kiểm tra bảo mật ở từng bước.
+- Không để lộ secret trong Git; một nơi đăng nhập, phân quyền theo nhóm.
+- Có giám sát, cảnh báo, quy trình vận hành hằng ngày, backup ngoài máy và kế hoạch lùi đã diễn tập.
 
 ## 2. Kiến trúc
 
-Sơ đồ hạ tầng, luồng GitOps, giám sát và bảng phiên bản: [kien-truc.md](kien-truc.md).
+Sơ đồ tổng thể, hạ tầng, luồng deploy và bảng thành phần: [kien-truc.md](kien-truc.md).
 
-Tóm tắt: Talos v1.14.2, Kubernetes v1.37.1, Flannel, KubePrism, VIP Layer 2. 5 VM (CP 2 vCPU/2 GB, worker 2 vCPU/3 GB) trên mạng NAT `10.10.10.0/24` của kvm-host2 (i7-6700, 16 GB, 1 HDD). Argo CD v3.5.4 đồng bộ 4 ứng dụng: sealed-secrets, monitoring (kube-prometheus-stack), demo-app, headlamp.
+Tóm tắt: Talos v1.14.2, Kubernetes v1.37.1, Flannel, KubePrism, VIP Layer 2. cp1 2 vCPU/3,5 GB, w1 và w2 2 vCPU/4,5 GB, mạng NAT `10.10.10.0/24` trên kvm-host2 (i7-6700, 16 GB, 1 HDD). Truy cập từ LAN qua HAProxy :443 trên host2, tên miền `*.talos.internal`, chứng chỉ từ CA nội bộ.
+
+Luồng đưa code lên production: push → Jenkins (gitleaks, test, govulncheck, gosec, SonarQube, build amd64 + arm64, Trivy, SBOM, cosign) → sửa `newTag` trong repo này → Argo CD → Harbor replicate từ GHCR → blue-green có kiểm tra. Đo ngày 28/10: khoảng 12 phút từ push tới khi bản mới nhận traffic.
 
 ## 3. Bảo mật
 
+**Chuỗi cung ứng**
+
+- Pipeline Jenkins: gitleaks quét toàn bộ lịch sử Git, govulncheck, gosec (từ mức medium), quality gate SonarQube có coverage, Trivy quét đúng digest đã đẩy (cả amd64 và arm64), SBOM CycloneDX, ký cosign. Mỗi cổng đã thử chặn bằng commit hoặc image lỗi cố ý.
+- Kyverno (ImageValidatingPolicy) chỉ nhận image demo-app ký bằng khoá Jenkins, cả từ GHCR lẫn Harbor. Webhook chỉ ở namespace `demo` nên Kyverno lỗi không chặn được phần còn lại của cụm.
+- ZAP baseline quét bản preview trước khi chuyển traffic.
+
 **Secret**
 
-- Secret trong Git chỉ ở dạng SealedSecret (mã hóa, chỉ controller trong cụm giải được): token bot Telegram, tài khoản admin Grafana, credential kéo image GHCR.
-- Khóa giải mã của Sealed Secrets đã được backup.
-- File nhạy cảm của cụm (secret Talos, talosconfig, kubeconfig, snapshot etcd) chỉ nằm trên host2 trong thư mục quyền 700, không commit vào Git, không in ra màn hình hay chat.
-- Token cho cảnh báo backup trên host2 nằm trong file root 600; dịch vụ gửi tin chạy user tạm (DynamicUser) và nhận token qua LoadCredential.
+- Secret hạ tầng trong Git chỉ ở dạng SealedSecret; khoá giải mã của Sealed Secrets đã được backup.
+- Biến môi trường của ứng dụng nằm ở Vault (KV v2), External Secrets đưa vào pod. Vault tự unseal bằng GCP KMS, có audit log.
+- File nhạy cảm của cụm (secret Talos, talosconfig, kubeconfig, snapshot etcd, khoá init Vault) chỉ nằm trên host2 trong thư mục quyền 700, không commit, không in ra màn hình hay chat.
 
-**Phân quyền và cô lập**
+**Đăng nhập và phân quyền**
 
-- Pod Security Admission: `demo` và `headlamp` ở mức restricted; `monitoring` privileged (node-exporter cần quyền host).
-- Headlamp: đã tắt binding cluster-admin mặc định của chart; 2 tài khoản `headlamp-admin` và `headlamp-viewer` (chỉ xem, không đọc Secret); đăng nhập bằng token ngắn hạn 8 giờ.
-- Argo CD đọc repo bằng deploy key chỉ đọc; CI dùng deploy key riêng có quyền ghi để sửa tag. Image GHCR private, kéo bằng PAT chỉ có quyền `read:packages`, hạn 90 ngày.
-- UI chưa mở ra LAN, hiện chỉ truy cập qua SSH tunnel.
-
-Bài học 14/10: một lệnh dry-run ở maintenance mode in toàn bộ config kèm secret. Đã reset cụm, tạo bộ secret mới và đưa lệnh đó vào danh sách cấm.
+- Keycloak (realm `talos`) cho Grafana, Argo CD, Headlamp, Vault, Harbor (OIDC), Jenkins, GitLab, SonarQube (SAML), Prometheus và Alertmanager (qua oauth2-proxy). Nhóm `talos-admins` có quyền quản trị, `talos-viewers` chỉ xem. Mỗi công cụ giữ một tài khoản dự phòng khi Keycloak hỏng.
+- HAProxy chỉ nhận kết nối từ các IP được phép trong LAN. Pod Security Admission mức restricted cho `demo`, `headlamp`, `kyverno`.
+- Argo CD đọc repo bằng deploy key chỉ đọc; Jenkins dùng deploy key riêng có quyền ghi để sửa tag. Cụm kéo image Harbor bằng robot chỉ có quyền pull.
 
 ## 4. Vận hành hằng ngày và backup
 
-Host2 bị tắt khoảng 17:00 mỗi ngày nên cụm được bật/tắt có kiểm soát theo runbook.
+Host2 bị tắt cuối ngày (T2/T4 lúc 10:30, các ngày khác khoảng 17:00), nên cụm được bật/tắt có kiểm soát theo runbook.
 
-**Buổi sáng**
+**Buổi sáng**: đăng nhập captive portal trên host2 → bật host2 (VM tự bật) → kiểm tra node, Argo CD, Vault đã unseal, ExternalSecret, demo-app. Khởi động lạnh đo ngày 28/10: 9 phút 29 giây tới khi mọi app Healthy.
 
-1. Đăng nhập captive portal trên host2 (cần cho Internet, kéo image, gửi Telegram).
-2. Kiểm tra host: giờ, RAM, áp lực IO (PSI).
-3. Kiểm tra 5 VM, etcd 3 member cùng leader, 5 node Ready, Argo CD Synced/Healthy.
-4. Kiểm tra backup etcd hôm trước và các cảnh báo đang firing.
+**Cuối ngày**: backup (tự động 16:45, hoặc chạy tay nếu tắt sớm) → tạm dừng watchdog và healthchecks nếu tắt sớm → tắt 2 worker → tắt cp1.
 
-**Buổi chiều**
-
-1. 16:45 backup tự động; khoảng 16:50 xác nhận log.
-2. Tắt 2 worker, chờ `shut off`.
-3. Tắt 3 CP cùng lúc (tắt lần lượt sẽ làm etcd bầu leader liên tục).
-4. Nếu quên, libvirt-guests tự tắt VM khi host tắt; sáng hôm sau VM tự bật.
-
-**Backup etcd**
+**Backup**
 
 | Hạng mục | Chi tiết | Trạng thái |
 |---|---|---|
-| Lịch | systemd timer 16:45 hằng ngày, `Persistent=false` (lúc host mới bật etcd chưa sẵn sàng) | Đã chạy thử |
-| Script | Chụp snapshot qua talosctl, thử lần lượt cp1, cp2, cp3; giữ 7 bản; file chmod 600 | Chạy tay và qua systemd OK |
-| Cảnh báo lỗi | OnFailure gửi Telegram kèm 5 dòng log cuối | Giả lập lỗi, tin về sau ~1 s |
-| Lần chạy tự động đầu tiên | 16:45 ngày 16/10 | Chưa kiểm chứng |
-| Khôi phục từ snapshot | `talosctl bootstrap --recover-from` | Chưa diễn tập |
+| Lịch | systemd 16:45 trên host2 (ngoài cụm); tắt sớm thì chạy tay | Chạy hằng ngày, lần gần nhất 28/10 10:10 đủ 6 bước |
+| Nội dung | snapshot etcd, dump DB Keycloak (Supabase), dump DB Harbor, snapshot Vault | OK |
+| Ngoài máy | gói mã hóa GPG đẩy lên Backblaze B2 | OK, đã thử giải mã |
+| Cảnh báo lỗi | Telegram kèm log khi một bước lỗi | Đã thử |
+| Khôi phục etcd từ snapshot | `talosctl bootstrap --recover-from` | Chưa diễn tập |
+| Khôi phục Vault từ snapshot | `vault operator raft snapshot restore` | Chưa diễn tập |
+
+**Giám sát**: Prometheus, Alertmanager, Grafana; cảnh báo về Telegram cho demo-app, Argo CD, Keycloak, ExternalSecret, Vault (`VaultNotReady`). Watchdog trên host2 và healthchecks.io báo khi cả cụm chết.
+
+**Diễn tập đã làm**: tắt có kế hoạch 1 worker (22/10); lùi DB Keycloak về PostgreSQL trong cụm rồi tiến lại Supabase (27/10, SSO gián đoạn 3 phút 23 giây khi lùi).
 
 ## 5. Sự cố đã gặp và bài học
 
 | Thời điểm | Sự cố | Xử lý và bài học |
 |---|---|---|
 | 14/10 | Lệnh dry-run ở maintenance mode in config kèm secret | Reset cụm, tạo secret mới. Cấm lệnh này; xem Secret chỉ theo tên khóa. |
-| 15/10 sáng | Host thiếu RAM, dùng swap; etcd bầu leader liên tục | Giảm RAM CP 2560 → 2048 MB, swappiness 10, nới timeout etcd. Gốc là HDD (khoảng 33 fsync/s từ 3 etcd). |
-| 15/10 14:14 | Grafana limit 256Mi thrash page cache, đọc đĩa 23–40 MB/s, IO 30%, cả 3 apiserver unready | Nâng Grafana lên 512Mi; gỡ rollout bị kẹt bằng cách scale ReplicaSet cũ về 0. |
-| 16/10 sáng | Portal hết hạn, host mất Internet; Talos chờ đồng bộ giờ mãi nên etcd không chạy, không có VIP | Cụm lấy giờ từ host2 qua KVM PTP, `bootTimeout` 2 phút; host2 đổi NTP sang Cloudflare. |
-| 16/10 10:34–10:45 | Grafana chạm limit 512Mi, đọc lại đĩa liên tục, HDD nghẽn, API cụm gián đoạn | Nâng Grafana lên request 384Mi / limit 1Gi (commit `3bc3f8e`). Chi tiết bên dưới. |
-
-**Chi tiết sự cố 16/10 10:34–10:45**
-
-1. Container Grafana trên w1 tăng working set 237 → 475 MiB, sát limit 512Mi.
-2. Kernel ép page cache của cgroup từ 255 → 65 MiB, Grafana phải đọc lại đĩa, trung bình khoảng 50 MB/s trong 5 phút.
-3. HDD nghẽn: PSI io full 62–72% trên host2.
-4. etcd fdatasync lên 2 s, VIP API mất tạm thời, probe timeout toàn cụm.
-5. kube-apiserver restart 1–2 lần mỗi CP, controller-manager và scheduler 3–5 lần.
-6. Cụm tự hồi phục khi liveness probe kill Grafana.
-
-Rollout bản sửa (11:08–11:17) cũng gây tải: pod mới trên w2 kéo image 464 MB và chạy lại migration DB của Grafana, PSI io lên 55% và control plane restart thêm. Grafana hiện chạy trên w2.
-
-Cách điều tra: PSI của host2, `virsh domblkstat` theo từng VM, `vmstat`, Prometheus `query_range` theo container; đã loại trừ snap/apt trên host.
-
-Bài học: HDD đang sát trần IOPS (khoảng 52 fsync/s chỉ riêng 3 etcd), nên một container thrash ở worker cũng kéo sập control plane. Hai sự cố 15/10 và 16/10 có cùng gốc. Ngoài ra host2 chưa có giám sát riêng nên phải điều tra tay.
+| 15/10 | Host thiếu RAM, swap; Grafana thrash page cache, IO 30%, cả 3 apiserver unready | Giảm RAM CP, swappiness 10, nới timeout etcd, nâng limit Grafana. Gốc là HDD. |
+| 16/10 sáng | Portal hết hạn, Talos chờ đồng bộ giờ, etcd không chạy | Cụm lấy giờ từ host2 qua KVM PTP, `bootTimeout` 2 phút. |
+| 16/10 10:34 | Grafana chạm limit, đọc đĩa liên tục, API gián đoạn 11 phút | Grafana request 384Mi / limit 1Gi, sau đó DB Grafana lên PVC. |
+| 20/10 | RAM và IO không đủ cho 3 control plane | Tắt cp2, cp3, còn 1 control plane; nhận rủi ro mất API khi cp1 lỗi. |
+| 27/10 | Khi tiến lại Supabase, StatefulSet Keycloak kẹt vì pod cũ unready (`OrderedReady`) | Xóa pod để revision mới lên. Lần sau tách 2 commit: đổi app trước, tắt DB cũ sau. |
+| 28/10 sáng | Host2 mất Internet: Vault không gọi được KMS nên không unseal, Argo CD không đọc được Git | Đăng nhập lại portal thì tự hồi phục. Thêm cảnh báo `VaultNotReady`. |
+| 28/10 | Harbor trả 500 khi cấp token: khoá ký ở dạng PKCS#8 | Chuyển sang PKCS#1, sửa script sinh khoá. Bài học: thử thành phần mới qua đúng đường mà nơi dùng nó sẽ đi. |
+| 29/10 sáng | Khởi động lạnh: Keycloak build lại cấu hình, Vault, DB Harbor cùng đọc ghi đĩa; PSI io full khoảng 33%, etcd chậm, API mất khoảng 1 phút, controller-manager và scheduler restart | Tự hồi phục. Cùng gốc HDD; xem mục 6, 7. |
 
 ## 6. Giới hạn hiện tại
 
-- **Một ổ HDD cho cả cụm.** PSI io của host2 lúc bình thường 10–25%, khi sự cố lên 62–72%. Đây là giới hạn chính về độ ổn định.
-- **Một máy vật lý.** 5 VM cùng nằm trên host2, nên HA chỉ chống được lỗi VM/node, không chống được lỗi host hay ổ đĩa.
-- **Backup chưa có bản ngoài host2.** Snapshot etcd và backup khóa Sealed Secrets nằm cùng ổ HDD với VM. Chưa diễn tập khôi phục.
-- **Lịch tắt máy 17:00.** Nếu host tắt trước 16:45 thì hôm đó không có backup tự động (phải chụp bù tay). Mỗi sáng phải đăng nhập portal tay.
-- **host2 chưa được giám sát.** Prometheus chỉ thu metrics 5 node Talos, không có cảnh báo cho IO/RAM của host.
-- **RAM sát.** 12/16 GB đã cấp cho VM; sáng 15/10 từng phải giảm RAM CP vì host swap.
-- **sudo không mật khẩu.** User quản trị trên host2 đang đặt NOPASSWD (từ 16/10) cho tiện thao tác lab; đánh đổi bảo mật, cần thu hồi khi kết thúc giai đoạn dựng.
-- **PAT kéo image hạn 90 ngày.** Cần gia hạn trước khi hết hạn, nếu không pod mới của demo-app sẽ không kéo được image.
-- **Grafana, Headlamp chưa mở ra LAN.** Hiện phải có tài khoản SSH trên host2 mới vào được.
+- **Một ổ HDD cho cả cụm.** PSI io lúc bình thường 10–25%, khi khởi động lạnh hoặc sự cố vượt 30%. Đây là giới hạn chính về độ ổn định.
+- **Một control plane.** Mất cp1 là mất API cho tới khi bật lại; etcd chỉ có 1 member.
+- **Một máy vật lý.** Không chống được lỗi host hay ổ đĩa; backup đã có bản ngoài máy (B2).
+- **Phụ thuộc Internet qua captive portal.** Mất mạng thì Vault không unseal, Keycloak không vào DB (Supabase), Argo CD không đọc Git, không gửi được Telegram.
+- **Thành phần có trạng thái ghim một worker.** Harbor, Grafana trên w2; Prometheus, DB keycloak-db cũ trên w1. Worker đó tắt thì dịch vụ đó ngừng.
+- **sudo không mật khẩu** trên host2 (từ 16/10) cho tiện thao tác lab; cần thu hồi khi kết thúc giai đoạn dựng.
+- **Token có hạn**: PAT đọc repo và đẩy image của Jenkins hết hạn khoảng 22/11/2026, cần gia hạn trước.
 
 ## 7. Việc tiếp theo và đề xuất
 
 | Ưu tiên | Việc | Lý do |
 |---|---|---|
-| Cao | Xin SSD cho đĩa VM (cần anh duyệt) | Giải quyết gốc của 2 sự cố API; etcd cần độ trễ fsync thấp, HDD đang ở mức 33–52 fsync/s và PSI io 10–25% lúc bình thường. |
-| Cao | Mở Grafana, Headlamp cho máy trong LAN `192.168.136.x` | Anh theo dõi trực tiếp bằng link, không cần SSH. |
-| Cao | Kiểm chứng lần backup tự động 16:45 | Chưa xác nhận lần chạy tự động đầu tiên. |
-| Cao | Đưa bản backup etcd và khóa Sealed Secrets ra ngoài host2 | Hiện mất ổ HDD là mất cả cụm lẫn backup. |
-| Trung bình | Diễn tập khôi phục etcd từ snapshot (cùng anh) | Backup chưa thử khôi phục thì chưa thể tin cậy. |
-| Trung bình | Giám sát host2 (CPU, RAM, PSI io) và cảnh báo về Telegram | Phát hiện nghẽn IO sớm thay vì điều tra tay sau sự cố. |
-| Trung bình | Thử tắt w2: cảnh báo node down, pod chuyển sang w1 | Kiểm chứng HA ở tầng worker và đường cảnh báo. |
-| Thấp | Thu hồi sudo NOPASSWD; quy trình cấp quyền Headlamp chỉ xem cho thành viên nhóm | Đưa cấu hình về gần production. |
+| Cao | Xin SSD cho đĩa VM (cần anh duyệt) | Gốc của các lần API gián đoạn; etcd cần độ trễ fsync thấp. |
+| Cao | Diễn tập khôi phục Vault và etcd từ snapshot | Backup chưa thử khôi phục thì chưa tin cậy được. |
+| Trung bình | Giảm tải lúc khởi động lạnh: Keycloak build sẵn cấu hình (`start --optimized`), bật các app nặng theo đợt | Tránh IO dồn một lúc làm etcd chậm (sự cố 29/10). |
+| Trung bình | Gia hạn PAT của Jenkins trước 22/11; gỡ `keycloak-db` sau 06/11 | Tránh pipeline hỏng; dọn DB cũ khi hết thời gian giữ để lùi. |
+| Thấp | Thu hồi sudo NOPASSWD trên host2 | Đưa cấu hình về gần production. |

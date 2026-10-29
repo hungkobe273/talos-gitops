@@ -1,70 +1,54 @@
-# Truy cập Grafana và Headlamp
+# Truy cập các giao diện của cụm
 
-Cập nhật: 16/10/2026.
+Cập nhật: 29/10/2026.
+
+Không ghi mật khẩu hay token vào repo này. Mật khẩu tài khoản dự phòng chỉ lưu trên host2, ngoài Git.
+
+## 1. Chuẩn bị máy (một lần)
+
+Từ 16/10 các giao diện mở thẳng từ LAN qua HAProxy :443 trên kvm-host2 `192.168.136.38`. HAProxy chỉ nhận một số IP trong LAN; máy mới cần nhờ Hưng thêm IP vào danh sách.
+
+1. **File hosts** (DNS công ty không phân giải `*.talos.internal`). Thêm các dòng sau (Windows: `C:\Windows\System32\drivers\etc\hosts`, mở bằng quyền admin; mỗi dòng tối đa 9 tên):
+
+   ```text
+   192.168.136.38 grafana.talos.internal headlamp.talos.internal argocd.talos.internal keycloak.talos.internal
+   192.168.136.38 demo.talos.internal demo-preview.talos.internal harbor.talos.internal vault.talos.internal
+   192.168.136.38 prometheus.talos.internal alertmanager.talos.internal
+   ```
+
+2. **Tin CA nội bộ** `talos-kvm internal CA` (chứng chỉ công khai, không có khoá riêng): xin file `talos-internal-ca.crt` từ Hưng, cài vào Trusted Root Certification Authorities (Windows) hoặc Keychain (macOS). Không cài thì trình duyệt báo chứng chỉ không tin cậy.
+
+## 2. Các giao diện
 
 | Dịch vụ | Link | Đăng nhập | Ghi chú |
 |---|---|---|---|
-| Grafana | http://localhost:3000 | user `admin`, mật khẩu xin Hưng | Cần mở SSH tunnel trước (mục 1) |
-| Headlamp | http://localhost:8080 | token ngắn hạn 8 giờ | Cần mở SSH tunnel trước (mục 1) |
+| Argo CD | https://argocd.talos.internal | Keycloak ("LOG IN VIA KEYCLOAK") | trạng thái đồng bộ của 18 app |
+| Grafana | https://grafana.talos.internal | Keycloak; xem ẩn danh quyền Viewer | dashboard cụm, demo-app, Keycloak |
+| Headlamp | https://headlamp.talos.internal | Keycloak | `talos-viewers` chỉ xem, không đọc Secret |
+| Harbor | https://harbor.talos.internal | Keycloak (LOGIN VIA OIDC PROVIDER) | project `talos`, replication từ GHCR |
+| Vault | https://vault.talos.internal | Keycloak (method OIDC) | `talos-viewers` chỉ đọc |
+| Prometheus | https://prometheus.talos.internal | Keycloak qua oauth2-proxy | chỉ nhóm `talos-admins` |
+| Alertmanager | https://alertmanager.talos.internal | Keycloak qua oauth2-proxy | chỉ nhóm `talos-admins` |
+| Keycloak | https://keycloak.talos.internal | tài khoản Keycloak | realm `talos`; quản trị realm chỉ admin |
+| demo-app | https://demo.talos.internal | không cần | bản đang nhận traffic |
+| demo-app preview | https://demo-preview.talos.internal | không cần | bản mới trong lúc blue-green |
 
-Link trực tiếp từ LAN `192.168.136.x` chưa có, xem mục 2.
+Jenkins, GitLab CE, SonarQube chạy trên Google Cloud, đăng nhập bằng Keycloak (SAML); link xin Hưng.
 
-Không ghi mật khẩu hay token vào repo này. Mật khẩu Grafana chỉ lưu trên host2, ngoài Git.
+**Tài khoản Keycloak**: nhờ Hưng tạo user trong realm `talos` và cho vào nhóm `talos-viewers` (chỉ xem) hoặc `talos-admins`.
 
-## 1. Cách hiện tại: SSH tunnel qua kvm-host2
+**Khi Keycloak hỏng**: mỗi công cụ còn một tài khoản dự phòng cục bộ (Argo CD, Grafana, Harbor `admin`; Headlamp token ServiceAccount). Mật khẩu ở host2, xin Hưng khi cần.
 
-Grafana và Headlamp chạy trong cụm, ở mạng NAT `10.10.10.0/24` phía sau kvm-host2, nên máy trên LAN không mở thẳng được. Cách hiện tại: SSH vào host2, cho `kubectl port-forward` chạy trên host2, rồi chuyển cổng về máy mình bằng `ssh -L`.
+## 3. Dự phòng: SSH tunnel qua kvm-host2
 
-Yêu cầu: có tài khoản SSH trên kvm-host2 (`192.168.136.38`) và máy đang ở LAN công ty. Trong các lệnh dưới, `kvm-host2` là alias SSH trỏ tới `192.168.136.38` (khai báo trong `~/.ssh/config`).
-
-### Grafana
-
-Mở một cửa sổ terminal (PowerShell trên Windows, Terminal trên macOS), chạy và để nguyên cửa sổ đó:
+Dùng khi HAProxy hoặc Traefik có vấn đề. Cần tài khoản SSH trên host2; `kvm-host2` là alias SSH trỏ tới `192.168.136.38`.
 
 ```bash
 ssh -L 3000:127.0.0.1:3000 kvm-host2 "KUBECONFIG=~/talos-kvm/kubeconfig kubectl -n monitoring port-forward svc/kps-grafana 3000:80"
 ```
 
-Mở http://localhost:3000. Đóng cửa sổ terminal thì tunnel tắt.
-
-### Headlamp
-
-Cửa sổ thứ nhất, để nguyên:
-
-```bash
-ssh -L 8080:127.0.0.1:8080 kvm-host2 "KUBECONFIG=~/talos-kvm/kubeconfig kubectl -n headlamp port-forward svc/headlamp 8080:80"
-```
-
-Cửa sổ thứ hai, lấy token chỉ xem (8 giờ) thẳng vào clipboard, không in ra màn hình:
-
-Windows (PowerShell):
+Mở http://localhost:3000. Headlamp tương tự với `-n headlamp svc/headlamp 8080:80`, rồi lấy token chỉ xem 8 giờ thẳng vào clipboard:
 
 ```powershell
 ssh kvm-host2 "KUBECONFIG=~/talos-kvm/kubeconfig kubectl -n headlamp create token headlamp-viewer --duration=8h" | Set-Clipboard
 ```
-
-macOS:
-
-```bash
-ssh kvm-host2 "KUBECONFIG=~/talos-kvm/kubeconfig kubectl -n headlamp create token headlamp-viewer --duration=8h" | pbcopy
-```
-
-Mở http://localhost:8080, dán token vào ô đăng nhập.
-
-| Tài khoản Headlamp | Quyền |
-|---|---|
-| `headlamp-viewer` | Chỉ xem tài nguyên cụm, không đọc Secret |
-| `headlamp-admin` | cluster-admin, chỉ dùng khi cần sửa |
-
-Người không có tài khoản trên host2: nhờ Hưng tạo token `headlamp-viewer` và gửi riêng (không gửi vào nhóm chat).
-
-## 2. Truy cập trực tiếp từ LAN 192.168.136.x (chưa làm)
-
-Yêu cầu của anh hướng dẫn: máy trong dải `192.168.136.x` mở được Grafana và Headlamp bằng link, không cần tài khoản SSH trên host2.
-
-Hướng làm: kvm-host2 nhận kết nối trên IP LAN `192.168.136.38` và chuyển tiếp vào dịch vụ trong cụm. Khi xong, cập nhật bảng đầu file với link dạng `http://192.168.136.38:<cổng>`, cách đăng nhập, và ghi vào [nhat-ky-thay-doi.md](nhat-ky-thay-doi.md).
-
-Cần chốt khi làm:
-
-- Cách chuyển tiếp: reverse proxy hoặc chuyển cổng trên host2 tới Service trong cụm (NodePort hoặc tương đương), quản lý bằng systemd và GitOps để tự lên lại khi host bật mỗi sáng.
-- Bảo mật: chỉ mở trong LAN, giới hạn IP nguồn được vào nếu có thể; Headlamp chỉ cấp token `headlamp-viewer`; chưa có TLS nên không dùng mật khẩu quan trọng.
