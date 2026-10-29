@@ -1,8 +1,9 @@
 # Jenkins, GitLab CE and SonarQube run on GCP VMs and listen only on 127.0.0.1 there.
 # host2 keeps SSH tunnels to them (host2/systemd/gcp-tunnel-*.service) listening on 10.10.10.1,
-# the host side of the VM network. Each tool gets a selector-less Service + EndpointSlice pointing
-# at that port and an Ingress with an internal-CA certificate, so it opens like every other
-# *.talos.internal tool (LAN only, HAProxy IP allow-list). Login stays SAML via Keycloak.
+# the host side of the VM network. A small nginx pod forwards to those ports (Argo CD does not
+# manage EndpointSlices, so a selector-less Service is not an option), and each tool gets an
+# Ingress with an internal-CA certificate: it opens like every other *.talos.internal tool
+# (LAN only, HAProxy IP allow-list). Login stays SAML via Keycloak.
 apiVersion: v1
 kind: Namespace
 metadata:
@@ -10,34 +11,109 @@ metadata:
   labels:
     pod-security.kubernetes.io/enforce: restricted
 ---
-# Jenkins (jenkins-1) via host2 tunnel 10.10.10.1:18080
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: tunnel-proxy
+  namespace: gcp-tools
+data:
+  default.conf: |
+    client_max_body_size 200m;
+    proxy_http_version 1.1;
+    proxy_buffering off;
+      server {
+        listen 8080;
+        location / {
+          proxy_pass http://10.10.10.1:18080;
+          proxy_set_header Host $host;
+          proxy_set_header X-Forwarded-Proto https;
+          proxy_set_header X-Forwarded-Host $host;
+          proxy_set_header X-Forwarded-Port 443;
+          proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+          proxy_set_header X-Real-IP $remote_addr;
+          proxy_read_timeout 300s;
+        }
+      }
+      server {
+        listen 8081;
+        location / {
+          proxy_pass http://10.10.10.1:18081;
+          proxy_set_header Host $host;
+          proxy_set_header X-Forwarded-Proto https;
+          proxy_set_header X-Forwarded-Host $host;
+          proxy_set_header X-Forwarded-Port 443;
+          proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+          proxy_set_header X-Real-IP $remote_addr;
+          proxy_read_timeout 300s;
+        }
+      }
+      server {
+        listen 8082;
+        location / {
+          proxy_pass http://10.10.10.1:19000;
+          proxy_set_header Host $host;
+          proxy_set_header X-Forwarded-Proto https;
+          proxy_set_header X-Forwarded-Host $host;
+          proxy_set_header X-Forwarded-Port 443;
+          proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+          proxy_set_header X-Real-IP $remote_addr;
+          proxy_read_timeout 300s;
+        }
+      }
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: tunnel-proxy
+  namespace: gcp-tools
+spec:
+  replicas: 1
+  selector:
+    matchLabels: {app: tunnel-proxy}
+  template:
+    metadata:
+      labels: {app: tunnel-proxy}
+    spec:
+      automountServiceAccountToken: false
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 101
+        seccompProfile: {type: RuntimeDefault}
+      containers:
+        - name: nginx
+          image: docker.io/nginxinc/nginx-unprivileged:1.27.3-alpine
+          ports:
+            - name: jenkins
+              containerPort: 8080
+            - name: gitlab
+              containerPort: 8081
+            - name: sonarqube
+              containerPort: 8082
+          resources:
+            requests: {cpu: 5m, memory: 16Mi}
+            limits: {memory: 64Mi}
+          securityContext:
+            allowPrivilegeEscalation: false
+            capabilities: {drop: [ALL]}
+          volumeMounts:
+            - name: conf
+              mountPath: /etc/nginx/conf.d
+      volumes:
+        - name: conf
+          configMap:
+            name: tunnel-proxy
+---
 apiVersion: v1
 kind: Service
 metadata:
   name: jenkins
   namespace: gcp-tools
 spec:
+  selector: {app: tunnel-proxy}
   ports:
     - name: http
       port: 80
-      targetPort: 18080
----
-apiVersion: discovery.k8s.io/v1
-kind: EndpointSlice
-metadata:
-  name: jenkins-host2
-  namespace: gcp-tools
-  labels:
-    kubernetes.io/service-name: jenkins
-addressType: IPv4
-ports:
-  - name: http
-    port: 18080
-    protocol: TCP
-endpoints:
-  - addresses: ["10.10.10.1"]
-    conditions:
-      ready: true
+      targetPort: 8080
 ---
 apiVersion: networking.k8s.io/v1
 kind: Ingress
@@ -64,34 +140,17 @@ spec:
                 port:
                   name: http
 ---
-# GitLab CE (gitlab-1) via host2 tunnel 10.10.10.1:18081
 apiVersion: v1
 kind: Service
 metadata:
   name: gitlab
   namespace: gcp-tools
 spec:
+  selector: {app: tunnel-proxy}
   ports:
     - name: http
       port: 80
-      targetPort: 18081
----
-apiVersion: discovery.k8s.io/v1
-kind: EndpointSlice
-metadata:
-  name: gitlab-host2
-  namespace: gcp-tools
-  labels:
-    kubernetes.io/service-name: gitlab
-addressType: IPv4
-ports:
-  - name: http
-    port: 18081
-    protocol: TCP
-endpoints:
-  - addresses: ["10.10.10.1"]
-    conditions:
-      ready: true
+      targetPort: 8081
 ---
 apiVersion: networking.k8s.io/v1
 kind: Ingress
@@ -118,34 +177,17 @@ spec:
                 port:
                   name: http
 ---
-# SonarQube (gitlab-1) via host2 tunnel 10.10.10.1:19000
 apiVersion: v1
 kind: Service
 metadata:
   name: sonarqube
   namespace: gcp-tools
 spec:
+  selector: {app: tunnel-proxy}
   ports:
     - name: http
       port: 80
-      targetPort: 19000
----
-apiVersion: discovery.k8s.io/v1
-kind: EndpointSlice
-metadata:
-  name: sonarqube-host2
-  namespace: gcp-tools
-  labels:
-    kubernetes.io/service-name: sonarqube
-addressType: IPv4
-ports:
-  - name: http
-    port: 19000
-    protocol: TCP
-endpoints:
-  - addresses: ["10.10.10.1"]
-    conditions:
-      ready: true
+      targetPort: 8082
 ---
 apiVersion: networking.k8s.io/v1
 kind: Ingress
