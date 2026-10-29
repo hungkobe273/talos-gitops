@@ -61,7 +61,7 @@ prometheus:
     resources:
       requests:
         cpu: 100m
-        memory: 400Mi
+        memory: 704Mi      # 29/10: p95 7 ngày 623Mi (trước 400Mi)
       limits:
         memory: 1Gi
 
@@ -86,7 +86,7 @@ alertmanager:
     resources:
       requests:
         cpu: 10m
-        memory: 32Mi
+        memory: 64Mi       # 29/10: p95 52Mi
       limits:
         memory: 128Mi
   config:
@@ -181,7 +181,7 @@ grafana:
   resources:
     requests:
       cpu: 20m
-      memory: 384Mi
+      memory: 704Mi        # 29/10: p95 7 ngày 608Mi (trước 384Mi); OOM-kill trên w2 sáng 29/10
     limits:
       memory: 1536Mi
   # First start on the HDD runs hundreds of SQLite migrations (DB lives in an
@@ -321,14 +321,14 @@ prometheusOperator:
   resources:
     requests:
       cpu: 10m
-      memory: 48Mi
+      memory: 128Mi        # 29/10: p95 101Mi
     limits:
       memory: 192Mi
 kube-state-metrics:
   resources:
     requests:
       cpu: 10m
-      memory: 48Mi
+      memory: 96Mi         # 29/10: p95 78Mi
     limits:
       memory: 192Mi
 prometheus-node-exporter:

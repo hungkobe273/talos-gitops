@@ -33,7 +33,7 @@ spec:
               resources:
                 requests:
                   cpu: 50m
-                  memory: 128Mi
+                  memory: 176Mi    # 29/10: p95 140Mi, max 185Mi
                 limits:
                   memory: 384Mi
               # Trust the internal CA (harbor.talos.internal) on top of the image's system CAs.

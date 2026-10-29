@@ -9,7 +9,7 @@ controller:
   resources:
     requests:
       cpu: 20m
-      memory: 64Mi
+      memory: 144Mi        # 29/10: p95 116Mi
     limits:
       memory: 256Mi
   metrics:

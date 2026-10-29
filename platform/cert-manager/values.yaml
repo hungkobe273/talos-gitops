@@ -3,15 +3,15 @@ crds:
   enabled: true
   keep: true
 resources:
-  requests: {cpu: 10m, memory: 64Mi}
+  requests: {cpu: 10m, memory: 128Mi}   # 29/10: p95 100Mi
   limits: {memory: 256Mi}
 webhook:
   resources:
-    requests: {cpu: 10m, memory: 32Mi}
+    requests: {cpu: 10m, memory: 80Mi}    # 29/10: p95 71Mi
     limits: {memory: 128Mi}
 cainjector:
   resources:
-    requests: {cpu: 10m, memory: 64Mi}
+    requests: {cpu: 10m, memory: 112Mi}   # 29/10: p95 85Mi, max 120Mi
     limits: {memory: 256Mi}
 startupapicheck:
   enabled: false

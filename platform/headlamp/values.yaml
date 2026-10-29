@@ -23,7 +23,7 @@ securityContext:
 resources:
   requests:
     cpu: 10m
-    memory: 48Mi
+    memory: 96Mi           # 29/10: p95 79Mi
   limits:
     memory: 192Mi
 

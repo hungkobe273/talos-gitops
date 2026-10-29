@@ -19,7 +19,7 @@ server:
   resources:
     requests:
       cpu: 50m
-      memory: 128Mi
+      memory: 256Mi        # 29/10: p95 175Mi, max 378Mi lúc khởi động
     limits:
       memory: 512Mi
 

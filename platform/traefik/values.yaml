@@ -37,5 +37,5 @@ ingressClass:
   enabled: true
   isDefaultClass: true
 resources:
-  requests: {cpu: 50m, memory: 64Mi}
-  limits: {memory: 256Mi}
+  requests: {cpu: 50m, memory: 224Mi}   # 29/10: p95 189Mi (trước 64Mi)
+  limits: {memory: 384Mi}

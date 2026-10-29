@@ -95,6 +95,6 @@ patches:
         value:
           requests:
             cpu: 10m
-            memory: 32Mi
+            memory: 72Mi       # 29/10: p95 60Mi
           limits:
             memory: 128Mi
