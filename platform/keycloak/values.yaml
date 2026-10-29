@@ -15,17 +15,24 @@ fullnameOverride: keycloak
 
 replicas: 1
 
+# Image "optimized" (29/10, K10): quay.io/keycloak/keycloak:26.8.1 đã chạy sẵn `kc.sh build`
+# (platform/keycloak/image/Dockerfile, build bằng GitHub Actions, Harbor replicate từ ghcr).
+# Lùi về image gốc: repository quay.io/keycloak/keycloak, tag "26.8.1", bỏ --optimized.
 image:
-  repository: quay.io/keycloak/keycloak
-  tag: "26.8.1"            # ghim bằng appVersion của chart 7.4.0; nâng cấp = sửa cả 2 chỗ
+  repository: harbor.talos.internal/talos/talos-keycloak
+  tag: "26.8.1-71de393"    # Keycloak 26.8.1 = appVersion chart 7.4.0; nâng cấp = sửa Dockerfile, chart, tag
 
-# "start" (chế độ production) + nạp realm từ /opt/keycloak/data/import khi khởi động.
-# Image chính thức có ENTRYPOINT kc.sh nhưng không có lệnh mặc định -> phải ghi rõ.
-# Vì chưa dùng image "optimized" (K10 để sau), mỗi lần start Keycloak tự build lại Quarkus
-# (thêm 20–60 s CPU + đọc đĩa). startupProbe bên dưới đã tính phần này.
+imagePullSecrets:
+  - name: harbor-pull      # SealedSecret platform/keycloak/manifests/harbor-pull-sealed.yaml
+
+# "start --optimized": bỏ bước build Quarkus lúc khởi động (sáng 29/10 bước này mất 5–12 phút
+# trên HDD và startup probe đã kill Keycloak). Tuỳ chọn build-time trong Dockerfile phải khớp
+# env bên dưới; lệch thì Keycloak từ chối khởi động và nêu tên tuỳ chọn.
+# --import-realm: nạp realm từ /opt/keycloak/data/import (bỏ qua nếu realm đã có).
 command:
   - /opt/keycloak/bin/kc.sh
   - start
+  - --optimized
   - --import-realm
 
 # Không cần biến môi trường kiểu Docker link (KEYCLOAK_DB_PORT...), bớt rác trong env.
