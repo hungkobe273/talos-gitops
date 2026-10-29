@@ -10,7 +10,8 @@ Thay đổi nằm ngoài repo này (host2, cấu hình Talos) cũng ghi ở đâ
 |---|---|---|
 | Viết lại `docs/kien-truc.md` theo hiện trạng: 1 control plane, Jenkins deploy, Harbor, Kyverno, Vault, SSO Keycloak | Sơ đồ cũ (16/10) không còn đúng | `b608ba2` |
 | Bổ sung nhật ký 20/10 – 28/10; viết lại `docs/bao-cao.md`, `docs/truy-cap.md` và `README.md` theo hiện trạng | Tài liệu cho anh hướng dẫn theo dõi không còn khoảng trống | `5099d39`, `d9d7d07`, commit README |
-| Sự cố khởi động lạnh 08:3x: PSI io full khoảng 33%, etcd chậm, API mất khoảng 1 phút, tự hồi phục | Ghi nhận (gốc HDD), xem `bao-cao.md` mục 5 | ngoài repo |
+| Sự cố khởi động lạnh 08:37: PSI io full khoảng 33%, etcd chậm, API mất khoảng 1 phút, controller-manager và scheduler restart; tự hồi phục | Ghi nhận (gốc HDD), xem `bao-cao.md` mục 5 | ngoài repo |
+| Sự cố 08:47–09:11: Keycloak bị startup probe kill sau 20 phút (bước build Quarkus chậm vì IO); w2 nhận gần hết pod (request RAM 88%), Talos OOM-kill 2 lần (08:58, 09:05), Grafana restart liên tục. Xử lý: xoá pod `keycloak-0` để nó sang w1; 09:11 cụm sạch, request RAM w1 39% / w2 69%. Khởi động lạnh hôm nay khoảng 50 phút | Ghi nhận; sửa gốc: request RAM sát mức dùng thật, Keycloak image optimized | ngoài repo (xoá pod tay) |
 
 ## 28/10/2026
 

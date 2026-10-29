@@ -83,7 +83,8 @@ Host2 bị tắt cuối ngày (T2/T4 lúc 10:30, các ngày khác khoảng 17:00
 | 27/10 | Khi tiến lại Supabase, StatefulSet Keycloak kẹt vì pod cũ unready (`OrderedReady`) | Xóa pod để revision mới lên. Lần sau tách 2 commit: đổi app trước, tắt DB cũ sau. |
 | 28/10 sáng | Host2 mất Internet: Vault không gọi được KMS nên không unseal, Argo CD không đọc được Git | Đăng nhập lại portal thì tự hồi phục. Thêm cảnh báo `VaultNotReady`. |
 | 28/10 | Harbor trả 500 khi cấp token: khoá ký ở dạng PKCS#8 | Chuyển sang PKCS#1, sửa script sinh khoá. Bài học: thử thành phần mới qua đúng đường mà nơi dùng nó sẽ đi. |
-| 29/10 sáng | Khởi động lạnh: Keycloak build lại cấu hình, Vault, DB Harbor cùng đọc ghi đĩa; PSI io full khoảng 33%, etcd chậm, API mất khoảng 1 phút, controller-manager và scheduler restart | Tự hồi phục. Cùng gốc HDD; xem mục 6, 7. |
+| 29/10 08:37 | Khởi động lạnh: Keycloak build lại cấu hình, Vault, DB Harbor cùng đọc ghi đĩa; PSI io full khoảng 33%, etcd chậm, API mất khoảng 1 phút, controller-manager và scheduler restart | Tự hồi phục. Cùng gốc HDD; xem mục 6, 7. |
+| 29/10 08:47–09:11 | w2 lên trước nên nhận gần hết pod (request RAM 88% nhưng limit 261%); Talos OOM-kill 2 lần, Grafana restart liên tục; Keycloak bị startup probe kill sau 20 phút build | Xoá pod Keycloak để sang w1, cụm sạch lúc 09:11 (khởi động lạnh khoảng 50 phút). Bài học: request thấp hơn mức dùng thật làm scheduler xếp quá tải một node; sửa bằng request sát thực tế và Keycloak image optimized. |
 
 ## 6. Giới hạn hiện tại
 
