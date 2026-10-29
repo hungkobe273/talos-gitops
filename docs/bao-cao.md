@@ -65,7 +65,7 @@ Host2 bị tắt cuối ngày (T2/T4 lúc 10:30, các ngày khác khoảng 17:00
 | Ngoài máy | gói mã hóa GPG đẩy lên Backblaze B2 | OK, đã thử giải mã |
 | Cảnh báo lỗi | Telegram kèm log khi một bước lỗi | Đã thử |
 | Khôi phục etcd từ snapshot | `talosctl bootstrap --recover-from` | Chưa diễn tập |
-| Khôi phục Vault từ snapshot | `vault operator raft snapshot restore` | Chưa diễn tập |
+| Khôi phục Vault từ snapshot | `vault operator raft snapshot restore -force` vào Vault mới cùng KMS key; nơi khôi phục cần `/vault/audit` ghi được | Đã diễn tập 29/10: Vault tạm ở ns riêng, tự unseal, đọc được `kv/demo/demo-app`, khoảng 2,5 phút |
 
 **Giám sát**: Prometheus, Alertmanager, Grafana; cảnh báo về Telegram cho demo-app, Argo CD, Keycloak, ExternalSecret, Vault (`VaultNotReady`). Watchdog trên host2 và healthchecks.io báo khi cả cụm chết.
 

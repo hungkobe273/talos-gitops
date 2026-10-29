@@ -16,6 +16,7 @@ Thay đổi nằm ngoài repo này (host2, cấu hình Talos) cũng ghi ở đâ
 | Argo CD (Helm bootstrap, revision 7 -> 8): request RAM controller 512->768Mi, server 64->224Mi, repo-server 128->176Mi, applicationSet 64->112Mi, redis 32->80Mi theo p95 7 ngày; áp bằng helm upgrade tay | Cùng lý do với commit c3cd6ab; Argo CD không tự quản lý chính nó | 9d97f2a |
 | Image Keycloak "optimized": `platform/keycloak/image/Dockerfile` (chạy `kc.sh build` lúc build image) + workflow GitHub Actions đẩy `ghcr.io/hungkobe273/talos-keycloak` (Trivy báo cáo). Chưa đổi Keycloak đang chạy | Bỏ bước build Quarkus 5–12 phút mỗi lần Keycloak khởi động (sự cố 29/10) | `71de393` |
 | Replication Harbor `ghcr-keycloak` (mỗi giờ); SealedSecret `keycloak/harbor-pull`; Keycloak chạy `harbor.talos.internal/talos/talos-keycloak:26.8.1-71de393` với `start --optimized --import-realm`. Lùi: image `quay.io/keycloak/keycloak:26.8.1`, bỏ `--optimized` | Keycloak khởi động không còn bước build; image kéo từ Harbor nội bộ | `27c4be6`, commit này |
+| Diễn tập khôi phục Vault (Phúc, Hưng): ns tạm `vault-drill`, Vault 2.0.4 cùng seal GCP KMS trên w1, restore `vault-2026-10-28-101053.snap`, tự unseal, đọc được `kv/demo/demo-app` (chỉ tên key); lần chạy sạch khoảng 2,5 phút; đã xoá ns tạm, Vault thật không restart. Gặp: snapshot mang audit device `file/`, nơi khôi phục thiếu `/vault/audit` ghi được thì Vault tự seal; timer backup `Persistent=false` nên ngày tắt host2 trước 16:45 không có snapshot | Chứng minh backup Vault dùng được; ghi lại điều kiện khôi phục | ngoài repo |
 
 ## 28/10/2026
 
