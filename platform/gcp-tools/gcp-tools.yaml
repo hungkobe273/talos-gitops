@@ -1,0 +1,167 @@
+# Jenkins, GitLab CE and SonarQube run on GCP VMs and listen only on 127.0.0.1 there.
+# host2 keeps SSH tunnels to them (host2/systemd/gcp-tunnel-*.service) listening on 10.10.10.1,
+# the host side of the VM network. Each tool gets a selector-less Service + EndpointSlice pointing
+# at that port and an Ingress with an internal-CA certificate, so it opens like every other
+# *.talos.internal tool (LAN only, HAProxy IP allow-list). Login stays SAML via Keycloak.
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: gcp-tools
+  labels:
+    pod-security.kubernetes.io/enforce: restricted
+---
+# Jenkins (jenkins-1) via host2 tunnel 10.10.10.1:18080
+apiVersion: v1
+kind: Service
+metadata:
+  name: jenkins
+  namespace: gcp-tools
+spec:
+  ports:
+    - name: http
+      port: 80
+      targetPort: 18080
+---
+apiVersion: discovery.k8s.io/v1
+kind: EndpointSlice
+metadata:
+  name: jenkins-host2
+  namespace: gcp-tools
+  labels:
+    kubernetes.io/service-name: jenkins
+addressType: IPv4
+ports:
+  - name: http
+    port: 18080
+    protocol: TCP
+endpoints:
+  - addresses: ["10.10.10.1"]
+---
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: jenkins
+  namespace: gcp-tools
+  annotations:
+    cert-manager.io/cluster-issuer: talos-internal-ca
+spec:
+  ingressClassName: traefik
+  tls:
+    - hosts:
+        - jenkins.talos.internal
+      secretName: jenkins-tls
+  rules:
+    - host: jenkins.talos.internal
+      http:
+        paths:
+          - path: /
+            pathType: Prefix
+            backend:
+              service:
+                name: jenkins
+                port:
+                  name: http
+---
+# GitLab CE (gitlab-1) via host2 tunnel 10.10.10.1:18081
+apiVersion: v1
+kind: Service
+metadata:
+  name: gitlab
+  namespace: gcp-tools
+spec:
+  ports:
+    - name: http
+      port: 80
+      targetPort: 18081
+---
+apiVersion: discovery.k8s.io/v1
+kind: EndpointSlice
+metadata:
+  name: gitlab-host2
+  namespace: gcp-tools
+  labels:
+    kubernetes.io/service-name: gitlab
+addressType: IPv4
+ports:
+  - name: http
+    port: 18081
+    protocol: TCP
+endpoints:
+  - addresses: ["10.10.10.1"]
+---
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: gitlab
+  namespace: gcp-tools
+  annotations:
+    cert-manager.io/cluster-issuer: talos-internal-ca
+spec:
+  ingressClassName: traefik
+  tls:
+    - hosts:
+        - gitlab.talos.internal
+      secretName: gitlab-tls
+  rules:
+    - host: gitlab.talos.internal
+      http:
+        paths:
+          - path: /
+            pathType: Prefix
+            backend:
+              service:
+                name: gitlab
+                port:
+                  name: http
+---
+# SonarQube (gitlab-1) via host2 tunnel 10.10.10.1:19000
+apiVersion: v1
+kind: Service
+metadata:
+  name: sonarqube
+  namespace: gcp-tools
+spec:
+  ports:
+    - name: http
+      port: 80
+      targetPort: 19000
+---
+apiVersion: discovery.k8s.io/v1
+kind: EndpointSlice
+metadata:
+  name: sonarqube-host2
+  namespace: gcp-tools
+  labels:
+    kubernetes.io/service-name: sonarqube
+addressType: IPv4
+ports:
+  - name: http
+    port: 19000
+    protocol: TCP
+endpoints:
+  - addresses: ["10.10.10.1"]
+---
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: sonarqube
+  namespace: gcp-tools
+  annotations:
+    cert-manager.io/cluster-issuer: talos-internal-ca
+spec:
+  ingressClassName: traefik
+  tls:
+    - hosts:
+        - sonarqube.talos.internal
+      secretName: sonarqube-tls
+  rules:
+    - host: sonarqube.talos.internal
+      http:
+        paths:
+          - path: /
+            pathType: Prefix
+            backend:
+              service:
+                name: sonarqube
+                port:
+                  name: http

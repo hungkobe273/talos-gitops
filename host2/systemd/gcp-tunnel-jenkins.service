@@ -1,0 +1,21 @@
+# SSH tunnel host2 -> jenkins-1 (GCP) so the cluster can reach Jenkins at 10.10.10.1:18080
+# (Ingress jenkins.talos.internal, platform/gcp-tools). Listens only on the VM network bridge.
+# Key ~/.ssh/gcp-tunnel is limited on the VM to command="/bin/false",permitopen="127.0.0.1:8080".
+# Install: sudo cp host2/systemd/gcp-tunnel-*.service /etc/systemd/system/ && sudo systemctl daemon-reload
+#          && sudo systemctl enable --now gcp-tunnel-jenkins gcp-tunnel-gitlab
+[Unit]
+Description=SSH tunnel to Jenkins on GCP (10.10.10.1:18080)
+After=network-online.target libvirtd.service
+Wants=network-online.target
+
+[Service]
+User=ngochung
+ExecStart=/usr/bin/ssh -F /dev/null -N -i /home/ngochung/.ssh/gcp-tunnel -o IdentitiesOnly=yes -o BatchMode=yes \
+  -o ExitOnForwardFailure=yes -o ServerAliveInterval=30 -o ServerAliveCountMax=3 \
+  -o UserKnownHostsFile=/home/ngochung/.ssh/known_hosts \
+  -L 10.10.10.1:18080:127.0.0.1:8080 hung@34.142.205.108
+Restart=always
+RestartSec=15
+
+[Install]
+WantedBy=multi-user.target

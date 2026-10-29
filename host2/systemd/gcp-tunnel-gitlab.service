@@ -1,0 +1,19 @@
+# SSH tunnel host2 -> gitlab-1 (GCP): GitLab at 10.10.10.1:18081, SonarQube at 10.10.10.1:19000
+# (Ingress gitlab/sonarqube.talos.internal, platform/gcp-tools). Listens only on the VM network bridge.
+# Key ~/.ssh/gcp-tunnel is limited on the VM to command="/bin/false" and these two ports.
+[Unit]
+Description=SSH tunnel to GitLab and SonarQube on GCP (10.10.10.1:18081, :19000)
+After=network-online.target libvirtd.service
+Wants=network-online.target
+
+[Service]
+User=ngochung
+ExecStart=/usr/bin/ssh -F /dev/null -N -i /home/ngochung/.ssh/gcp-tunnel -o IdentitiesOnly=yes -o BatchMode=yes \
+  -o ExitOnForwardFailure=yes -o ServerAliveInterval=30 -o ServerAliveCountMax=3 \
+  -o UserKnownHostsFile=/home/ngochung/.ssh/known_hosts \
+  -L 10.10.10.1:18081:127.0.0.1:18081 -L 10.10.10.1:19000:127.0.0.1:9000 hung@34.21.211.150
+Restart=always
+RestartSec=15
+
+[Install]
+WantedBy=multi-user.target

@@ -1,0 +1,21 @@
+# Ingress names for the GCP tools (Jenkins, GitLab CE, SonarQube) through host2's SSH tunnels.
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: gcp-tools
+  namespace: argocd
+  annotations:
+    argocd.argoproj.io/sync-wave: "1"
+spec:
+  project: default
+  source:
+    repoURL: git@github.com:hungkobe273/talos-gitops.git
+    targetRevision: main
+    path: platform/gcp-tools
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: gcp-tools
+  syncPolicy:
+    automated:
+      prune: true
+      selfHeal: true
