@@ -52,7 +52,7 @@ Luồng đưa code lên production: push → Jenkins (gitleaks, test, govulnchec
 
 Host2 bị tắt cuối ngày (T2/T4 lúc 10:30, các ngày khác khoảng 17:00), nên cụm được bật/tắt có kiểm soát theo runbook.
 
-**Buổi sáng**: đăng nhập captive portal trên host2 → bật host2 (VM tự bật) → kiểm tra node, Argo CD, Vault đã unseal, ExternalSecret, demo-app. Khởi động lạnh đo ngày 28/10: 9 phút 29 giây tới khi mọi app Healthy.
+**Buổi sáng**: đăng nhập captive portal trên host2 → bật host2 (VM tự bật) → kiểm tra node, Argo CD, Vault đã unseal, ExternalSecret, demo-app. Khởi động lạnh đo ngày 29/10 sau khi sửa: 12 phút 46 giây tới khi mọi pod Ready (chi tiết mục 7).
 
 **Cuối ngày**: backup (tự động 16:45, hoặc chạy tay nếu tắt sớm) → tạm dừng watchdog và healthchecks nếu tắt sớm → tắt 2 worker → tắt cp1.
 
@@ -98,10 +98,27 @@ Host2 bị tắt cuối ngày (T2/T4 lúc 10:30, các ngày khác khoảng 17:00
 
 ## 7. Việc tiếp theo và đề xuất
 
-| Ưu tiên | Việc | Lý do |
+**Số đo khởi động lạnh 29/10** (bật cp1 → mọi pod Ready, mọi app Healthy):
+
+| | Sáng 29/10, trước khi sửa | 10:16 29/10, sau khi sửa |
 |---|---|---|
-| Cao | Xin SSD cho đĩa VM (cần anh duyệt) | Gốc của các lần API gián đoạn; etcd cần độ trễ fsync thấp. |
-| Cao | Diễn tập khôi phục Vault và etcd từ snapshot | Backup chưa thử khôi phục thì chưa tin cậy được. |
-| Trung bình | Giảm tải lúc khởi động lạnh: Keycloak build sẵn cấu hình (`start --optimized`), bật các app nặng theo đợt | Tránh IO dồn một lúc làm etcd chậm (sự cố 29/10). |
+| Tổng thời gian | khoảng 50 phút, phải xoá pod Keycloak tay | 12 phút 46 giây, không can thiệp |
+| OOM-kill trên w1 / w2 | 0 / 2 | 0 / 0 |
+| Request RAM w1 / w2 | 19% / 88% (dồn một node) | 93% / 81% |
+| Keycloak | build lại cấu hình 5–12 phút, bị startup probe kill | không build lại, Ready sau 11 phút |
+| PSI io 8 phút đầu | tới 44% | 15–28% |
+
+Hai bản sửa (request RAM theo p95 thực tế, Keycloak image optimized) đã bỏ được OOM và can thiệp tay. Phần còn lại là giới hạn phần cứng, cần anh duyệt:
+
+| Ưu tiên | Đề xuất (cần anh duyệt) | Căn cứ |
+|---|---|---|
+| Cao | **SSD cho đĩa VM** | Sau khi sửa, khởi động lạnh vẫn 12,8 phút, IO 15–28% suốt 8 phút đầu; riêng JVM Keycloak mất khoảng 4 phút để lên. 29/10 08:37 etcd chậm vì IO làm API mất 1 phút. |
+| Cao | **Thêm RAM cho worker** (ví dụ 4,5 → 5,5 GB mỗi node) | Request đã 93% trên w1, 81% trên w2 (tổng khoảng 6,8/7,8 GiB). Thêm thành phần mới hoặc tắt 1 worker là có pod Pending. Host2 còn khoảng 3 GB trống nên chỉ thêm được ít. |
+| Trung bình | **IaC cho tầng VM và Talos** (Terraform provider libvirt hoặc Ansible; cấu hình máy Talos trong Git) | Tầng Kubernetes đã là GitOps; tầng dưới (tạo VM, patch Talos, HAProxy, script backup trên host2) còn làm tay theo runbook. Có IaC thì đổi RAM VM, dựng lại host2 là một commit có review và lùi được. |
+
+| Ưu tiên | Việc nhóm tự làm | Lý do |
+|---|---|---|
+| Trung bình | Policy `require-memory-request` từ Warn sang Deny | Sau vài lần khởi động lạnh không còn cảnh báo. |
+| Trung bình | Diễn tập khôi phục etcd từ snapshot (cần anh có mặt) | Vault đã diễn tập 29/10; etcd chưa. |
 | Trung bình | Gia hạn PAT của Jenkins trước 22/11; gỡ `keycloak-db` sau 06/11 | Tránh pipeline hỏng; dọn DB cũ khi hết thời gian giữ để lùi. |
 | Thấp | Thu hồi sudo NOPASSWD trên host2 | Đưa cấu hình về gần production. |
