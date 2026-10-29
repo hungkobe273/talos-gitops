@@ -58,9 +58,9 @@ server:
   resources:
     requests:
       cpu: 20m
-      memory: 64Mi
+      memory: 224Mi        # 29/10: p95 7 ngày 196Mi
     limits:
-      memory: 256Mi
+      memory: 384Mi
   metrics:
     enabled: true
     serviceMonitor:
@@ -78,9 +78,9 @@ controller:
   resources:
     requests:
       cpu: 100m
-      memory: 512Mi
+      memory: 768Mi        # 29/10: p95 7 ngày 662Mi, max 857Mi
     limits:
-      memory: 1Gi
+      memory: 1280Mi
   metrics:
     enabled: true
     serviceMonitor:
@@ -109,7 +109,7 @@ repoServer:
   resources:
     requests:
       cpu: 50m
-      memory: 128Mi
+      memory: 176Mi        # 29/10: p95 153Mi
     limits:
       memory: 512Mi
   metrics:
@@ -120,13 +120,13 @@ applicationSet:
   resources:
     requests:
       cpu: 10m
-      memory: 64Mi
+      memory: 112Mi        # 29/10: p95 89Mi
     limits:
       memory: 256Mi
 redis:
   resources:
     requests:
       cpu: 10m
-      memory: 32Mi
+      memory: 80Mi         # 29/10: p95 67Mi
     limits:
       memory: 128Mi
