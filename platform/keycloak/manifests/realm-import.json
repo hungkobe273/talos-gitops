@@ -16,8 +16,12 @@
   "ssoSessionIdleTimeout": 3600,
   "ssoSessionMaxLifespan": 36000,
   "groups": [
-    { "name": "talos-admins" },
-    { "name": "talos-viewers" }
+    {
+      "name": "talos-admins"
+    },
+    {
+      "name": "talos-viewers"
+    }
   ],
   "clients": [
     {
@@ -234,13 +238,14 @@
       "enabled": true,
       "protocol": "saml",
       "frontchannelLogout": true,
-      "rootUrl": "http://localhost:19000",
-      "baseUrl": "http://localhost:19000/",
+      "rootUrl": "https://sonarqube.talos.internal",
+      "baseUrl": "https://sonarqube.talos.internal/",
       "redirectUris": [
+        "https://sonarqube.talos.internal/oauth2/callback/saml",
         "http://localhost:19000/oauth2/callback/saml"
       ],
       "attributes": {
-        "saml_assertion_consumer_url_post": "http://localhost:19000/oauth2/callback/saml",
+        "saml_assertion_consumer_url_post": "https://sonarqube.talos.internal/oauth2/callback/saml",
         "saml.force.post.binding": "true",
         "saml.server.signature": "true",
         "saml.assertion.signature": "true",
@@ -309,13 +314,14 @@
       "enabled": true,
       "protocol": "saml",
       "frontchannelLogout": true,
-      "rootUrl": "http://localhost:18081",
-      "baseUrl": "http://localhost:18081/",
+      "rootUrl": "https://gitlab.talos.internal",
+      "baseUrl": "https://gitlab.talos.internal/",
       "redirectUris": [
+        "https://gitlab.talos.internal/users/auth/saml/callback",
         "http://localhost:18081/users/auth/saml/callback"
       ],
       "attributes": {
-        "saml_assertion_consumer_url_post": "http://localhost:18081/users/auth/saml/callback",
+        "saml_assertion_consumer_url_post": "https://gitlab.talos.internal/users/auth/saml/callback",
         "saml.force.post.binding": "true",
         "saml.server.signature": "true",
         "saml.assertion.signature": "true",
@@ -384,13 +390,14 @@
       "enabled": true,
       "protocol": "saml",
       "frontchannelLogout": true,
-      "rootUrl": "http://localhost:18080",
-      "baseUrl": "http://localhost:18080/",
+      "rootUrl": "https://jenkins.talos.internal",
+      "baseUrl": "https://jenkins.talos.internal/",
       "redirectUris": [
+        "https://jenkins.talos.internal/securityRealm/finishLogin",
         "http://localhost:18080/securityRealm/finishLogin"
       ],
       "attributes": {
-        "saml_assertion_consumer_url_post": "http://localhost:18080/securityRealm/finishLogin",
+        "saml_assertion_consumer_url_post": "https://jenkins.talos.internal/securityRealm/finishLogin",
         "saml.force.post.binding": "true",
         "saml.server.signature": "true",
         "saml.assertion.signature": "true",
