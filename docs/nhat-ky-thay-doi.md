@@ -8,7 +8,7 @@ Thay đổi nằm ngoài repo này (host2, cấu hình Talos) cũng ghi ở đâ
 
 | Thay đổi | Lý do | Commit |
 |---|---|---|
-| Viết lại `docs/kien-truc.md` theo hiện trạng: 1 control plane, Jenkins deploy, Harbor, Kyverno, Vault, SSO Keycloak | Sơ đồ cũ (16/10) không còn đúng | commit này |
+| Viết lại `docs/kien-truc.md` theo hiện trạng: 1 control plane, Jenkins deploy, Harbor, Kyverno, Vault, SSO Keycloak | Sơ đồ cũ (16/10) không còn đúng | `bfaa23f`, commit sau |
 
 ## 16/10/2026
 
@@ -17,7 +17,7 @@ Thay đổi nằm ngoài repo này (host2, cấu hình Talos) cũng ghi ở đâ
 | Grafana: request 384Mi, limit 1Gi (trước 256Mi/512Mi) | Grafana chạm limit 512Mi, đọc lại đĩa liên tục, HDD nghẽn, API cụm gián đoạn 10:34–10:45 | `3bc3f8e` |
 | Backup etcd tự động trên host2: systemd timer 16:45, giữ 7 bản, báo Telegram khi lỗi | Có bản khôi phục etcd hằng ngày | ngoài repo |
 | Talos `TimeSyncConfig`: lấy giờ qua KVM PTP, `bootTimeout: 2m`; host2 NTP `time.cloudflare.com` | Sáng 16/10 host mất Internet, Talos chờ đồng bộ giờ, etcd không chạy | ngoài repo |
-| Thêm tài liệu `docs/` (báo cáo, kiến trúc, truy cập, nhật ký thay đổi) | Anh hướng dẫn yêu cầu đưa tài liệu lên GitHub và cập nhật theo thay đổi | commit này |
+| Thêm tài liệu `docs/` (báo cáo, kiến trúc, truy cập, nhật ký thay đổi) | Anh hướng dẫn yêu cầu đưa tài liệu lên GitHub và cập nhật theo thay đổi | `bfaa23f`, commit sau |
 
 ## 15/10/2026
 
