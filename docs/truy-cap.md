@@ -1,6 +1,6 @@
 # Truy cập các giao diện của cụm
 
-Cập nhật: 29/10/2026.
+Cập nhật: 29/10/2026 (thêm Jenkins, GitLab, SonarQube; tài khoản chỉ xem).
 
 Không ghi mật khẩu hay token vào repo này. Mật khẩu tài khoản dự phòng chỉ lưu trên host2, ngoài Git.
 
@@ -14,6 +14,7 @@ Từ 16/10 các giao diện mở thẳng từ LAN qua HAProxy :443 trên kvm-hos
    192.168.136.38 grafana.talos.internal headlamp.talos.internal argocd.talos.internal keycloak.talos.internal
    192.168.136.38 demo.talos.internal demo-preview.talos.internal harbor.talos.internal vault.talos.internal
    192.168.136.38 prometheus.talos.internal alertmanager.talos.internal
+   192.168.136.38 jenkins.talos.internal gitlab.talos.internal sonarqube.talos.internal
    ```
 
 2. **Tin CA nội bộ** `talos-kvm internal CA` (chứng chỉ công khai, không có khoá riêng): xin file `talos-internal-ca.crt` từ Hưng, cài vào Trusted Root Certification Authorities (Windows) hoặc Keychain (macOS). Không cài thì trình duyệt báo chứng chỉ không tin cậy.
@@ -32,10 +33,13 @@ Từ 16/10 các giao diện mở thẳng từ LAN qua HAProxy :443 trên kvm-hos
 | Keycloak | https://keycloak.talos.internal | tài khoản Keycloak | realm `talos`; quản trị realm chỉ admin |
 | demo-app | https://demo.talos.internal | không cần | bản đang nhận traffic |
 | demo-app preview | https://demo-preview.talos.internal | không cần | bản mới trong lúc blue-green |
+| Jenkins | https://jenkins.talos.internal | Keycloak (SAML) | pipeline DevSecOps của demo-app; chạy trên Google Cloud |
+| GitLab CE | https://gitlab.talos.internal | Keycloak (nút SAML) | user mới chờ admin duyệt; `talos-viewers` là External, chỉ thấy project được thêm vào |
+| SonarQube | https://sonarqube.talos.internal | Keycloak (SAML) | quality gate của demo-app |
 
-Jenkins, GitLab CE, SonarQube chạy trên Google Cloud, đăng nhập bằng Keycloak (SAML); link xin Hưng.
+Jenkins, GitLab CE, SonarQube chạy trên VM Google Cloud và chỉ nghe nội bộ trên VM; host2 giữ đường hầm SSH tới chúng (`host2/systemd/gcp-tunnel-*.service`), Traefik trong cụm cấp link `*.talos.internal`. Không mở cổng nào trên GCP ra Internet, nên 3 link này cũng chỉ vào được trong LAN công ty. VM GCP tự tắt 17:15, bật 08:15 (T2–T6): ngoài giờ đó 3 link báo lỗi 502.
 
-**Tài khoản Keycloak**: nhờ Hưng tạo user trong realm `talos` và cho vào nhóm `talos-viewers` (chỉ xem) hoặc `talos-admins`.
+**Tài khoản Keycloak**: nhờ Hưng tạo user trong realm `talos` bằng `platform/keycloak/add-user.sh <user> talos-viewers|talos-admins` (mật khẩu tạm, bắt đổi ở lần đăng nhập đầu). Tài khoản chỉ xem cho anh hướng dẫn: `mentor_view` (`talos-viewers`).
 
 **Khi Keycloak hỏng**: mỗi công cụ còn một tài khoản dự phòng cục bộ (Argo CD, Grafana, Harbor `admin`; Headlamp token ServiceAccount). Mật khẩu ở host2, xin Hưng khi cần.
 
