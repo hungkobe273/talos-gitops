@@ -9,7 +9,7 @@ Thay đổi nằm ngoài repo này (host2, cấu hình Talos) cũng ghi ở đâ
 | Thay đổi | Lý do | Commit |
 |---|---|---|
 | Viết lại `docs/kien-truc.md` theo hiện trạng: 1 control plane, Jenkins deploy, Harbor, Kyverno, Vault, SSO Keycloak | Sơ đồ cũ (16/10) không còn đúng | `b608ba2` |
-| Bổ sung nhật ký 20/10 – 28/10; viết lại `docs/bao-cao.md` và `docs/truy-cap.md` theo hiện trạng | Tài liệu cho anh hướng dẫn theo dõi không còn khoảng trống | `5099d39`, commit này |
+| Bổ sung nhật ký 20/10 – 28/10; viết lại `docs/bao-cao.md`, `docs/truy-cap.md` và `README.md` theo hiện trạng | Tài liệu cho anh hướng dẫn theo dõi không còn khoảng trống | `5099d39`, `d9d7d07`, commit README |
 | Sự cố khởi động lạnh 08:3x: PSI io full khoảng 33%, etcd chậm, API mất khoảng 1 phút, tự hồi phục | Ghi nhận (gốc HDD), xem `bao-cao.md` mục 5 | ngoài repo |
 
 ## 28/10/2026
