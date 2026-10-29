@@ -6,78 +6,42 @@ Cụm Kubernetes on-premise trên một máy KVM (kvm-host2), vận hành theo G
 
 Khi có thay đổi hạ tầng hoặc cấu hình, sửa file này cùng commit và ghi thêm vào [nhat-ky-thay-doi.md](nhat-ky-thay-doi.md).
 
-## 1. Sơ đồ tổng thể
+## 1. Bộ sơ đồ
 
-```mermaid
-flowchart LR
-  subgraph cloud["Internet / cloud"]
-    gh["GitHub<br/>talos-demo-app (code)<br/>talos-gitops (repo này)"]
-    ghcr[("GHCR<br/>image gốc")]
-    subgraph gcp["Google Cloud"]
-      jk["Jenkins (deployer) + SonarQube<br/>gitleaks, test, gosec, govulncheck<br/>Sonar gate, Trivy, SBOM, cosign"]
-      gl["GitLab CE<br/>chỉ build"]
-      kms["Cloud KMS<br/>khoá unseal Vault"]
-    end
-    supa[("Supabase PostgreSQL<br/>DB Keycloak")]
-    b2[("Backblaze B2<br/>backup GPG")]
-    tg["Telegram<br/>nhóm TTS-ITC"]
-    hc["healthchecks.io"]
-  end
+Sáu hình, đọc từ tổng quát đến chi tiết; mỗi hình trả lời một câu hỏi. Màu theo nhóm: xanh ngọc là nền tảng, cam là bảo mật, xanh lá là ứng dụng, xanh dương là danh tính, tím là giám sát; khung nét đứt là dịch vụ bên ngoài. Trong các hình luồng, nét xanh chuyển động chỉ hướng dữ liệu, nét cam đứt là Kyverno kiểm chữ ký.
 
-  subgraph office["Mạng văn phòng, ra Internet qua captive portal"]
-    laptop["Laptop<br/>https://*.talos.internal"]
-    subgraph host2["kvm-host2 192.168.136.38, Ubuntu 24.04, KVM, 16 GB, 1 HDD"]
-      haproxy["HAProxy :443"]
-      backup["systemd 16:45<br/>backup etcd, Keycloak, Harbor, Vault<br/>+ watchdog ngoài cụm"]
-      subgraph k8s["Cụm Talos v1.14 / K8s v1.37: cp1 + w1 + w2, VIP 10.10.10.100"]
-        platform["Nền tảng<br/>Argo CD, Argo Rollouts, Traefik<br/>cert-manager, Sealed Secrets"]
-        app["demo-app<br/>blue-green: active + preview<br/>smoke, tỉ lệ lỗi, ZAP"]
-        sec["Bảo mật<br/>Kyverno, Vault, External Secrets"]
-        harbor["Harbor 2.15<br/>+ PostgreSQL 18, ghim w2"]
-        idp["Danh tính<br/>Keycloak, oauth2-proxy, Headlamp"]
-        mon["Giám sát<br/>Prometheus, Alertmanager, Grafana"]
-      end
-    end
-  end
+### 1.1 Bối cảnh: hệ thống nói chuyện với ai
 
-  gh -- "1. poll 5 phút" --> jk
-  jk -- "2. image đã ký" --> ghcr
-  jk -- "3. sửa newTag" --> gh
-  gh -- "4. Argo CD đồng bộ" --> platform
-  ghcr -- "5. replicate 10 phút, kèm chữ ký" --> harbor
-  harbor -- "6. pull" --> app
-  sec -. "admission: chỉ image đã ký" .-> app
-  sec -- "auto-unseal" --> kms
-  idp -- "JDBC" --> supa
-  mon -- "cảnh báo" --> tg
-  backup -- "bundle GPG" --> b2
-  backup -- "nhịp" --> hc
-  laptop --> haproxy --> platform
-```
+![Bối cảnh](so-do/boi-canh.svg)
 
-Số 1 đến 6 trên mũi tên là thứ tự đưa code lên production (mục 3).
+### 1.2 Hạ tầng vật lý: cái gì chạy trên máy nào
+
+![Hạ tầng vật lý](so-do/ha-tang.svg)
+
+Ba VM Talos dùng chung một ổ HDD của host2 (nút thắt IO). Volume dùng local-path nên pod có dữ liệu bị ghim vào đúng một worker.
+
+### 1.3 Thành phần trong cụm: ai gọi ai
+
+![Thành phần trong cụm](so-do/thanh-phan.svg)
+
+### 1.4 Luồng đưa code lên production
+
+![Luồng deploy](so-do/luong-deploy.svg)
+
+### 1.5 Backup hằng ngày
+
+![Luồng backup](so-do/luong-backup.svg)
+
+### 1.6 Phụ thuộc bên ngoài
+
+![Phụ thuộc bên ngoài](so-do/phu-thuoc.svg)
+
+Nguồn các hình là file text D2 trong [so-do/](so-do/) (`chung.d2` chứa màu và kiểu dùng chung). Sửa xong thì xuất lại, ví dụ `d2 docs/so-do/ha-tang.d2 docs/so-do/ha-tang.svg`. Logo lấy từ CNCF artwork và Simple Icons, được nhúng thẳng vào SVG.
 
 ## 2. Hạ tầng
 
-```mermaid
-flowchart TB
-  subgraph LAN["LAN công ty 192.168.136.0/24"]
-    laptop["Laptop"]
-    subgraph host2["kvm-host2 192.168.136.38, i7-6700, 16 GB, 1 HDD WD10EZEX"]
-      haproxy["HAProxy :443<br/>*.talos.internal"]
-      subgraph net["talos-net 10.10.10.0/24, NAT"]
-        vip(["VIP API 10.10.10.100:6443"])
-        cp1["cp1 .11<br/>control plane, etcd<br/>2 vCPU, 3,5 GB"]
-        w1["w1 .21<br/>2 vCPU, 4,5 GB"]
-        w2["w2 .22<br/>2 vCPU, 4,5 GB"]
-        off["cp2 .12, cp3 .13<br/>đã tắt từ 20/10, giữ đĩa"]
-      end
-    end
-  end
-  laptop -- "HTTPS" --> haproxy --> w1
-  haproxy --> w2
-  vip -.-> cp1
-```
+Sơ đồ: mục 1.2.
+
 
 | VM | IP | vCPU | RAM | Tên node | Ghi chú |
 |---|---|---|---|---|---|

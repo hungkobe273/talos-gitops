@@ -1,0 +1,95 @@
+# Sơ đồ hạ tầng vật lý: cái gì chạy trên máy nào.
+#   d2 docs/so-do/ha-tang.d2 docs/so-do/ha-tang.svg
+# Logo: CNCF artwork (github.com/cncf/artwork) và Simple Icons (simpleicons.org), được nhúng vào SVG khi xuất.
+
+vars: {
+  d2-config: {
+    layout-engine: elk
+    theme-id: 0
+  }
+  cncf: https://raw.githubusercontent.com/cncf/artwork/main/projects
+}
+
+classes: {
+  vm: {style: {fill: "#f7fbfb"; stroke: "#0e6a76"; stroke-width: 2; border-radius: 8; font-size: 20; bold: true}}
+  pod: {style: {fill: "#ffffff"; stroke: "#9aa7b4"; border-radius: 6; font-size: 16}}
+  pv: {shape: cylinder; style: {fill: "#fff7e8"; stroke: "#a8571b"; font-size: 14}}
+  ngoai: {style: {fill: "#f4f6f8"; stroke: "#8a96a3"; stroke-dash: 4; border-radius: 6; font-size: 17}}
+  phu: {style: {stroke: "#5b6876"; stroke-width: 2; font-size: 15; font-color: "#5b6876"}}
+  chu: {shape: text; style: {font-size: 16; font-color: "#24303c"}}
+}
+
+title: |md
+  # Hạ tầng vật lý — một máy chủ, ba máy ảo, pod nằm ở đâu
+| {near: top-center}
+
+laptop: "Laptop trong LAN\nhttps://*.talos.internal" {class: ngoai}
+
+host2: "kvm-host2 · 192.168.136.38\nUbuntu 24.04 · i7-6700 · 16 GB RAM" {
+  icon: https://cdn.simpleicons.org/ubuntu
+  style: {fill: "#eef2f5"; stroke: "#5b6876"; stroke-width: 2; border-radius: 10; font-size: 22; bold: true}
+
+  haproxy: "HAProxy :443\nchỉ nhận IP được phép" {class: pod; style.fill: "#e3f1f3"}
+  systemd: "systemd trên host\nbackup 16:45 · watchdog" {class: pod; style.fill: "#efeaf7"}
+  hdd: "1 ổ HDD 1 TB\nđĩa của cả 3 VM + backup" {shape: cylinder; style: {fill: "#fbeee3"; stroke: "#a8571b"; font-size: 17; bold: true}}
+
+  net: "Mạng libvirt talos-net 10.10.10.0/24 (NAT) · API qua VIP 10.10.10.100:6443" {
+    icon: https://cdn.simpleicons.org/qemu
+    style: {fill: "#ffffff"; stroke: "#0e6a76"; stroke-dash: 3; border-radius: 10; font-size: 18}
+    grid-columns: 3
+    grid-gap: 50
+
+    cp1: "cp1 · 10.10.10.11\ncontrol plane · 2 vCPU · 3,5 GB" {
+      class: vm
+      icon: https://cdn.simpleicons.org/talos
+      grid-columns: 1
+      api: "kube-apiserver" {class: pod; icon: ${cncf}/kubernetes/icon/color/kubernetes-icon-color.svg}
+      etcd: "etcd (1 member)" {class: pod}
+      sch: "scheduler · controller-manager" {class: pod}
+      dns: "CoreDNS" {class: pod}
+    }
+
+    w1: "w1 · 10.10.10.21\nworker · 2 vCPU · 4,5 GB · request RAM 93%" {
+      class: vm
+      icon: https://cdn.simpleicons.org/talos
+      grid-columns: 2
+      keycloak: "Keycloak" {class: pod; icon: ${cncf}/keycloak/icon/color/keycloak-icon-color.svg}
+      prom: "Prometheus\nAlertmanager" {class: pod; icon: ${cncf}/prometheus/icon/color/prometheus-icon-color.svg}
+      argocd: "Argo CD\nserver · repo-server" {class: pod; icon: ${cncf}/argo/icon/color/argo-icon-color.svg}
+      traefik: "Traefik (bản 1)\nnhận :30443" {class: pod; icon: https://cdn.simpleicons.org/traefikproxy}
+      kyverno: "Kyverno" {class: pod; icon: ${cncf}/kyverno/icon/color/kyverno-icon-color.svg}
+      certm: "cert-manager\nSealed Secrets" {class: pod; icon: ${cncf}/cert-manager/icon/color/cert-manager-icon-color.svg}
+      demo: "demo-app (pod 1)" {class: pod; style.fill: "#e8f3e6"}
+      pv_prom: "PV Prometheus 5 GiB" {class: pv}
+      pv_kcdb: "PV keycloak-db cũ 5 GiB" {class: pv}
+    }
+
+    w2: "w2 · 10.10.10.22\nworker · 2 vCPU · 4,5 GB · request RAM 81%" {
+      class: vm
+      icon: https://cdn.simpleicons.org/talos
+      grid-columns: 2
+      harbor: "Harbor\ncore · registry · portal" {class: pod; icon: ${cncf}/harbor/icon/color/harbor-icon-color.svg}
+      harbordb: "PostgreSQL + Redis\ncủa Harbor" {class: pod}
+      vault: "Vault" {class: pod; icon: https://cdn.simpleicons.org/vault}
+      grafana: "Grafana" {class: pod; icon: https://cdn.simpleicons.org/grafana}
+      argoctl: "Argo CD\napplication-controller" {class: pod; icon: ${cncf}/argo/icon/color/argo-icon-color.svg}
+      traefik: "Traefik (bản 2)\nnhận :30443" {class: pod; icon: https://cdn.simpleicons.org/traefikproxy}
+      eso: "External Secrets" {class: pod}
+      demo: "demo-app (pod 2)" {class: pod; style.fill: "#e8f3e6"}
+      pv_harbor: "PV Harbor 10 + 2 + 1 + 1 GiB" {class: pv}
+      pv_vault: "PV Vault 2 GiB + audit 1 GiB" {class: pv}
+      pv_graf: "PV Grafana 1 GiB" {class: pv}
+    }
+  }
+}
+
+laptop -> host2.haproxy: "HTTPS :443" {class: phu}
+host2.haproxy -> host2.net: "NodePort 30443 → Traefik trên w1 và w2" {class: phu}
+host2.net -> host2.hdd: "đĩa ảo của 3 VM cùng nằm trên 1 ổ" {style: {stroke: "#a8571b"; stroke-width: 3; font-color: "#a8571b"; font-size: 16}}
+host2.systemd -> host2.hdd: "bản backup" {class: phu}
+
+note: |md
+  - Volume dùng local-path: dữ liệu nằm trên đĩa của đúng một worker, nên pod có volume bị **ghim** vào node đó (Harbor, Vault, Grafana trên w2; Prometheus trên w1).
+  - cp2, cp3 (10.10.10.12, .13) đã tắt từ 20/10 để tiết kiệm RAM và IO, giữ đĩa để bật lại khi cần HA.
+  - Node chạy Talos Linux: không SSH, quản trị hoàn toàn qua API `talosctl`.
+| {class: chu; near: bottom-center}

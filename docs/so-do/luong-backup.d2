@@ -1,0 +1,24 @@
+# Hình 5 — Backup hằng ngày và khôi phục.
+...@chung
+
+direction: right
+
+title: |md
+  # Backup hằng ngày 16:45 (chạy trên host2, ngoài cụm)
+| {near: top-center}
+
+timer: "systemd timer 16:45\nT2/T4: chạy tay trước khi tắt" {class: giamsat; icon: ${si}/linux}
+etcd: "Snapshot etcd\nqua talosctl" {class: nentang; icon: ${si}/talos}
+keycloak: "Dump DB Keycloak\ntừ Supabase" {class: danhtinh; icon: ${cncf}/keycloak/icon/color/keycloak-icon-color.svg}
+harbor: "Dump DB Harbor" {class: nentang; icon: ${cncf}/harbor/icon/color/harbor-icon-color.svg}
+vault: "Snapshot Vault (Raft)" {class: baomat; icon: ${si}/vault}
+bundle: "Bundle offsite\nmã hoá GPG" {class: giamsat}
+b2: "Backblaze B2" {class: db; icon: ${si}/backblaze}
+tg: "Telegram\nbáo khi lỗi" {class: ngoai; icon: ${si}/telegram}
+
+timer -> etcd -> keycloak -> harbor -> vault -> bundle -> b2: {class: luong}
+timer -> tg: "bước nào lỗi" {class: phu}
+
+note: |md
+  Đã thử giải mã gói backup. Đã diễn tập khôi phục Vault 29/10 vào namespace tạm: khoảng 2,5 phút, đọc được dữ liệu. Khôi phục etcd chưa diễn tập.
+| {class: chu; near: bottom-center}

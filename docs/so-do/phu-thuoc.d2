@@ -1,0 +1,33 @@
+# Hình 6 — Phụ thuộc bên ngoài: mất Internet thì những gì ngừng.
+...@chung
+
+direction: right
+
+title: |md
+  # Phụ thuộc bên ngoài — mất Internet thì những gì ngừng?
+| {near: top-center}
+
+app: "demo-app\nđọc .env" {class: ungdung}
+eso: "External Secrets" {class: baomat}
+vault: "Vault (trong cụm)" {class: baomat; icon: ${si}/vault}
+kms: "Google Cloud KMS\nkhoá unseal" {class: baomat; icon: ${si}/googlecloud}
+keycloak: "Keycloak\nSSO 8 công cụ" {class: danhtinh; icon: ${cncf}/keycloak/icon/color/keycloak-icon-color.svg}
+supabase: "Supabase PostgreSQL" {class: db; icon: ${si}/supabase}
+argocd: "Argo CD" {class: nentang; icon: ${cncf}/argo/icon/color/argo-icon-color.svg}
+github: "GitHub\ntalos-gitops" {class: ngoai; icon: ${si}/github}
+am: "Alertmanager" {class: giamsat; icon: ${cncf}/prometheus/icon/color/prometheus-icon-color.svg}
+tg: "Telegram" {class: ngoai; icon: ${si}/telegram}
+backup: "Backup trên host2" {class: giamsat; icon: ${si}/linux}
+b2: "Backblaze B2" {class: db; icon: ${si}/backblaze}
+
+app -> eso: "Secret demo-app-env" {class: phu}
+eso -> vault: "đọc secret" {class: phu}
+vault -> kms: "unseal mỗi lần khởi động" {class: luong}
+keycloak -> supabase: "DB (JDBC, TLS)" {class: luong}
+argocd -> github: "đọc trạng thái mong muốn" {class: luong}
+am -> tg: "gửi cảnh báo" {class: luong}
+backup -> b2: "đẩy bundle GPG" {class: luong}
+
+note: |md
+  Sáng 28/10 host2 mất Internet: Vault không unseal, Argo CD không đọc được Git, Keycloak không vào DB. Có mạng lại thì tự hồi phục. Cảnh báo VaultNotReady báo nếu Vault không sẵn sàng quá 10 phút.
+| {class: chu; near: bottom-center}

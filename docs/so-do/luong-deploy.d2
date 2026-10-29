@@ -1,0 +1,46 @@
+# Hình 4 — Luồng đưa code lên production.
+...@chung
+
+direction: down
+
+title: |md
+  # Luồng đưa code lên production (~12 phút, đo 28/10)
+| {near: top-center}
+
+dev: "Lập trình viên\npush code" {class: ngoai; shape: person; width: 110; height: 100}
+github: "GitHub\ntalos-demo-app" {class: ngoai; icon: ${si}/github}
+jenkins: "Jenkins trên Google Cloud" {
+  class: baomat
+  icon: ${si}/jenkins
+  grid-rows: 2
+  grid-gap: 60
+  gitleaks: "1. gitleaks\nquét toàn bộ lịch sử Git"
+  test: "2. go test + coverage\ngovulncheck · gosec"
+  sonar: "3. SonarQube\nquality gate"
+  build: "4. build amd64 + arm64\nđẩy GHCR một lần"
+  trivy: "5. Trivy\nquét đúng digest + SBOM"
+  sign: "6. cosign\nký image"
+  gitleaks -> test -> sonar -> build -> trivy -> sign: {class: luong}
+}
+ghcr: "GHCR" {class: db; icon: ${si}/github}
+gitops: "talos-gitops\nnewTag mới" {class: ngoai; icon: ${si}/github}
+argocd: "Argo CD\nđồng bộ Rollout" {class: nentang; icon: ${cncf}/argo/icon/color/argo-icon-color.svg}
+harbor: "Harbor nội bộ\nreplicate 10 phút/lần" {class: nentang; icon: ${cncf}/harbor/icon/color/harbor-icon-color.svg}
+kyverno: "Kyverno\nkhông có chữ ký Jenkins = từ chối" {class: baomat; icon: ${cncf}/kyverno/icon/color/kyverno-icon-color.svg}
+preview: "Bản preview\nsmoke · tỉ lệ lỗi · ZAP" {class: ungdung; icon: ${cncf}/argo/icon/color/argo-icon-color.svg}
+active: "Bản active\nnhận traffic; bản cũ giữ 10 phút" {class: ungdung}
+
+dev -> github: {class: luong}
+github -> jenkins.gitleaks: "poll 5 phút" {class: luong}
+jenkins.sign -> ghcr: "image đã ký" {class: luong}
+jenkins.sign -> gitops: "sửa tag" {class: luong}
+gitops -> argocd: {class: luong}
+ghcr -> harbor: "kèm chữ ký" {class: luong}
+argocd -> preview: {class: luong}
+harbor -> preview: "kéo image 5–7 s" {class: luong}
+kyverno -> preview: "kiểm khi tạo pod" {class: kiem}
+preview -> active: "đạt cả 3 kiểm tra" {class: luong}
+
+note: |md
+  Cổng nào lỗi thì pipeline dừng, không có image được ký. Image không ký bị Kyverno từ chối, kể cả khi lấy từ Harbor.
+| {class: chu; near: bottom-center}

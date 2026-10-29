@@ -1,0 +1,81 @@
+# Hình 3 — Thành phần trong cụm và ai gọi ai.
+...@chung
+
+direction: right
+
+title: |md
+  # Thành phần trong cụm — ai gọi ai
+| {near: top-center}
+
+user: "Người dùng\nhttps://*.talos.internal" {class: ngoai; shape: person; width: 120; height: 110}
+git: "talos-gitops" {class: ngoai; icon: ${si}/github}
+
+ingress: "Lối vào" {
+  class: nentang
+  traefik: "Traefik\ningress + TLS nội bộ" {icon: ${si}/traefikproxy}
+  certm: "cert-manager\nCA nội bộ" {icon: ${cncf}/cert-manager/icon/color/cert-manager-icon-color.svg}
+  certm -> traefik: "chứng chỉ" {class: phu}
+}
+
+gitops: "Triển khai" {
+  class: nentang
+  argocd: "Argo CD\n19 app, self-heal" {icon: ${cncf}/argo/icon/color/argo-icon-color.svg}
+  rollouts: "Argo Rollouts\nblue-green + phân tích" {icon: ${cncf}/argo/icon/color/argo-icon-color.svg}
+  sealed: "Sealed Secrets\ngiải mã secret trong Git"
+}
+
+sec: "Bảo mật" {
+  class: baomat
+  kyverno: "Kyverno\nchỉ image ký bằng khoá Jenkins" {icon: ${cncf}/kyverno/icon/color/kyverno-icon-color.svg}
+  vap: "ValidatingAdmissionPolicy\nbắt buộc request RAM"
+  vault: "Vault\nsecret của ứng dụng" {icon: ${si}/vault}
+  eso: "External Secrets\nVault → Secret"
+  eso -> vault: "đọc" {class: phu}
+}
+
+reg: "Registry" {
+  class: nentang
+  harbor: "Harbor\nbản sao image + chữ ký" {icon: ${cncf}/harbor/icon/color/harbor-icon-color.svg}
+}
+
+app: "Ứng dụng demo-app" {
+  class: ungdung
+  active: "Bản active"
+  preview: "Bản preview"
+  preview -> active: "đạt smoke, tỉ lệ lỗi, ZAP" {class: phu}
+}
+
+idp: "Danh tính" {
+  class: danhtinh
+  keycloak: "Keycloak\nSSO OIDC/SAML" {icon: ${cncf}/keycloak/icon/color/keycloak-icon-color.svg}
+  oauth2: "oauth2-proxy"
+  headlamp: "Headlamp\ngiao diện cụm"
+  oauth2 -> keycloak: "đăng nhập" {class: phu}
+  headlamp -> keycloak: "đăng nhập" {class: phu}
+}
+
+mon: "Giám sát" {
+  class: giamsat
+  prom: "Prometheus" {icon: ${cncf}/prometheus/icon/color/prometheus-icon-color.svg}
+  am: "Alertmanager" {icon: ${cncf}/prometheus/icon/color/prometheus-icon-color.svg}
+  grafana: "Grafana" {icon: ${si}/grafana}
+  prom -> am: "luật cảnh báo" {class: phu}
+  grafana -> prom: "truy vấn" {class: phu}
+}
+
+user -> ingress.traefik: "HTTPS" {class: luong}
+ingress.traefik -> app.active: {class: luong}
+ingress.traefik -> idp.keycloak: {class: phu}
+ingress.traefik -> mon.grafana: {class: phu}
+ingress.traefik -> idp.oauth2: "Prometheus, Alertmanager" {class: phu}
+git -> gitops.argocd: "trạng thái mong muốn" {class: luong}
+gitops.argocd -> gitops.rollouts: "Rollout" {class: phu}
+gitops.rollouts -> app.preview: "tạo bản mới" {class: luong}
+reg.harbor -> app.preview: "image" {class: luong}
+sec.kyverno -> app.preview: "kiểm chữ ký" {class: kiem}
+sec.eso -> app.active: ".env" {class: phu}
+mon.prom -> app.active: "thu metric" {class: phu}
+
+note: |md
+  Grafana, Argo CD, Headlamp, Vault, Harbor đăng nhập qua Keycloak (SSO); Prometheus và Alertmanager qua oauth2-proxy.
+| {class: chu; near: bottom-center}

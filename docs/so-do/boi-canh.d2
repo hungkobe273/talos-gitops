@@ -1,0 +1,39 @@
+# Hình 1 — Bối cảnh: hệ thống nói chuyện với ai, với dịch vụ ngoài nào.
+...@chung
+
+direction: right
+
+title: |md
+  # Bối cảnh — talos-kvm và những gì xung quanh
+| {near: top-center}
+
+dev: "Nhóm phát triển\npush code" {class: ngoai; shape: person; width: 120; height: 110}
+ops: "Người vận hành\n(Hưng, Phúc)" {class: ngoai; shape: person; width: 120; height: 110}
+mentor: "Anh hướng dẫn\nđọc docs, xem dashboard" {class: ngoai; shape: person; width: 120; height: 110}
+
+he: "Cụm talos-kvm\nKubernetes on-premise trên kvm-host2\nGitOps · blue-green · SSO · giám sát" {
+  class: he
+  icon: ${cncf}/kubernetes/icon/color/kubernetes-icon-color.svg
+}
+
+github: "GitHub\nmã nguồn + talos-gitops" {class: ngoai; icon: ${si}/github}
+gcp: "Google Cloud\nJenkins · SonarQube · GitLab · KMS" {class: ngoai; icon: ${si}/googlecloud}
+ghcr: "GHCR\nimage gốc" {class: db}
+supabase: "Supabase\nDB của Keycloak" {class: db; icon: ${si}/supabase}
+b2: "Backblaze B2\nbackup mã hoá" {class: db; icon: ${si}/backblaze}
+tg: "Telegram\ncảnh báo" {class: ngoai; icon: ${si}/telegram}
+hc: "healthchecks.io\nbáo khi mất nhịp" {class: ngoai}
+
+dev -> github: "push" {class: phu}
+ops -> he: "runbook, talosctl, kubectl" {class: phu}
+mentor -> he: "Grafana, Argo CD qua SSO" {class: phu}
+mentor -> github: "đọc docs/" {class: phu}
+github -> gcp: "Jenkins build" {class: luong}
+gcp -> ghcr: "image đã ký" {class: luong}
+github -> he: "Argo CD đồng bộ" {class: luong}
+ghcr -> he: "Harbor replicate" {class: luong}
+he -> gcp: "Vault unseal (KMS)" {class: phu}
+he -> supabase: "Keycloak" {class: phu}
+he -> b2: "backup 16:45" {class: phu}
+he -> tg: "cảnh báo" {class: phu}
+he -> hc: "nhịp" {class: phu}
