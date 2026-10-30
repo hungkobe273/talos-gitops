@@ -10,6 +10,7 @@ Repo GitOps của cụm talos-kvm (Talos Linux, 1 control plane + 2 worker trên
 | [docs/kien-truc.md](docs/kien-truc.md) | Sơ đồ tổng thể, hạ tầng, luồng đưa code lên production, bảng thành phần và phiên bản |
 | [docs/truy-cap.md](docs/truy-cap.md) | Link và cách đăng nhập các giao diện (Argo CD, Grafana, Headlamp, Harbor, Vault, ...) |
 | [docs/nhat-ky-thay-doi.md](docs/nhat-ky-thay-doi.md) | Nhật ký thay đổi theo ngày, kể cả thay đổi ngoài repo |
+| [docs/ke-hoach-w3-gcp.md](docs/ke-hoach-w3-gcp.md) | Kế hoạch worker w3 trên GCP (KubeSpan), đã duyệt 30/10 |
 
 Quy ước: thay đổi nào làm khác kiến trúc, phiên bản hoặc cách truy cập thì sửa file tương ứng trong `docs/` ngay trong cùng commit, và thêm một dòng vào `docs/nhat-ky-thay-doi.md`.
 
