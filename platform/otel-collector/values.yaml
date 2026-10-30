@@ -15,6 +15,10 @@ tolerations:
   - key: node-role.kubernetes.io/control-plane
     operator: Exists
     effect: NoSchedule
+  # w3 (GCP worker, 30/10): collect its pod logs too.
+  - key: cloud
+    operator: Exists
+    effect: NoSchedule
 # Startup can be slow while the HDD is busy at cold start: up to 5 min before liveness applies.
 startupProbe:
   httpGet: {path: /, port: 13133}

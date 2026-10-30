@@ -7,9 +7,11 @@ server:
     enabled: true
     storageClassName: local-path-retain
     size: 5Gi
-  # local-path PV sticks to its node: pin to w2 (30/10: w2 87% / w1 92% memory requested),
-  # talos-pinned so it may preempt movable pods there at cold start.
+  # On w3 (GCP worker over KubeSpan, plan docs/ke-hoach-w3-gcp.md, 30/10): frees w2. local-path PV
+  # sticks to w3; logs before the move stay on the old PV on w2 (Retain).
   priorityClassName: talos-pinned
+  tolerations:
+    - {key: cloud, operator: Equal, value: gcp, effect: NoSchedule}
   affinity:
     nodeAffinity:
       requiredDuringSchedulingIgnoredDuringExecution:
@@ -17,7 +19,7 @@ server:
           - matchExpressions:
               - key: kubernetes.io/hostname
                 operator: In
-                values: ["talos-iv6-z5m"]
+                values: ["w3"]
   resources:
     requests: {cpu: 20m, memory: 96Mi}    # 30/10: p95 43Mi, max 50Mi (grows with data)
     limits: {memory: 512Mi}

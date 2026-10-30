@@ -75,6 +75,10 @@ patches:
               - key: node.kubernetes.io/disk-pressure
                 operator: Exists
                 effect: NoSchedule
+              # w3 (GCP, taint cloud=gcp): PVs for pods pinned there (30/10).
+              - key: cloud
+                operator: Exists
+                effect: NoSchedule
             containers:
             - name: helper-pod
               image: docker.io/library/busybox:1.38.0
