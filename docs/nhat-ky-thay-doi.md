@@ -23,6 +23,7 @@ Thay đổi nằm ngoài repo này (host2, cấu hình Talos) cũng ghi ở đâ
 | Anh duyệt thêm worker w3 trên GCP (e2-standard-2, KubeSpan) cho tầng quan sát và job lúc deploy; kế hoạch `docs/ke-hoach-w3-gcp.md`, thi công dự kiến 03/11 | Cụm gần hết RAM, credit GCP còn khoảng 7,5 triệu đ đến 22/01/2027 | commit này |
 | GCP budget "talos-lab free trial" 7.791.151 đ (24/10/2026–22/01/2027, tính chi phí trước khi trừ credit), báo mail ở 50/80/95% | Tài khoản Free Trial, thẻ của Phúc: không Upgrade, theo dõi mức tiêu | ngoài repo (GCP) |
 | Bản sao backup thứ hai lên Google Cloud Storage: bucket `talos-kvm-offsite-gcs-vtc` (asia-southeast1, chặn công khai, tự xoá sau 30 ngày); service account `talos-backup-writer` chỉ có `roles/storage.objectCreator` trên bucket (không đọc/ghi đè/xoá được); `host2/bin/talos-offsite-gcs.sh` (JWT bằng openssl, không cần gcloud) + drop-in `35-gcs.conf` chạy sau B2 lúc 16:45; khoá ở `/etc/talos-offsite-gcs/sa.json` (root 600). Thử 13:23: bundle 10:06 lên GCS, md5 khớp | 2 nơi lưu trên 2 nhà cung cấp (B2 + GCS) | `075550b`, commit này |
+| Image GCP `talos-v1-14-2` (Talos v1.14.2, Image Factory bản vanilla, platform gcp) sẵn cho w3; file tạm trên bucket đã xoá | Chuẩn bị thi công w3 ngày 03/11 | ngoài repo (GCP) |
 
 ## 29/10/2026
 
