@@ -6,6 +6,16 @@ crdAnnotations:
   argocd.argoproj.io/sync-options: ServerSideApply=true,Prune=false
 controller:
   replicas: 1
+  # Prefers w3 (30/10): needs the API and Prometheus (on w3); deploys already need Internet (Jenkins).
+  tolerations:
+    - {key: cloud, operator: Equal, value: gcp, effect: NoSchedule}
+  affinity:
+    nodeAffinity:
+      preferredDuringSchedulingIgnoredDuringExecution:
+        - weight: 100
+          preference:
+            matchExpressions:
+              - {key: kubernetes.io/hostname, operator: In, values: ["w3"]}
   resources:
     requests:
       cpu: 20m

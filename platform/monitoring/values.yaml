@@ -70,19 +70,22 @@ prometheus:
 
 alertmanager:
   alertmanagerSpec:
-    # Prefer a node without Keycloak pods (keycloak + keycloak-db live on w1); preferred, so 1 worker still works.
-    # The chart's default podAntiAffinity "soft" overrides affinity.podAntiAffinity, so switch it off (1 replica anyway).
+    # Next to Prometheus on w3 (30/10); preferred, so it returns on-prem when w3 is off. Without Internet
+    # Telegram is unreachable anyway. DNS over TCP (use-vc): UDP from w3 loses ~1% on the company uplink.
+    # The chart's default podAntiAffinity "soft" overrides affinity, so switch it off (1 replica anyway).
     podAntiAffinity: ""
+    dnsConfig:
+      options:
+        - name: use-vc
+    tolerations:
+      - {key: cloud, operator: Equal, value: gcp, effect: NoSchedule}
     affinity:
-      podAntiAffinity:
+      nodeAffinity:
         preferredDuringSchedulingIgnoredDuringExecution:
           - weight: 100
-            podAffinityTerm:
-              topologyKey: kubernetes.io/hostname
-              namespaceSelector:
-                matchLabels:
-                  kubernetes.io/metadata.name: keycloak
-              labelSelector: {}
+            preference:
+              matchExpressions:
+                - {key: kubernetes.io/hostname, operator: In, values: ["w3"]}
     # Mounted at /etc/alertmanager/secrets/telegram-bot/
     secrets:
       - telegram-bot
