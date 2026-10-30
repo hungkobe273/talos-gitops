@@ -343,6 +343,16 @@ grafana:
 # Requests/limits for the small components (2026-10-22 scan, working set max 1h: operator 25Mi,
 # kube-state-metrics 28Mi, node-exporter ~30Mi). Request ~ usage, memory limit ~4x, no CPU limit.
 prometheusOperator:
+  # Prefers w3 (GCP worker, 30/10): stateless, needs only the API (and GitHub); back on-prem when w3 is off.
+  tolerations:
+    - {key: cloud, operator: Equal, value: gcp, effect: NoSchedule}
+  affinity:
+    nodeAffinity:
+      preferredDuringSchedulingIgnoredDuringExecution:
+        - weight: 100
+          preference:
+            matchExpressions:
+              - {key: kubernetes.io/hostname, operator: In, values: ["w3"]}
   # Helm hook Jobs admission-create/-patch (cert for the operator webhook), seconds per sync.
   # Without a request they trip ValidatingAdmissionPolicy require-memory-request (30/10).
   admissionWebhooks:
@@ -368,6 +378,16 @@ prometheusOperator:
       limits:
         memory: 96Mi
 kube-state-metrics:
+  # Prefers w3 (GCP worker, 30/10): stateless, needs only the API (and GitHub); back on-prem when w3 is off.
+  tolerations:
+    - {key: cloud, operator: Equal, value: gcp, effect: NoSchedule}
+  affinity:
+    nodeAffinity:
+      preferredDuringSchedulingIgnoredDuringExecution:
+        - weight: 100
+          preference:
+            matchExpressions:
+              - {key: kubernetes.io/hostname, operator: In, values: ["w3"]}
   resources:
     requests:
       cpu: 10m

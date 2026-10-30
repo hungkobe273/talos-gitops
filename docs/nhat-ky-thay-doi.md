@@ -31,6 +31,7 @@ Thay đổi nằm ngoài repo này (host2, cấu hình Talos) cũng ghi ở đâ
 | Prometheus chuyển từ w1 lên w3 (toleration `cloud`, nodeAffinity w3, PVC mới: mất số đo 7 ngày trước, PV cũ giữ trên w1). Alertmanager ở lại w2 (cần DNS UDP tới Telegram). w3 tắt 17:15 theo lịch: để cụm chạy qua đêm thì tạm dừng watchdog | w1 97% request; Prometheus scrape theo IP, lấy target qua API (TCP) | commit này |
 | Job ZAP (AnalysisTemplate `demo-app-zap-baseline`) ưu tiên w3 (preferred, w3 tắt thì về on-prem), toleration `cloud`, `dnsConfig` `use-vc` (DNS qua TCP vì UDP từ w3 còn mất vài %). Sau khi chuyển: w1 78%, w2 83%, w3 14% request; Prometheus 42/42 target up | Rollout 30/10 sáng bị huỷ vì ZAP không có chỗ | commit này |
 | App `image-scan`: CronJob Trivy 0.76.1 (12:30 T2–T6, ưu tiên w3, ns demo dùng `ghcr-pull`) quét mọi image đang chạy, CVE CRITICAL có bản vá thì Job fail và cảnh báo `ImageScanCritical` về Telegram; kết quả từng image là dòng `SCAN` trong log tập trung. Đóng firewall GCP: xoá `default-allow-rdp`, `default-allow-ssh` chỉ còn IP công ty | Lấp khoảng trống anh hỏi 29/10: image chỉ được quét lúc build; SSH/RDP đang mở ra Internet | commit này |
+| Ưu tiên w3 (preferred, w3 tắt thì về on-prem): kube-state-metrics, prometheus-operator, Argo CD repo-server và applicationset-controller (Argo CD helm rev 9, thêm `dnsConfig use-vc`). Headlamp ở lại vì OIDC server-side cần `keycloak.talos.internal` | Bớt pod tranh HDD lúc cold start, bớt khoảng 600Mi request on-prem; đánh đổi: mất Internet thì Argo CD tạm không sync | commit này |
 
 ## 29/10/2026
 

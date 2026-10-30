@@ -106,6 +106,20 @@ controller:
             summary: Argo CD app {{ $labels.name }} is OutOfSync
             description: Application {{ $labels.name }} has been OutOfSync for 30 minutes (auto-sync failing or a manual change).
 repoServer:
+  # Prefers w3 (GCP worker, 30/10): stateless, needs only the API (and GitHub); back on-prem when w3 is off.
+  tolerations:
+    - {key: cloud, operator: Equal, value: gcp, effect: NoSchedule}
+  affinity:
+    nodeAffinity:
+      preferredDuringSchedulingIgnoredDuringExecution:
+        - weight: 100
+          preference:
+            matchExpressions:
+              - {key: kubernetes.io/hostname, operator: In, values: ["w3"]}
+  # DNS over TCP from w3 (UDP loses ~1% on the company uplink); Go resolver honours use-vc.
+  dnsConfig:
+    options:
+      - name: use-vc
   resources:
     requests:
       cpu: 50m
@@ -117,6 +131,20 @@ repoServer:
     serviceMonitor:
       enabled: true
 applicationSet:
+  # Prefers w3 (GCP worker, 30/10): stateless, needs only the API (and GitHub); back on-prem when w3 is off.
+  tolerations:
+    - {key: cloud, operator: Equal, value: gcp, effect: NoSchedule}
+  affinity:
+    nodeAffinity:
+      preferredDuringSchedulingIgnoredDuringExecution:
+        - weight: 100
+          preference:
+            matchExpressions:
+              - {key: kubernetes.io/hostname, operator: In, values: ["w3"]}
+  # DNS over TCP from w3 (UDP loses ~1% on the company uplink); Go resolver honours use-vc.
+  dnsConfig:
+    options:
+      - name: use-vc
   resources:
     requests:
       cpu: 10m
