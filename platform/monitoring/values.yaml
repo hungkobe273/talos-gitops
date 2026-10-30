@@ -135,6 +135,10 @@ alertmanager:
 grafana:
   # Pinned to w2 by its PV (below): may preempt movable pods there (30/10).
   priorityClassName: talos-pinned
+  # Datasource for central logs (platform/victoria-logs/manifests/grafana-datasource.yaml, 30/10).
+  # Downloaded from grafana.com at pod start; without Internet Grafana starts without it.
+  plugins:
+    - victoriametrics-logs-datasource
   # Grafana DB (SQLite) on a PV (K7, 2026-10-22, design/grafana-pvc.md): keeps Keycloak-login users and
   # skips the ~813 migrations on every new pod. The local-path PV pins Grafana to w2 for good; keep
   # deploymentStrategy Recreate (only one process may open grafana.db). PV is Retain: a prune keeps the dir.

@@ -1,0 +1,40 @@
+# Central logs (mentor 30/10: "log tập trung, sử dụng opentelemetry đẩy về 1 con kiểu như signoz").
+# Backend VictoriaLogs instead of SigNoz: SigNoz self-hosted has no SSO (Keycloak) and needs
+# ClickHouse (2-4 GiB RAM). Logs are read in Grafana (Keycloak login). Design:
+# TTS_QTDV/design/log-tap-trung-otel-signoz-30-10.md (Phúc). Collector: argocd-apps/otel-collector.yaml.
+# No automated sync yet: first sync by hand, enable once stable.
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: victoria-logs
+  namespace: argocd
+  annotations:
+    argocd.argoproj.io/sync-wave: "2"
+spec:
+  project: default
+  sources:
+    - repoURL: https://victoriametrics.github.io/helm-charts/
+      chart: victoria-logs-single
+      targetRevision: 0.13.10
+      helm:
+        releaseName: vl
+        valueFiles:
+          - $values/platform/victoria-logs/values.yaml
+    - repoURL: git@github.com:hungkobe273/talos-gitops.git
+      targetRevision: main
+      ref: values
+    # Grafana datasource (ConfigMap in ns monitoring, picked up by the Grafana sidecar).
+    - repoURL: git@github.com:hungkobe273/talos-gitops.git
+      targetRevision: main
+      path: platform/victoria-logs/manifests
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: observability
+  syncPolicy:
+    # Namespace owned by this app; the collector (hostPath /var/log/pods) needs privileged.
+    managedNamespaceMetadata:
+      labels:
+        pod-security.kubernetes.io/enforce: privileged
+        pod-security.kubernetes.io/warn: restricted
+    syncOptions:
+      - CreateNamespace=true

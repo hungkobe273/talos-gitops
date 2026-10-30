@@ -1,0 +1,18 @@
+# Grafana datasource for VictoriaLogs; the kps Grafana sidecar loads ConfigMaps labelled
+# grafana_datasource=1 from every namespace. Plugin: platform/monitoring/values.yaml grafana.plugins.
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: victorialogs-datasource
+  namespace: monitoring
+  labels:
+    grafana_datasource: "1"
+data:
+  victorialogs.yaml: |
+    apiVersion: 1
+    datasources:
+      - name: VictoriaLogs
+        uid: victorialogs
+        type: victoriametrics-logs-datasource
+        access: proxy
+        url: http://vl-victoria-logs-single-server.observability.svc:9428

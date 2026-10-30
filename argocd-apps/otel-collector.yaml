@@ -1,0 +1,26 @@
+# OpenTelemetry Collector (DaemonSet, also on cp1): pod logs from /var/log/pods -> OTLP HTTP ->
+# VictoriaLogs (argocd-apps/victoria-logs.yaml). Namespace observability is created by that app.
+# No automated sync yet: first sync by hand after victoria-logs is healthy.
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: otel-collector
+  namespace: argocd
+  annotations:
+    argocd.argoproj.io/sync-wave: "3"
+spec:
+  project: default
+  sources:
+    - repoURL: https://open-telemetry.github.io/opentelemetry-helm-charts
+      chart: opentelemetry-collector
+      targetRevision: 0.176.0
+      helm:
+        releaseName: otel
+        valueFiles:
+          - $values/platform/otel-collector/values.yaml
+    - repoURL: git@github.com:hungkobe273/talos-gitops.git
+      targetRevision: main
+      ref: values
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: observability

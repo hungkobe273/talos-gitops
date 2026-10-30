@@ -12,6 +12,7 @@ Thay đổi nằm ngoài repo này (host2, cấu hình Talos) cũng ghi ở đâ
 | PriorityClass `talos-pinned` (value 1000, `platform/admission-policies/priority-pinned.yaml`), gắn cho mọi thành phần Harbor (portal, core, jobservice, registry, redis, exporter, postgres) | Pod bị ghim một node không tự dời được; ưu tiên cao hơn thì scheduler đẩy một pod dời được sang worker kia (preemption) thay vì để Harbor Pending | commit này |
 | Gắn `talos-pinned` cho Vault và Grafana (cũng bị ghim w2 qua PV local-path). Grafana restart khi sync; Vault (OnDelete) nhận ở lần pod khởi động sau | Cùng lý do dòng trên | commit này |
 | Request RAM cho Job hook `kps-kube-prometheus-stack-admission-create/-patch` (`prometheusOperator.admissionWebhooks.patch.resources`, 32Mi); sửa `messageExpression` của `require-memory-request` (hết lỗi cộng 2 list khác kiểu). Còn cảnh báo type checking `undefined field requests` nhưng policy vẫn bắt đúng vi phạm (bộ đếm apiserver). Chưa chuyển Deny | Kết quả kiểm tra của Phúc (`TTS_QTDV/design/kiem-tra-require-memory-request-30-10.md`): 2 vi phạm sáng 30/10 đều từ 2 Job hook này. Job hook mới chỉ chạy ở lần sync monitoring tới | `ac0f967` |
+| `require-memory-request`: bọc `dyn(c.resources)` để trình kiểm kiểu CEL của apiserver 1.37 hết báo `undefined field requests`; `.status.typeChecking` rỗng, pod thử thiếu request vẫn bị cảnh báo (`--dry-run=server`) | Điều kiện trước khi chuyển Deny (kiểm tra của Phúc) | `d4d2e00` |
 
 ## 29/10/2026
 

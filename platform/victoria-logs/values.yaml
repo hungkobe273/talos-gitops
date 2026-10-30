@@ -1,0 +1,23 @@
+server:
+  # Without a unit retentionPeriod is in months.
+  retentionPeriod: 7d
+  extraArgs:
+    retention.maxDiskSpaceUsageBytes: 4GiB
+  persistentVolume:
+    enabled: true
+    storageClassName: local-path-retain
+    size: 5Gi
+  # local-path PV sticks to its node: pin to w2 (30/10: w2 87% / w1 92% memory requested),
+  # talos-pinned so it may preempt movable pods there at cold start.
+  priorityClassName: talos-pinned
+  affinity:
+    nodeAffinity:
+      requiredDuringSchedulingIgnoredDuringExecution:
+        nodeSelectorTerms:
+          - matchExpressions:
+              - key: kubernetes.io/hostname
+                operator: In
+                values: ["talos-iv6-z5m"]
+  resources:
+    requests: {cpu: 20m, memory: 192Mi}
+    limits: {memory: 512Mi}
