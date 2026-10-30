@@ -3,7 +3,7 @@
 # Exit 0 = pass. Rules listed as FAIL in zap-rules.tsv (below) fail the analysis and abort
 # the rollout; every other finding is a WARN, printed in the Job log and ignored (-I).
 #
-# Cost on this cluster: the image is ~1.15 GB compressed, so it is pinned to w2 (most
+# Cost on this cluster: the image is ~1.15 GB compressed, so it prefers w3 (GCP worker, most
 # free memory) and pulled there once (IfNotPresent); the first rollout after this change
 # waits for that pull. Memory limit 1 GiB (the JVM sizes its heap from it).
 apiVersion: v1
@@ -36,6 +36,14 @@ spec:
             template:
               spec:
                 restartPolicy: Never
+                # 30/10: prefer w3 (GCP worker over KubeSpan, room to spare); falls back to an
+                # on-prem worker when w3 is off. DNS over TCP (use-vc, glibc): UDP from w3 to
+                # CoreDNS on-prem still loses a few % of packets.
+                tolerations:
+                  - {key: cloud, operator: Equal, value: gcp, effect: NoSchedule}
+                dnsConfig:
+                  options:
+                    - name: use-vc
                 affinity:
                   nodeAffinity:
                     preferredDuringSchedulingIgnoredDuringExecution:
@@ -44,7 +52,7 @@ spec:
                           matchExpressions:
                             - key: kubernetes.io/hostname
                               operator: In
-                              values: ["talos-iv6-z5m"]
+                              values: ["w3"]
                 securityContext:
                   runAsNonRoot: true
                   runAsUser: 1000
