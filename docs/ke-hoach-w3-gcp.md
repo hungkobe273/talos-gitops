@@ -1,6 +1,6 @@
 # Kế hoạch dùng GCP: worker w3 (KubeSpan), backup, diễn tập khôi phục, staging GKE
 
-Duyệt: anh hướng dẫn 30/10/2026 ("được, có cloud thì các bạn cứ tận dụng nhé"). Thi công dự kiến thứ Ba 03/11.
+Duyệt: anh hướng dẫn 30/10/2026 ("được, có cloud thì các bạn cứ tận dụng nhé"). **Đã thi công 30/10 chiều** (sớm hơn dự kiến thứ Ba 03/11), xem mục "Kết quả 30/10".
 
 ## Vì sao
 
@@ -100,3 +100,26 @@ ssh kvm-host2 'export TALOSCONFIG=~/talos-kvm/talosconfig KUBECONFIG=~/talos-kvm
 ```
 
 Kiểm tra mạng: pod thử trên w3 (toleration `cloud`) gọi pod trên w1/w2, `ping -M do -s 1300` và `-s 1400`, gọi `kube-dns`, gọi Service Prometheus.
+
+## Kết quả 30/10
+
+| Giờ | Việc | Kết quả |
+|---|---|---|
+| 13:40 | Backup tay (lần đầu có bước GCS trong service) | đạt |
+| 13:44–13:53 | KubeSpan cp1, w1, w2 (`no-reboot`) | 6 cặp peer up, không reboot |
+| 13:54–13:57 | Firewall, VM w3, `apply-config` | w3 Ready 13:57 |
+| 13:58–15:00 | Xử lý mạng: checksum offload `flannel.1` (`EthernetConfig`, 4 node), endpoint NAT sai (`harvestExtraEndpoints`, 4 node) | mất gói w3↔w2 20–65% → khoảng 2–3% |
+| 15:09 | VictoriaLogs lên w3 (PVC mới), Collector có toleration | log về từ 4 node |
+| 15:18 | Prometheus lên w3 (PVC mới) | 42/42 target up, nối Alertmanager |
+| 15:24 | ZAP ưu tiên w3 + DNS qua TCP, chạy thử | Succeeded, FAIL-NEW 0 |
+
+Request RAM sau đó: w1 78% (từ 97%), w2 83%, cp1 36%, w3 14%. Grafana ở lại w2 (không gọi được keycloak.talos.internal từ w3).
+
+Còn mở (T3 03/11): nguyên nhân mất gói khoảng 2–3% còn lại trong đường hầm (Internet trần 0%); quan sát cold start sáng 02/11 có w3 (w3 bật 08:15 trước host2); Alertmanager vẫn ở w2.
+
+## Vận hành w3
+
+- w3 tắt 17:15, bật 08:15 (T2–T6) theo lịch GCP. Để cụm chạy qua đêm thì Prometheus/VictoriaLogs dừng sau 17:15: tạm dừng watchdog, hoặc gỡ w3 khỏi lịch (`gcloud compute instances remove-resource-policies w3 --zone=asia-southeast1-b --resource-policies=jenkins-office-hours`).
+- Kiểm tra: `talosctl -n 10.148.0.4 get kubespanpeerstatuses` (3 peer up), `kubectl get node w3`.
+- Pod cần chạy trên w3: toleration `cloud=gcp:NoSchedule` + nodeAffinity `kubernetes.io/hostname: w3`; tra DNS nhiều thì thêm `dnsConfig.options: use-vc` (glibc, Go).
+- Không đặt lên w3 thứ cần `*.talos.internal` (192.168.136.38): Grafana (OIDC), pod kéo image từ Harbor.
