@@ -68,3 +68,35 @@ Credit còn khoảng 7,54 triệu đ (hạn 22/01/2027). gitlab-1 + jenkins-1 ti
 | 5 | Budget alert 50/80/95% (tính chi phí trước khi trừ credit), gửi mail admin billing | 0 | 30/10 |
 
 Tổng thêm khoảng 2,05 triệu; cộng 3 triệu đang tiêu là khoảng 5 triệu trên 7,54 triệu.
+
+## Đã chuẩn bị (30/10 chiều)
+
+- Image GCP `talos-v1-14-2` (READY), budget alert, bucket backup.
+- host2 `~/talos-kvm/w3.yaml` (600, không commit): từ w1.yaml, bỏ IP tĩnh, `UnattendedInstallConfig`, DNS công ty, `StaticHostConfig`; NTP `169.254.169.254`; `KubeNodeConfig` labels `topology.kubernetes.io/zone: gcp-asia-southeast1-b`, taints `cloud: gcp:NoSchedule`; thêm `KubeSpanConfig`. `talosctl validate --mode cloud`: hợp lệ. (Talos 1.14 khai labels/taints trong `KubeNodeConfig`, không phải `machine.nodeLabels`; NodeRestriction chặn nhãn tự đặt tiền tố.)
+- host2 `~/talos-kvm/patch-kubespan.yaml`: tài liệu `KubeSpanConfig` (enabled, mtu 1380).
+- Lịch có sẵn `jenkins-office-hours` (08:15–17:15 T2–T6, Asia/Ho_Chi_Minh) dùng chung cho w3.
+- Phát hiện (việc riêng, chưa làm): firewall mặc định `default-allow-ssh` và `default-allow-rdp` mở 0.0.0.0/0 cho gitlab-1, jenkins-1; nên thu về IP công ty sau khi kiểm tra không ai SSH từ nơi khác.
+
+## Lệnh thi công (T3 03/11)
+
+Giai đoạn 1, mỗi node một lần, chờ peer `up` rồi mới làm node tiếp (cp1, w1, w2):
+
+```bash
+ssh kvm-host2 'export TALOSCONFIG=~/talos-kvm/talosconfig; cd ~/talos-kvm; N=10.10.10.11; F=cp1.yaml; cp $F $F.bak-20261103-kubespan; talosctl -n $N patch mc --patch @patch-kubespan.yaml --mode=no-reboot && printf -- "---\n" >> $F && cat patch-kubespan.yaml >> $F && talosctl validate --config $F --mode metal | tail -1; sleep 40; talosctl -n $N get kubespanpeerstatuses'
+```
+
+Giai đoạn 2 (laptop):
+
+```bash
+gcloud compute firewall-rules create talos-w3-kubespan --network=default --direction=INGRESS --allow=udp:51820 --source-ranges=118.70.124.66/32 --target-tags=talos-w3
+gcloud compute firewall-rules create talos-w3-apid --network=default --direction=INGRESS --allow=tcp:50000 --source-ranges=118.70.124.66/32 --target-tags=talos-w3
+gcloud compute instances create w3 --zone=asia-southeast1-b --machine-type=e2-standard-2 --image=talos-v1-14-2 --boot-disk-size=50GB --boot-disk-type=pd-balanced --tags=talos-w3 --resource-policies=jenkins-office-hours --no-service-account --no-scopes
+```
+
+Giai đoạn 3 (host2, IP công cộng của w3 lấy từ lệnh trên; không `--dry-run` cùng `--insecure`):
+
+```bash
+ssh kvm-host2 'export TALOSCONFIG=~/talos-kvm/talosconfig KUBECONFIG=~/talos-kvm/kubeconfig; talosctl apply-config --insecure -n <W3_PUBLIC_IP> --file ~/talos-kvm/w3.yaml; sleep 180; kubectl get nodes -o wide; talosctl -n 10.10.10.11 get kubespanpeerstatuses'
+```
+
+Kiểm tra mạng: pod thử trên w3 (toleration `cloud`) gọi pod trên w1/w2, `ping -M do -s 1300` và `-s 1400`, gọi `kube-dns`, gọi Service Prometheus.
