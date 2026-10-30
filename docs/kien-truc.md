@@ -104,7 +104,7 @@ Talos v1.14.2, Kubernetes v1.37.1, CNI Flannel.
 
 ## 6. Vận hành
 
-- **Backup** hằng ngày 16:45 trên host2 (ngoài cụm): snapshot etcd, dump DB Keycloak (Supabase), dump DB Harbor, snapshot Vault; gom thành một gói mã hóa GPG, đẩy lên Backblaze B2. Lỗi bước nào thì báo Telegram. Đã thử giải mã gói backup; khôi phục Vault từ snapshot chưa diễn tập.
+- **Backup** hằng ngày 16:45 trên host2 (ngoài cụm): snapshot etcd, dump DB Keycloak (Supabase), dump DB Harbor, snapshot Vault; gom thành một gói mã hóa GPG, đẩy lên Backblaze B2 và Google Cloud Storage (từ 30/10; tài khoản ghi lên GCS chỉ thêm được, không xoá được). Lỗi bước nào thì báo Telegram. Đã thử giải mã gói backup; đã diễn tập khôi phục Vault (29/10).
 - **Cảnh báo**: Prometheus/Alertmanager báo Telegram khi cụm còn sống (demo-app, ExternalSecret, Keycloak, `VaultNotReady`). Watchdog trên host2 và healthchecks.io báo khi cả cụm chết.
 - **Log tập trung** (30/10): OpenTelemetry Collector thu log mọi pod, đẩy về VictoriaLogs; xem trên Grafana qua Keycloak (viewer dùng dashboard "Log tập trung", Explore chỉ cho admin). Chọn VictoriaLogs thay SigNoz vì SigNoz tự host không có SSO và cần ClickHouse 2–4 GiB RAM; đầu thu là OTLP chuẩn nên đổi backend chỉ cần đổi exporter.
 - **Khởi động lạnh**: 9 phút 29 giây từ lúc bật cp1 tới khi mọi app Healthy (đo 28/10); 30/10 khoảng 25 phút do w2 đầy request (xem nhật ký).
