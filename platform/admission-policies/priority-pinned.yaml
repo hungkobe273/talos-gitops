@@ -1,0 +1,11 @@
+# Pods pinned to one node (nodeSelector or a local-path PVC) cannot move when that node is full.
+# 30/10 cold start: w2 filled up with pods that could run anywhere, Harbor (pinned to w2) stayed
+# Pending, Kyverno could not reach Harbor to verify signatures and demo-app had 0 pods.
+# With a higher priority the scheduler preempts a movable pod, which restarts on the other worker.
+apiVersion: scheduling.k8s.io/v1
+kind: PriorityClass
+metadata:
+  name: talos-pinned
+value: 1000
+globalDefault: false
+description: "Pods pinned to one node (Harbor); may preempt movable priority-0 pods."
