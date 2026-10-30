@@ -1,6 +1,6 @@
 # OpenTelemetry Collector (DaemonSet, also on cp1): pod logs from /var/log/pods -> OTLP HTTP ->
 # VictoriaLogs (argocd-apps/victoria-logs.yaml). Namespace observability is created by that app.
-# No automated sync yet: first sync by hand after victoria-logs is healthy.
+# First sync by hand 30/10 09:40, automated after it ran clean.
 apiVersion: argoproj.io/v1alpha1
 kind: Application
 metadata:
@@ -24,3 +24,7 @@ spec:
   destination:
     server: https://kubernetes.default.svc
     namespace: observability
+  syncPolicy:
+    automated:
+      prune: true
+      selfHeal: true

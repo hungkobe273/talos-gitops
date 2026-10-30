@@ -2,7 +2,7 @@
 # Backend VictoriaLogs instead of SigNoz: SigNoz self-hosted has no SSO (Keycloak) and needs
 # ClickHouse (2-4 GiB RAM). Logs are read in Grafana (Keycloak login). Design:
 # TTS_QTDV/design/log-tap-trung-otel-signoz-30-10.md (Phúc). Collector: argocd-apps/otel-collector.yaml.
-# No automated sync yet: first sync by hand, enable once stable.
+# First sync by hand 30/10 09:37, automated after it ran clean.
 apiVersion: argoproj.io/v1alpha1
 kind: Application
 metadata:
@@ -31,6 +31,9 @@ spec:
     server: https://kubernetes.default.svc
     namespace: observability
   syncPolicy:
+    automated:
+      prune: true
+      selfHeal: true
     # Namespace owned by this app; the collector (hostPath /var/log/pods) needs privileged.
     managedNamespaceMetadata:
       labels:

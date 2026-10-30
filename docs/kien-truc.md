@@ -47,7 +47,7 @@ Sơ đồ: mục 1.2.
 |---|---|---|---|---|---|
 | cp1 | 10.10.10.11 | 2 | 3,5 GB | talos-w9b-tsv | control plane duy nhất từ 20/10 |
 | w1 | 10.10.10.21 | 2 | 4,5 GB | talos-hdl-7jo | DB keycloak-db cũ ghim ở đây |
-| w2 | 10.10.10.22 | 2 | 4,5 GB | talos-iv6-z5m | Harbor, Grafana ghim ở đây |
+| w2 | 10.10.10.22 | 2 | 4,5 GB | talos-iv6-z5m | Harbor, Grafana, Vault, VictoriaLogs ghim ở đây (PriorityClass `talos-pinned`) |
 | cp2, cp3 | .12, .13 | | | | tắt, giữ đĩa để bật lại khi cần HA |
 
 - Node chạy Talos Linux, không có SSH, quản trị bằng API `talosctl`.
@@ -89,6 +89,8 @@ GitHub Actions và GitLab CE vẫn build cùng app để so sánh, nhưng chỉ 
 | | oauth2-proxy | | đăng nhập Keycloak trước Prometheus, Alertmanager |
 | | headlamp | 0.45.0 | giao diện cụm |
 | Giám sát | monitoring | kube-prometheus-stack 92.2.0 | Prometheus, Alertmanager, Grafana |
+| Log tập trung | victoria-logs | victoria-logs-single 0.13.10 | lưu log 7 ngày (tối đa 4 GiB), xem trên Grafana (dashboard "Log tập trung", đăng nhập Keycloak) |
+| | otel-collector | opentelemetry-collector 0.176.0 | DaemonSet trên cả 3 node, đọc `/var/log/pods`, gắn namespace/pod/container, đẩy OTLP về VictoriaLogs |
 | Ứng dụng | demo-app | | app Go mẫu, Rollout blue-green |
 
 Talos v1.14.2, Kubernetes v1.37.1, CNI Flannel.
@@ -104,7 +106,8 @@ Talos v1.14.2, Kubernetes v1.37.1, CNI Flannel.
 
 - **Backup** hằng ngày 16:45 trên host2 (ngoài cụm): snapshot etcd, dump DB Keycloak (Supabase), dump DB Harbor, snapshot Vault; gom thành một gói mã hóa GPG, đẩy lên Backblaze B2. Lỗi bước nào thì báo Telegram. Đã thử giải mã gói backup; khôi phục Vault từ snapshot chưa diễn tập.
 - **Cảnh báo**: Prometheus/Alertmanager báo Telegram khi cụm còn sống (demo-app, ExternalSecret, Keycloak, `VaultNotReady`). Watchdog trên host2 và healthchecks.io báo khi cả cụm chết.
-- **Khởi động lạnh**: 9 phút 29 giây từ lúc bật cp1 tới khi mọi app Healthy (đo 28/10).
+- **Log tập trung** (30/10): OpenTelemetry Collector thu log mọi pod, đẩy về VictoriaLogs; xem trên Grafana qua Keycloak (viewer dùng dashboard "Log tập trung", Explore chỉ cho admin). Chọn VictoriaLogs thay SigNoz vì SigNoz tự host không có SSO và cần ClickHouse 2–4 GiB RAM; đầu thu là OTLP chuẩn nên đổi backend chỉ cần đổi exporter.
+- **Khởi động lạnh**: 9 phút 29 giây từ lúc bật cp1 tới khi mọi app Healthy (đo 28/10); 30/10 khoảng 25 phút do w2 đầy request (xem nhật ký).
 - **Runbook**: bật/tắt hằng ngày, kiểm tra backup, xử lý các lỗi đã gặp (ngoài repo, file `talos-kvm-runbook.md`).
 
 ## 7. Giới hạn đã biết
