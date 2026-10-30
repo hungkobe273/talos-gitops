@@ -18,11 +18,11 @@ podSecurityContext:
   seccompProfile:
     type: RuntimeDefault
 deschedulerPolicy:
-  # Only the two workers; cp1 is tainted and cannot take app pods.
-  nodeSelector: "!node-role.kubernetes.io/control-plane"
+  # Only the two on-prem workers: cp1 and w3 are tainted and cannot take ordinary pods.
+  nodeSelector: "!node-role.kubernetes.io/control-plane,topology.kubernetes.io/zone!=gcp-asia-southeast1-b"
   # Few evictions per run so the HDD is not flooded with restarts.
-  maxNoOfPodsToEvictPerNode: 3
-  maxNoOfPodsToEvictTotal: 3
+  maxNoOfPodsToEvictPerNode: 5
+  maxNoOfPodsToEvictTotal: 5
   profiles:
     - name: balance
       pluginConfig:
@@ -38,17 +38,18 @@ deschedulerPolicy:
         - name: RemoveDuplicates
         - name: LowNodeUtilization
           args:
-            # % of allocatable, by requests. 22/10 cold start: w1 15/9/5 (not
-            # underutilized with 10/10/5), w2 50/58/25. Balanced ~31/33/14 sits
-            # between the two bands, so nothing moves once spread.
+            # % of allocatable, by requests. A node is underutilized only when ALL
+            # three are below thresholds. 30/10 cold start: w1 30/40/8, w2 40/97/24
+            # (old 20/20/10 never matched w1, nothing moved). Balanced ~68% memory
+            # sits between the two bands, so nothing moves once spread.
             thresholds:
-              cpu: 20
-              memory: 20
-              pods: 10
+              cpu: 60
+              memory: 55
+              pods: 40
             targetThresholds:
-              cpu: 40
-              memory: 40
-              pods: 20
+              cpu: 85
+              memory: 75
+              pods: 60
       plugins:
         balance:
           enabled:
