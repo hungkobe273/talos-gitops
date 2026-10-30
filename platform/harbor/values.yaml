@@ -45,7 +45,7 @@ persistence:
 portal:
   nodeSelector: {kubernetes.io/hostname: talos-iv6-z5m}
   priorityClassName: talos-pinned
-  resources: {requests: {cpu: 10m, memory: 32Mi}, limits: {memory: 128Mi}}
+  resources: {requests: {cpu: 10m, memory: 16Mi}, limits: {memory: 64Mi}}   # 30/10: max 4Mi
 core:
   nodeSelector: {kubernetes.io/hostname: talos-iv6-z5m}
   priorityClassName: talos-pinned

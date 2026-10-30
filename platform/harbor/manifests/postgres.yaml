@@ -79,7 +79,7 @@ spec:
           resources:
             requests:
               cpu: 30m
-              memory: 128Mi
+              memory: 80Mi       # 30/10: p95 7 ngày 53Mi, max 129Mi
             limits:
               memory: 384Mi
           lifecycle:

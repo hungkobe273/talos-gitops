@@ -19,5 +19,5 @@ server:
                 operator: In
                 values: ["talos-iv6-z5m"]
   resources:
-    requests: {cpu: 20m, memory: 192Mi}
+    requests: {cpu: 20m, memory: 96Mi}    # 30/10: p95 43Mi, max 50Mi (grows with data)
     limits: {memory: 512Mi}
