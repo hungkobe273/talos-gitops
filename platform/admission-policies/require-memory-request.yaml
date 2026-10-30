@@ -18,19 +18,21 @@ spec:
         apiVersions: ["v1"]
         operations: ["CREATE"]
         resources: ["pods"]
+  # dyn(): the 1.37 type checker reports "undefined field requests" on ResourceRequirements (30/10);
+  # dyn skips static typing there, the runtime check is the same.
   validations:
     - expression: >-
-        object.spec.containers.all(c, has(c.resources) && has(c.resources.requests) &&
-          'memory' in c.resources.requests) &&
+        object.spec.containers.all(c, has(c.resources) && has(dyn(c.resources).requests) &&
+          'memory' in dyn(c.resources).requests) &&
         (!has(object.spec.initContainers) || object.spec.initContainers.all(c,
-          has(c.resources) && has(c.resources.requests) && 'memory' in c.resources.requests))
+          has(c.resources) && has(dyn(c.resources).requests) && 'memory' in dyn(c.resources).requests))
       messageExpression: >-
         'every container needs resources.requests.memory (missing in: ' +
         (object.spec.containers
-          .filter(c, !has(c.resources) || !has(c.resources.requests) || !('memory' in c.resources.requests))
+          .filter(c, !has(c.resources) || !has(dyn(c.resources).requests) || !('memory' in dyn(c.resources).requests))
           .map(c, c.name) +
         (has(object.spec.initContainers) ? object.spec.initContainers
-          .filter(c, !has(c.resources) || !has(c.resources.requests) || !('memory' in c.resources.requests))
+          .filter(c, !has(c.resources) || !has(dyn(c.resources).requests) || !('memory' in dyn(c.resources).requests))
           .map(c, c.name) : [])).join(', ') + ')'
       reason: Invalid
 ---
