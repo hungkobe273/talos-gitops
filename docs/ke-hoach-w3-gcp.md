@@ -1,4 +1,4 @@
-# Kế hoạch: worker w3 trên GCP (KubeSpan)
+# Kế hoạch dùng GCP: worker w3 (KubeSpan), backup, diễn tập khôi phục, staging GKE
 
 Duyệt: anh hướng dẫn 30/10/2026 ("được, có cloud thì các bạn cứ tận dụng nhé"). Thi công dự kiến thứ Ba 03/11.
 
@@ -54,3 +54,17 @@ Mỗi lần một thay đổi, chờ PSI io < 10% rồi mới làm tiếp.
 ## Cuối kỳ thực tập
 
 Trước 22/01/2027: chuyển tầng quan sát về host2 hoặc gỡ, xoá w3 và firewall.
+
+## Các việc dùng GCP khác (anh: "dùng được gì cứ dùng", 30/10)
+
+Credit còn khoảng 7,54 triệu đ (hạn 22/01/2027). gitlab-1 + jenkins-1 tiêu khoảng 3 triệu đến hết hạn. Tài khoản đang Free Trial: hết credit hoặc hết hạn thì tài nguyên dừng, không trừ thẻ. **Không bấm Upgrade / Activate full account.** Cuối kỳ thực tập xoá hết tài nguyên.
+
+| # | Việc | Chi phí ước tính | Lịch |
+|---|---|---|---|
+| 1 | w3 e2-standard-2 (8 GB), bật theo giờ làm (mục trên) | khoảng 1,2 triệu | T3 03/11 |
+| 2 | Backup lên Cloud Storage: bundle GPG hằng ngày (bản thứ hai ngoài B2), bucket asia-southeast1, giữ 30 ngày | dưới 50 nghìn | 30/10 |
+| 3 | Velero (backup object Kubernetes vào GCS) + diễn tập khôi phục toàn cụm lên 3 VM Talos tạm trên GCP, đo RTO, xoá sau khi xong | khoảng 100 nghìn | T5 06/11 |
+| 4 | Staging GKE (zonal, 1 node e2-medium, bật theo giờ làm): Argo CD deploy demo-app sang 2 cụm | khoảng 0,7 triệu | tuần 09/11 |
+| 5 | Budget alert 50/80/95% (tính chi phí trước khi trừ credit), gửi mail admin billing | 0 | 30/10 |
+
+Tổng thêm khoảng 2,05 triệu; cộng 3 triệu đang tiêu là khoảng 5 triệu trên 7,54 triệu.
