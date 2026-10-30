@@ -115,7 +115,9 @@ Kiểm tra mạng: pod thử trên w3 (toleration `cloud`) gọi pod trên w1/w2
 
 Request RAM sau đó: w1 78% (từ 97%), w2 83%, cp1 36%, w3 14%. Grafana ở lại w2 (không gọi được keycloak.talos.internal từ w3).
 
-Còn mở (T3 03/11): nguyên nhân mất gói khoảng 2–3% còn lại trong đường hầm (Internet trần 0%); quan sát cold start sáng 02/11 có w3 (w3 bật 08:15 trước host2); Alertmanager vẫn ở w2.
+Mất gói còn lại đã đo 30/10 15:33 (600 gói, 5 phút): Internet trần host2 → w3 1,17%, host2 → 8.8.8.8 0,83%, trong đường hầm 0,83%, gói mất lẻ tẻ, không trùng lần cấu hình lại WireGuard nào. Vậy đó là mất gói của đường Internet công ty, KubeSpan không làm mất thêm; TCP tự gửi lại, pod tra DNS nhiều dùng `use-vc`.
+
+Còn mở: quan sát cold start sáng 02/11 có w3 (w3 bật 08:15 trước host2); Alertmanager vẫn ở w2.
 
 ## Vận hành w3
 
