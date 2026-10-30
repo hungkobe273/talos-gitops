@@ -27,12 +27,15 @@ defaultRules:
 
 prometheus:
   prometheusSpec:
-    # Pinned to w1 (talos-hdl-7jo), the opposite worker from Grafana (PV on w2):
-    # if either worker dies, half of the monitoring stack survives, and when w2
-    # dies Prometheus + Alertmanager still send the node-down alert. Required,
-    # because local-path creates the PV on whatever node the pod lands on first.
+    # On w3 (GCP worker over KubeSpan, 30/10, docs/ke-hoach-w3-gcp.md): frees 752Mi on w1 (97%).
+    # Scrapes by pod IP and discovers targets via the API (TCP), so the KubeSpan path is enough.
+    # w3 stops at 17:15 with its GCP schedule: if the cluster stays up overnight, Prometheus is
+    # down after that (pause the watchdog). Until 30/10 it was pinned to w1 (old PV kept, Retain).
+    # Required, because local-path creates the PV on whatever node the pod lands on first.
     # The chart's default podAntiAffinity "soft" would override affinity, so off.
     podAntiAffinity: ""
+    tolerations:
+      - {key: cloud, operator: Equal, value: gcp, effect: NoSchedule}
     affinity:
       nodeAffinity:
         requiredDuringSchedulingIgnoredDuringExecution:
@@ -40,11 +43,11 @@ prometheus:
             - matchExpressions:
                 - key: kubernetes.io/hostname
                   operator: In
-                  values: ["talos-hdl-7jo"]
+                  values: ["w3"]
     # ~350 MB/day at ~2.6k samples/s (23/10); whichever limit is hit first wins.
     retention: 7d
     retentionSize: 3GB
-    # TSDB on a local-path-retain PVC (survives restarts; PV pinned to w1).
+    # TSDB on a local-path-retain PVC (survives restarts; PV pinned to w3).
     storageSpec:
       volumeClaimTemplate:
         spec:
