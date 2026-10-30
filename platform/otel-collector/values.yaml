@@ -1,6 +1,8 @@
 mode: daemonset
 image:
-  repository: otel/opentelemetry-collector-contrib
+  # k8s distribution (filelog, k8sattributes, otlphttp): the contrib binary (~300 MB) did not fit
+  # the 192Mi limit as page cache, so after cold start it thrashed the HDD in state D (30/10).
+  repository: otel/opentelemetry-collector-k8s
 presets:
   # hostPath /var/log/pods + filelog receiver; skip the collector's own logs (no loop).
   logsCollection:
@@ -13,15 +15,14 @@ tolerations:
   - key: node-role.kubernetes.io/control-plane
     operator: Exists
     effect: NoSchedule
-# 30/10 after cold start the collector printed nothing and was killed by liveness (30s) in a loop.
-# Give it up to 5 min to start before liveness applies; debug logs to see where startup waits.
+# Startup can be slow while the HDD is busy at cold start: up to 5 min before liveness applies.
 startupProbe:
   httpGet: {path: /, port: 13133}
   periodSeconds: 10
   failureThreshold: 30
 resources:
   requests: {cpu: 20m, memory: 64Mi}
-  limits: {memory: 192Mi}
+  limits: {memory: 256Mi}
 config:
   processors:
     memory_limiter: {check_interval: 5s, limit_mib: 150, spike_limit_mib: 32}
@@ -31,8 +32,6 @@ config:
       headers:
         VL-Stream-Fields: k8s.namespace.name,k8s.pod.name,k8s.container.name
   service:
-    telemetry:
-      logs: {level: debug}
     pipelines:
       logs:
         processors: [memory_limiter, k8sattributes, batch]
