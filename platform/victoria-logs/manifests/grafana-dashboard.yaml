@@ -1,0 +1,53 @@
+# Dashboard "Log tập trung": Grafana Explore is Editor/Admin only, so talos-viewers (Viewer, e.g.
+# mentor_view) read logs here. Loaded by the kps Grafana sidecar (label grafana_dashboard=1).
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: victorialogs-dashboard
+  namespace: monitoring
+  labels:
+    grafana_dashboard: "1"
+data:
+  log-tap-trung.json: |
+    {
+      "uid": "log-tap-trung",
+      "title": "Log tập trung",
+      "tags": ["logs", "victorialogs"],
+      "timezone": "browser",
+      "refresh": "30s",
+      "time": {"from": "now-15m", "to": "now"},
+      "schemaVersion": 39,
+      "templating": {
+        "list": [
+          {"name": "namespace", "label": "Namespace", "type": "textbox", "query": "demo", "current": {"text": "demo", "value": "demo"}},
+          {"name": "search", "label": "Tìm (LogsQL, * = tất cả)", "type": "textbox", "query": "*", "current": {"text": "*", "value": "*"}}
+        ]
+      },
+      "panels": [
+        {
+          "id": 1,
+          "type": "timeseries",
+          "title": "Số dòng log theo pod",
+          "gridPos": {"x": 0, "y": 0, "w": 24, "h": 7},
+          "datasource": {"type": "victoriametrics-logs-datasource", "uid": "victorialogs"},
+          "targets": [
+            {"refId": "A", "datasource": {"type": "victoriametrics-logs-datasource", "uid": "victorialogs"},
+             "queryType": "statsRange", "step": "1m",
+             "expr": "k8s.namespace.name:\"$namespace\" $search | stats by (k8s.pod.name) count() lines"}
+          ]
+        },
+        {
+          "id": 2,
+          "type": "logs",
+          "title": "Log",
+          "gridPos": {"x": 0, "y": 7, "w": 24, "h": 18},
+          "datasource": {"type": "victoriametrics-logs-datasource", "uid": "victorialogs"},
+          "options": {"showTime": true, "wrapLogMessage": true, "sortOrder": "Descending", "enableLogDetails": true},
+          "targets": [
+            {"refId": "A", "datasource": {"type": "victoriametrics-logs-datasource", "uid": "victorialogs"},
+             "queryType": "instant", "maxLines": 500,
+             "expr": "k8s.namespace.name:\"$namespace\" $search"}
+          ]
+        }
+      ]
+    }
