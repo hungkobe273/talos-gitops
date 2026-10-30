@@ -10,6 +10,7 @@ Thay đổi nằm ngoài repo này (host2, cấu hình Talos) cũng ghi ở đâ
 |---|---|---|
 | Sự cố khởi động lạnh 08:26–08:51: w2 nhận nhiều pod chạy được ở đâu cũng được (request RAM 99%), nên các pod Harbor (bị ghim vào w2) nằm Pending; Kyverno không gọi được Harbor để kiểm chữ ký (503), demo-app có 0 pod. Xử lý tay: xoá pod `argocd-application-controller-0` (768Mi, sang w1), sau đó xoá ReplicaSet demo-app đang kẹt backoff. Khởi động lạnh hôm nay khoảng 25 phút, không có OOM | Ghi nhận; sửa gốc ở dòng dưới | ngoài repo (xoá pod tay) |
 | PriorityClass `talos-pinned` (value 1000, `platform/admission-policies/priority-pinned.yaml`), gắn cho mọi thành phần Harbor (portal, core, jobservice, registry, redis, exporter, postgres) | Pod bị ghim một node không tự dời được; ưu tiên cao hơn thì scheduler đẩy một pod dời được sang worker kia (preemption) thay vì để Harbor Pending | commit này |
+| Gắn `talos-pinned` cho Vault và Grafana (cũng bị ghim w2 qua PV local-path). Grafana restart khi sync; Vault (OnDelete) nhận ở lần pod khởi động sau | Cùng lý do dòng trên | commit này |
 
 ## 29/10/2026
 
