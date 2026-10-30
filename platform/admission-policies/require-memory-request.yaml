@@ -26,9 +26,12 @@ spec:
           has(c.resources) && has(c.resources.requests) && 'memory' in c.resources.requests))
       messageExpression: >-
         'every container needs resources.requests.memory (missing in: ' +
-        (object.spec.containers + (has(object.spec.initContainers) ? object.spec.initContainers : []))
+        (object.spec.containers
           .filter(c, !has(c.resources) || !has(c.resources.requests) || !('memory' in c.resources.requests))
-          .map(c, c.name).join(', ') + ')'
+          .map(c, c.name) +
+        (has(object.spec.initContainers) ? object.spec.initContainers
+          .filter(c, !has(c.resources) || !has(c.resources.requests) || !('memory' in c.resources.requests))
+          .map(c, c.name) : [])).join(', ') + ')'
       reason: Invalid
 ---
 apiVersion: admissionregistration.k8s.io/v1
