@@ -24,6 +24,8 @@ startupProbe:
   httpGet: {path: /, port: 13133}
   periodSeconds: 10
   failureThreshold: 30
+# One collector per node must always fit: at cold start w2 fills up and a plain DaemonSet pod stays Pending (30/10).
+priorityClassName: system-node-critical
 resources:
   requests: {cpu: 20m, memory: 64Mi}
   limits: {memory: 256Mi}
