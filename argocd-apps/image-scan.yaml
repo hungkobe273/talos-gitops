@@ -1,0 +1,21 @@
+# Periodic Trivy scan of running images (CronJob in ns demo), see platform/image-scan/image-scan.yaml.
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: image-scan
+  namespace: argocd
+  annotations:
+    argocd.argoproj.io/sync-wave: "3"
+spec:
+  project: default
+  source:
+    repoURL: git@github.com:hungkobe273/talos-gitops.git
+    targetRevision: main
+    path: platform/image-scan
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: demo
+  syncPolicy:
+    automated:
+      prune: true
+      selfHeal: true
