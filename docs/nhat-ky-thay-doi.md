@@ -15,6 +15,7 @@ Thay đổi nằm ngoài repo này (host2, cấu hình Talos) cũng ghi ở đâ
 | Gia hạn token Jenkins `github-read` và `ghcr` (`jenkins-gce-ghcr`) 90 ngày. Chạy thử 2 lần qua Jenkins tới rollout: `850e509`, `2c4da26` đều qua ZAP trên w3 (0 FAIL), smoke-load curl 8.23.0, error-rate | Token hết hạn 22/11; 2 build sau khi đổi token chứng minh token mới dùng được | ngoài repo (token) |
 | `demo-app` thêm `syncPolicy.retry` (8 lần, tối đa khoảng 16 phút). Sự cố 09:23–09:37: Jenkins ghi tag mới ngay sau khi đẩy GHCR, Harbor chưa replicate nên Kyverno từ chối (`NOT_FOUND`); Argo CD thử lại mặc định khoảng 6 phút rồi dừng, phải bấm Sync tay. Web không gián đoạn, vẫn chạy bản cũ | Thời gian thử lại phải dài hơn chu kỳ replicate 10 phút | `19be3a3` |
 | `tunnel-proxy` đổi sang nginx-unprivileged `1.30.6-alpine-slim` | Bản slim không có `brotli-libs` (CVE-2026-111497); proxy chỉ cần nginx cơ bản. Quét lại 09:48: nginx sạch, còn 11/48 image CRITICAL | `6881495` |
+| oauth2-proxy bỏ OIDC Discovery lúc khởi động (`OAUTH2_PROXY_SKIP_OIDC_DISCOVERY`, khai báo sẵn URL Keycloak) | Pod crash khi Keycloak chưa lên rồi chờ CrashLoop backoff, chiếm 1:36 cuối của cold start 02/11. Mục tiêu còn khoảng 9:45, đo ở cold start sau | commit này |
 | Gia hạn token GitLab `gitlab-gce-ghcr` (biến `GHCR_TOKEN`); thay `laptop-push` bằng `laptop-push-2` hạn 31/01/2027 vì Rotate không đổi được hạn. GitLab đang 19.5.1, có bản vá quan trọng 19.5.3, nâng sau | Token hết hạn 22/11; chưa chạy pipeline GitLab để kiểm tra | ngoài repo (token) |
 
 ## 30/10/2026
