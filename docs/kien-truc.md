@@ -1,6 +1,6 @@
 # Kiến trúc cụm talos-kvm
 
-Người thực hiện: Hưng, Phúc. Cập nhật: 29/10/2026.
+Người thực hiện: Hưng, Phúc. Cập nhật: 02/11/2026.
 
 Cụm Kubernetes on-premise trên một máy KVM (kvm-host2), vận hành theo GitOps. Code đi từ GitHub qua Jenkins, được quét và ký, rồi Argo CD triển khai blue-green. Cụm chỉ kéo image của ứng dụng từ Harbor nội bộ và chỉ chạy image có chữ ký của Jenkins.
 
@@ -47,8 +47,8 @@ Sơ đồ: mục 1.2.
 |---|---|---|---|---|---|
 | cp1 | 10.10.10.11 | 2 | 3,5 GB | talos-w9b-tsv | control plane duy nhất từ 20/10 |
 | w1 | 10.10.10.21 | 2 | 4,5 GB | talos-hdl-7jo | DB keycloak-db cũ ghim ở đây |
-| w2 | 10.10.10.22 | 2 | 4,5 GB | talos-iv6-z5m | Harbor, Grafana, Vault, VictoriaLogs ghim ở đây (PriorityClass `talos-pinned`) |
-| w3 (GCP) | 10.148.0.4 | 2 | 8 GB | w3 | VM GCP e2-standard-2 (asia-southeast1-b), nối cụm bằng KubeSpan (WireGuard) từ 30/10; taint `cloud=gcp:NoSchedule`; chạy Prometheus, VictoriaLogs, job ZAP; bật 08:15–17:15 T2–T6 |
+| w2 | 10.10.10.22 | 2 | 4,5 GB | talos-iv6-z5m | Harbor, Grafana, Vault ghim ở đây (PriorityClass `talos-pinned`) |
+| w3 (GCP) | 10.148.0.4 | 2 | 8 GB | w3 | VM GCP e2-standard-2 (asia-southeast1-b), nối cụm bằng KubeSpan (WireGuard) từ 30/10; taint `cloud=gcp:NoSchedule`; ghim Prometheus, VictoriaLogs; ưu tiên (preferred) Alertmanager, argo-rollouts, sealed-secrets, kube-state-metrics, prometheus-operator, Argo CD repo-server và applicationset, job ZAP, job image-scan; không đặt thứ cần `*.talos.internal` lên đây; bật 08:15–17:15 T2–T6 |
 | cp2, cp3 | .12, .13 | | | | tắt, giữ đĩa để bật lại khi cần HA |
 
 - Node chạy Talos Linux, không có SSH, quản trị bằng API `talosctl`.
@@ -91,7 +91,7 @@ GitHub Actions và GitLab CE vẫn build cùng app để so sánh, nhưng chỉ 
 | | headlamp | 0.45.0 | giao diện cụm |
 | Giám sát | monitoring | kube-prometheus-stack 92.2.0 | Prometheus, Alertmanager, Grafana |
 | Log tập trung | victoria-logs | victoria-logs-single 0.13.10 | lưu log 7 ngày (tối đa 4 GiB), xem trên Grafana (dashboard "Log tập trung", đăng nhập Keycloak) |
-| | otel-collector | opentelemetry-collector 0.176.0 | DaemonSet trên cả 3 node, đọc `/var/log/pods`, gắn namespace/pod/container, đẩy OTLP về VictoriaLogs |
+| | otel-collector | opentelemetry-collector 0.176.0 | DaemonSet trên cả 4 node, đọc `/var/log/pods`, gắn namespace/pod/container, đẩy OTLP về VictoriaLogs |
 | Ứng dụng | demo-app | | app Go mẫu, Rollout blue-green |
 
 Talos v1.14.2, Kubernetes v1.37.1, CNI Flannel.

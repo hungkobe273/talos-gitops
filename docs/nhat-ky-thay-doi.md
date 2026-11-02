@@ -9,8 +9,11 @@ Thay đổi nằm ngoài repo này (host2, cấu hình Talos) cũng ghi ở đâ
 | Thay đổi | Lý do | Commit |
 |---|---|---|
 | Khởi động lạnh thật có host2 boot và w3 bật sẵn: host2 08:27, API 08:29:40, demo-app 2 pod 08:36:42, tất cả app xanh 08:38:24 (khoảng 11 phút 20), không can thiệp tay, không OOM. Request RAM sau khởi động: w1 72%, w2 64%, cp1 41%, w3 25% | Ghi nhận; sáng 30/10 mất khoảng 25 phút và phải sửa tay 2 chỗ | ngoài repo (đo) |
-| Nâng image: nginx-unprivileged 1.27.3 lên 1.30.6-alpine (`tunnel-proxy`), curl 8.11.1 lên 8.23.0 (smoke-load, có hiệu lực ở lần rollout sau), postgres Harbor đổi sang tag `18.6-trixie` để kéo bản build lại 31/10 | CVE CRITICAL từ lần quét 30/10: libcrypto3, brotli, Go stdlib. Postgres chờ lần quét 12:30 xác nhận | commit này |
-| `image-scan` bỏ pod của chính job quét khỏi danh sách (trivy, python) | 2 image này chỉ chạy lúc quét | commit này |
+| Nâng image: nginx-unprivileged 1.27.3 lên 1.30.6-alpine (`tunnel-proxy`), curl 8.11.1 lên 8.23.0 (smoke-load, có hiệu lực ở lần rollout sau), postgres Harbor đổi sang tag `18.6-trixie` để kéo bản build lại 31/10 | CVE CRITICAL từ lần quét 30/10: libcrypto3, brotli, Go stdlib | `3de1a65` |
+| `image-scan` bỏ pod của chính job quét khỏi danh sách (trivy, python) | 2 image này chỉ chạy lúc quét | `3de1a65` |
+| Quét tay 09:31 (T2 cụm tắt 10:30 nên lần 12:30 không chạy): 12/47 image CRITICAL, trước đó 15/49. curl sạch. nginx 1.30.6 hết libcrypto3 nhưng còn `brotli-libs` CVE-2026-111497 (có bản sửa 1.2.1-r0, image chưa build lại). postgres `18.6-trixie` còn CVE-2025-68121 ở `gosu`. Còn lại: 7 image Harbor, argocd, k8s-sidecar, flannel; phân tích ở `TTS_QTDV/design/cve-con-lai-02-11.md` | Ghi nhận; `ImageScanCritical` vẫn firing | ngoài repo (đo) |
+| Gia hạn token Jenkins `github-read` và `ghcr` (`jenkins-gce-ghcr`) 90 ngày. Chạy thử 2 lần qua Jenkins tới rollout: `850e509`, `2c4da26` đều qua ZAP trên w3 (0 FAIL), smoke-load curl 8.23.0, error-rate | Token hết hạn 22/11; 2 build sau khi đổi token chứng minh token mới dùng được | ngoài repo (token) |
+| `demo-app` thêm `syncPolicy.retry` (8 lần, tối đa khoảng 16 phút). Sự cố 09:23–09:37: Jenkins ghi tag mới ngay sau khi đẩy GHCR, Harbor chưa replicate nên Kyverno từ chối (`NOT_FOUND`); Argo CD thử lại mặc định khoảng 6 phút rồi dừng, phải bấm Sync tay. Web không gián đoạn, vẫn chạy bản cũ | Thời gian thử lại phải dài hơn chu kỳ replicate 10 phút | commit này |
 
 ## 30/10/2026
 

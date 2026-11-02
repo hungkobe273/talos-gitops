@@ -19,3 +19,11 @@ spec:
     automated:
       prune: true
       selfHeal: true
+    # Jenkins commits the new tag right after pushing to GHCR; Harbor replicates every 10 minutes and
+    # Kyverno rejects the Deployment until then. Retry for ~16 minutes (default ~6) to outlast that gap.
+    retry:
+      limit: 8
+      backoff:
+        duration: 30s
+        factor: 2
+        maxDuration: 3m
