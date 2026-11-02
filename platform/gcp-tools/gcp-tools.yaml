@@ -81,7 +81,7 @@ spec:
         seccompProfile: {type: RuntimeDefault}
       containers:
         - name: nginx
-          image: docker.io/nginxinc/nginx-unprivileged:1.30.6-alpine
+          image: docker.io/nginxinc/nginx-unprivileged:1.30.6-alpine-slim
           ports:
             - name: jenkins
               containerPort: 8080
