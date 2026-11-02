@@ -50,6 +50,8 @@ data:
                                  headers={"Authorization": "Bearer " + open(f"{sa}/token").read()})
     ctx = ssl.create_default_context(cafile=f"{sa}/ca.crt")
     pods = json.load(urllib.request.urlopen(req, context=ctx))["items"]
+    # Skip this job's own pods: trivy and python only run during the scan.
+    pods = [p for p in pods if not p["metadata"].get("labels", {}).get("batch.kubernetes.io/job-name", "").startswith("image-scan")]
     images = {c["image"] for p in pods for c in p["spec"].get("containers", []) + p["spec"].get("initContainers", [])}
     images = sorted({re.sub(r"^harbor\.talos\.internal/talos/", "ghcr.io/hungkobe273/", i) for i in images})
     open("/shared/images.txt", "w").write("\n".join(images) + "\n")

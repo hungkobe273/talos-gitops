@@ -4,6 +4,14 @@ Ghi mỗi thay đổi về hạ tầng, cấu hình cụm hoặc ứng dụng: n
 
 Thay đổi nằm ngoài repo này (host2, cấu hình Talos) cũng ghi ở đây, vì repo không chứa file cấu hình Talos (có secret).
 
+## 02/11/2026
+
+| Thay đổi | Lý do | Commit |
+|---|---|---|
+| Khởi động lạnh thật có host2 boot và w3 bật sẵn: host2 08:27, API 08:29:40, demo-app 2 pod 08:36:42, tất cả app xanh 08:38:24 (khoảng 11 phút 20), không can thiệp tay, không OOM. Request RAM sau khởi động: w1 72%, w2 64%, cp1 41%, w3 25% | Ghi nhận; sáng 30/10 mất khoảng 25 phút và phải sửa tay 2 chỗ | ngoài repo (đo) |
+| Nâng image: nginx-unprivileged 1.27.3 lên 1.30.6-alpine (`tunnel-proxy`), curl 8.11.1 lên 8.23.0 (smoke-load, có hiệu lực ở lần rollout sau), postgres Harbor đổi sang tag `18.6-trixie` để kéo bản build lại 31/10 | CVE CRITICAL từ lần quét 30/10: libcrypto3, brotli, Go stdlib. Postgres chờ lần quét 12:30 xác nhận | commit này |
+| `image-scan` bỏ pod của chính job quét khỏi danh sách (trivy, python) | 2 image này chỉ chạy lúc quét | commit này |
+
 ## 30/10/2026
 
 | Thay đổi | Lý do | Commit |
