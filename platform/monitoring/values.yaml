@@ -24,12 +24,13 @@ defaultRules:
     kubeControllerManager: false
     kubeProxy: false
     windows: false
-  # 03/11: KubeAPIErrorBudgetBurn fires every day: the error budget (1d/3d windows) is eaten by
-  # /readyz, /livez and pod creates answering 500 while the API boots at each cold start (207 + 14 + 32
-  # in the 6 h with 4 cold starts on 03/11; 0 errors in the 30 min after). The cluster is off every
-  # night, so the SLO math does not fit. API down is still covered by KubeAPIDown and the watchdog.
-  disabled:
-    KubeAPIErrorBudgetBurn: true
+    # 03/11: group kube-apiserver-slos = only the 4 KubeAPIErrorBudgetBurn alerts, which fire every day:
+    # the error budget (1d/3d windows) is eaten by /readyz, /livez and pod creates answering 500 while
+    # the API boots at each cold start (207 + 14 + 32 in the 6 h with 4 cold starts on 03/11; 0 errors
+    # in the 30 min after). The cluster is off every night, so the SLO math does not fit. API down is
+    # still covered by KubeAPIDown and the watchdog. (defaultRules.disabled left the group empty,
+    # and an empty PrometheusRule group is rejected.)
+    kubeApiserverSlos: false
 
 prometheus:
   prometheusSpec:
