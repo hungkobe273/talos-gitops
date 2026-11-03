@@ -123,7 +123,7 @@ Những gì đã sửa từ 29/10: request RAM theo p95 thực tế, Keycloak im
 |---|---|---|
 | Cao | **SSD cho đĩa VM** | Đo 03/11: 10 phút đầu khởi động lạnh, CPU của cp1, w1, w2 chờ đĩa 43%, 61%, 50% thời gian; w3 trên GCP 0%. Sau các bản sửa phần mềm còn khoảng 6 phút; lần 13:16 ba pod cuối về đích cách nhau 11 giây, cả cụm đọc khoảng 5,5 GB từ một ổ HDD. Sửa từng app không còn lợi đáng kể. |
 | Trung bình | **Thêm RAM cho worker on-prem** | Từ khi có w3, request on-prem còn khoảng 64–73%; vẫn chật khi một worker tắt. Ưu tiên thấp hơn SSD. |
-| Trung bình | **IaC cho tầng VM và Talos** (Terraform provider libvirt hoặc Ansible; cấu hình máy Talos trong Git) | Tầng Kubernetes đã là GitOps; tầng dưới (tạo VM, patch Talos, HAProxy, script backup trên host2) còn làm tay theo runbook. |
+| Trung bình | **IaC cho tầng VM và Talos** (Terraform provider libvirt hoặc Ansible; cấu hình máy Talos trong Git) | Tầng Kubernetes đã là GitOps; tầng dưới (tạo VM, patch Talos, HAProxy, script backup trên host2) còn làm tay theo runbook. Chi tiết và thứ tự làm: [de-xuat-iac.md](de-xuat-iac.md). |
 
 | Ưu tiên | Việc nhóm tự làm | Lý do |
 |---|---|---|
