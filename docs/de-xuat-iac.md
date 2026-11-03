@@ -2,6 +2,8 @@
 
 Người soạn: Hưng. Ngày 03/11/2026. Trạng thái: **chờ anh duyệt**, dự kiến làm sau diễn tập Velero (05/11).
 
+Cập nhật 03/11 chiều: **bước 1 (patch Talos vào Git) đã làm** vì không đổi gì trên cụm, xem [talos/README.md](../talos/README.md). Bước 2–4 vẫn chờ anh duyệt.
+
 ## 1. Hiện trạng
 
 Tầng Kubernetes đã là GitOps: Argo CD đồng bộ 24 app từ repo này, mọi thay đổi có commit và nhật ký. Tầng dưới vẫn làm tay theo runbook:

@@ -1,0 +1,11 @@
+# Rollback for talos/patches/authn-oidc.yaml: back to anonymous probes only, no JWT issuers.
+apiVersion: v1alpha1
+kind: KubeAuthenticationConfig
+configuration:
+  anonymous:
+    enabled: true
+    conditions:
+      - path: /livez
+      - path: /readyz
+      - path: /healthz
+  jwt: []

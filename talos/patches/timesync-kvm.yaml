@@ -1,0 +1,6 @@
+apiVersion: v1alpha1
+kind: TimeSyncConfig
+bootTimeout: 2m
+ptp:
+  devices:
+    - /dev/ptp_kvm

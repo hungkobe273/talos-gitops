@@ -1,0 +1,18 @@
+# w3: Google Cloud worker (e2-standard-2, asia-southeast1-b), joined over KubeSpan (30/10).
+# Written 03/11 from the running config (talosctl get machineconfig), there was no patch file:
+# w3 was generated as a full config. Network comes from GCP DHCP, DNS from the metadata server.
+# Only chosen workloads run here (they tolerate the taint); see docs/ke-hoach-w3-gcp.md.
+apiVersion: v1alpha1
+kind: KubeNodeConfig
+labels:
+  topology.kubernetes.io/zone: gcp-asia-southeast1-b
+taints:
+  cloud: gcp:NoSchedule
+---
+# No /dev/ptp_kvm on GCP: sync from the metadata server instead of timesync-kvm.yaml.
+apiVersion: v1alpha1
+kind: TimeSyncConfig
+bootTimeout: 2m
+ntp:
+  servers:
+    - 169.254.169.254

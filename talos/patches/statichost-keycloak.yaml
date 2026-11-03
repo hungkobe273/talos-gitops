@@ -1,0 +1,5 @@
+apiVersion: v1alpha1
+kind: StaticHostConfig
+name: 192.168.136.38
+hostnames:
+  - keycloak.talos.internal
