@@ -10,7 +10,7 @@ File này là báo cáo tổng hợp, cập nhật mỗi khi có thay đổi l�
 - GitOps bằng Argo CD (24 app). Jenkins trên Google Cloud là deployer: quét bảo mật, build, ký image, rồi sửa tag trong repo này. Argo Rollouts triển khai blue-green có smoke test, phân tích tỉ lệ lỗi và quét ZAP.
 - Cụm kéo image từ Harbor nội bộ; Kyverno chỉ cho chạy image có chữ ký của Jenkins. Secret của ứng dụng nằm ở Vault. Đăng nhập tập trung bằng Keycloak cho 10 công cụ.
 - Giám sát và cảnh báo về Telegram, log tập trung (OpenTelemetry, VictoriaLogs), quét CVE image đang chạy mỗi ngày làm việc, watchdog ngoài cụm. Backup hằng ngày mã hóa lên Backblaze B2 và Google Cloud Storage; từ 03/11 thêm Velero backup object Kubernetes.
-- Nút thắt lớn nhất vẫn là ổ HDD duy nhất: sáng 03/11 lúc khởi động lạnh, CPU của VM on-prem chờ đĩa 43–64% thời gian (w3 trên GCP 0%). Khởi động lạnh hiện khoảng 11 phút, không cần can thiệp tay.
+- Nút thắt lớn nhất vẫn là ổ HDD duy nhất: sáng 03/11 lúc khởi động lạnh, CPU của VM on-prem chờ đĩa 43–64% thời gian (w3 trên GCP 0%). Sau các bản sửa ngày 03/11, khởi động lạnh còn khoảng 6 phút (trước đó 11 phút), không cần can thiệp tay.
 
 ## 1. Mục tiêu
 
@@ -107,21 +107,21 @@ Host2 bị tắt cuối ngày (T2/T4 lúc 10:30, các ngày khác khoảng 17:00
 
 **Số đo khởi động lạnh** (tới khi mọi app Healthy, không can thiệp tay trừ khi ghi):
 
-| | 29/10 sáng | 29/10 10:16 | 02/11 | 03/11 sáng | 03/11 10:12 (sau sửa) |
-|---|---|---|---|---|---|
-| Tổng (từ lúc bật VM) | khoảng 50 phút, xoá pod tay | 12:46 | khoảng 10:14 | 11:30 | **6:53** |
-| demo-app 2 pod | | | +8:32 | +9:07 | +4:17 |
-| Keycloak Ready | bị startup probe kill | khoảng 11 phút | khoảng 7:51 | +10:14 (JVM 280 giây) | +6:45 (JVM 98 giây) |
-| Request RAM w1 / w2 lúc lên | 19% / 88% | 93% / 81% | 72% / 64% | 50% / 96% | 64% / 73% |
-| CPU chờ đĩa (iowait) | | | khoảng 30% | 43–64% | 30–41% |
+| | 29/10 sáng | 29/10 10:16 | 02/11 | 03/11 sáng | 03/11 10:12 (sau sửa) | 03/11 10:51 | 03/11 13:16 (prefetch) |
+|---|---|---|---|---|---|---|---|
+| Tổng (từ lúc bật VM) | khoảng 50 phút, xoá pod tay | 12:46 | khoảng 10:14 | 11:30 | 6:53 | 6:14 | **5:59** |
+| demo-app 2 pod | | | +8:32 | +9:07 | +4:17 | +4:34 | |
+| Keycloak Ready | bị startup probe kill | khoảng 11 phút | khoảng 7:51 | +10:14 (JVM 280 giây) | +6:45 (JVM 98 giây) | +6:14 (JVM 111 giây) | +5:48 (JVM 29 giây) |
+| Request RAM w1 / w2 lúc lên | 19% / 88% | 93% / 81% | 72% / 64% | 50% / 96% | 64% / 73% | | |
+| CPU chờ đĩa (iowait) | | | khoảng 30% | 43–64% | 30–41% | | |
 
-Cột cuối là lần thử 03/11 có khởi động lại host2 (cache lạnh), sau 3 bản sửa: limit RAM của webhook external-secrets (trước đó đọc 10,7 GB từ đĩa trong 8 phút), tắt cụm không drain và tắt control plane trước, external-secrets kiểm tra chứng chỉ 30 giây.
+Ba cột cuối đều là lần thử 03/11 có khởi động lại host2 (cache lạnh), sau 3 bản sửa: limit RAM của webhook external-secrets (trước đó đọc 10,7 GB từ đĩa trong 8 phút), tắt cụm không drain và tắt control plane trước, external-secrets kiểm tra chứng chỉ 30 giây. Cột 13:16 thêm sidecar `prefetch` cho Keycloak (đọc tuần tự 381 MB jar trước khi JVM chạy) và tắt 16 plugin Grafana không dùng. Chênh 6:53 và 6:14 là do thứ tự khởi động: Keycloak phải chờ DNS 8–40 giây vì EndpointSlice kube-dns còn trỏ IP CoreDNS cũ cho tới khi CoreDNS mới Ready. Lần 13:16, Keycloak, harbor-jobservice và Grafana về đích cách nhau 11 giây; cả cụm đọc khoảng 5,5 GB từ một ổ HDD, nên khoảng 6 phút là mức sàn nếu không đổi phần cứng.
 
-Những gì đã sửa từ 29/10: request RAM theo p95 thực tế, Keycloak image optimized, PriorityClass cho pod bị ghim, chuyển Prometheus và bộ điều khiển lên w3, oauth2-proxy không còn phụ thuộc Keycloak lúc khởi động, external-secrets kiểm tra chứng chỉ 30 giây thay vì 5 phút, đổi cách tắt cụm. Phần còn lại là giới hạn phần cứng, cần anh duyệt:
+Những gì đã sửa từ 29/10: request RAM theo p95 thực tế, Keycloak image optimized, PriorityClass cho pod bị ghim, chuyển Prometheus và bộ điều khiển lên w3, oauth2-proxy không còn phụ thuộc Keycloak lúc khởi động, external-secrets kiểm tra chứng chỉ 30 giây thay vì 5 phút, đổi cách tắt cụm, Keycloak đọc trước jar, Grafana tắt plugin không dùng. Đã thử và lùi AppCDS cho Keycloak (JVM sập khi nạp archive). Phần còn lại là giới hạn phần cứng, cần anh duyệt:
 
 | Ưu tiên | Đề xuất (cần anh duyệt) | Căn cứ |
 |---|---|---|
-| Cao | **SSD cho đĩa VM** | Đo 03/11: 10 phút đầu khởi động lạnh, CPU của cp1, w1, w2 chờ đĩa 43%, 61%, 50% thời gian; w3 trên GCP 0%. Riêng JVM Keycloak mất 280 giây. Mọi bản sửa phần mềm chỉ dời nút thắt, không bỏ được. |
+| Cao | **SSD cho đĩa VM** | Đo 03/11: 10 phút đầu khởi động lạnh, CPU của cp1, w1, w2 chờ đĩa 43%, 61%, 50% thời gian; w3 trên GCP 0%. Sau các bản sửa phần mềm còn khoảng 6 phút; lần 13:16 ba pod cuối về đích cách nhau 11 giây, cả cụm đọc khoảng 5,5 GB từ một ổ HDD. Sửa từng app không còn lợi đáng kể. |
 | Trung bình | **Thêm RAM cho worker on-prem** | Từ khi có w3, request on-prem còn khoảng 64–73%; vẫn chật khi một worker tắt. Ưu tiên thấp hơn SSD. |
 | Trung bình | **IaC cho tầng VM và Talos** (Terraform provider libvirt hoặc Ansible; cấu hình máy Talos trong Git) | Tầng Kubernetes đã là GitOps; tầng dưới (tạo VM, patch Talos, HAProxy, script backup trên host2) còn làm tay theo runbook. |
 
