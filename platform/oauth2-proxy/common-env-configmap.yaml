@@ -21,8 +21,10 @@ data:
   # keycloak-oidc asks for "openid email profile groups" by default; realm talos has no "groups" client
   # scope (the groups mapper sits on the client itself) -> Keycloak answers invalid_scope. Same as Argo CD.
   OAUTH2_PROXY_SCOPE: openid email profile
-  # Only group talos-admins (groups claim, short names: mapper full.path=false). Anyone else gets 403.
-  OAUTH2_PROXY_ALLOWED_GROUPS: talos-admins
+  # Groups talos-admins and talos-viewers (groups claim, short names: mapper full.path=false). Anyone else gets 403.
+  # 03/11: viewers added. Prometheus runs without the admin API (read-only UI); Alertmanager has no
+  # roles of its own, so a viewer can also create or expire silences there.
+  OAUTH2_PROXY_ALLOWED_GROUPS: talos-admins,talos-viewers
   OAUTH2_PROXY_EMAIL_DOMAINS: "*"
   # keycloak.talos.internal has a cert from the internal CA (ConfigMap talos-internal-ca).
   OAUTH2_PROXY_PROVIDER_CA_FILES: /etc/talos-ca/ca.crt

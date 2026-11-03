@@ -1,4 +1,4 @@
-# https://alertmanager.talos.internal -> Traefik -> oauth2-proxy-alertmanager (login with Keycloak, talos-admins only) -> http://kps-kube-prometheus-stack-alertmanager.monitoring.svc:9093
+# https://alertmanager.talos.internal -> Traefik -> oauth2-proxy-alertmanager (login with Keycloak, talos-admins, talos-viewers) -> http://kps-kube-prometheus-stack-alertmanager.monitoring.svc:9093
 # Traefik has no Middleware CRDs here (installed with skipCrds), so oauth2-proxy is the reverse proxy itself,
 # not a ForwardAuth endpoint. Break-glass when Keycloak is down: kubectl port-forward / API proxy (runbook 3.16).
 apiVersion: apps/v1
@@ -17,7 +17,7 @@ spec:
   template:
     metadata:
       annotations:
-        talos/config-rev: "4"   # bump when oauth2-proxy-common changes (env is read at start only)
+        talos/config-rev: "5"   # bump when oauth2-proxy-common changes (env is read at start only)
       labels:
         app.kubernetes.io/name: oauth2-proxy
         app.kubernetes.io/instance: alertmanager
