@@ -107,15 +107,15 @@ Host2 bị tắt cuối ngày (T2/T4 lúc 10:30, các ngày khác khoảng 17:00
 
 **Số đo khởi động lạnh** (tới khi mọi app Healthy, không can thiệp tay trừ khi ghi):
 
-| | 29/10 sáng | 29/10 10:16 | 02/11 | 03/11 |
-|---|---|---|---|---|
-| Tổng (từ lúc bật VM) | khoảng 50 phút, xoá pod tay | 12:46 | khoảng 10:14 | 11:30 |
-| demo-app 2 pod | | | +8:32 | +9:07 |
-| Keycloak Ready | bị startup probe kill | khoảng 11 phút | khoảng 7:51 | +10:14 (JVM 280 giây) |
-| Request RAM w1 / w2 lúc lên | 19% / 88% | 93% / 81% | 72% / 64% | 50% / 96% |
-| CPU chờ đĩa (iowait) | | | khoảng 30% | 43–64% |
+| | 29/10 sáng | 29/10 10:16 | 02/11 | 03/11 sáng | 03/11 10:12 (sau sửa) |
+|---|---|---|---|---|---|
+| Tổng (từ lúc bật VM) | khoảng 50 phút, xoá pod tay | 12:46 | khoảng 10:14 | 11:30 | **6:53** |
+| demo-app 2 pod | | | +8:32 | +9:07 | +4:17 |
+| Keycloak Ready | bị startup probe kill | khoảng 11 phút | khoảng 7:51 | +10:14 (JVM 280 giây) | +6:45 (JVM 98 giây) |
+| Request RAM w1 / w2 lúc lên | 19% / 88% | 93% / 81% | 72% / 64% | 50% / 96% | 64% / 73% |
+| CPU chờ đĩa (iowait) | | | khoảng 30% | 43–64% | 30–41% |
 
-Thử 03/11 09:08 với cách tắt mới (không drain, host2 chạy sẵn nên cache còn ấm): 7:08, demo-app có pod đầu sau 2:54. Số có host2 boot sẽ đo sáng 04/11.
+Cột cuối là lần thử 03/11 có khởi động lại host2 (cache lạnh), sau 3 bản sửa: limit RAM của webhook external-secrets (trước đó đọc 10,7 GB từ đĩa trong 8 phút), tắt cụm không drain và tắt control plane trước, external-secrets kiểm tra chứng chỉ 30 giây.
 
 Những gì đã sửa từ 29/10: request RAM theo p95 thực tế, Keycloak image optimized, PriorityClass cho pod bị ghim, chuyển Prometheus và bộ điều khiển lên w3, oauth2-proxy không còn phụ thuộc Keycloak lúc khởi động, external-secrets kiểm tra chứng chỉ 30 giây thay vì 5 phút, đổi cách tắt cụm. Phần còn lại là giới hạn phần cứng, cần anh duyệt:
 
