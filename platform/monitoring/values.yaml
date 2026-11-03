@@ -328,6 +328,12 @@ grafana:
     auth:
       # Also end the Keycloak session when signing out of Grafana.
       signout_redirect_url: https://keycloak.talos.internal/realms/talos/protocol/openid-connect/logout?post_logout_redirect_uri=https%3A%2F%2Fgrafana.talos.internal%2Flogin&client_id=grafana
+    # 03/11: plugin loading took 40.6 s of the cold start (Grafana is the last pod to turn Ready).
+    # Datasources in use: prometheus, alertmanager, victoriametrics-logs-datasource. These plugins
+    # have no datasource here and cost ~30 s; most start their own backend binary from the HDD.
+    # To use one again, remove it from this list.
+    plugins:
+      disable_plugins: "grafana-advisor-app,grafana-exploretraces-app,grafana-lokiexplore-app,grafana-pyroscope-app,elasticsearch,grafana-postgresql-datasource,grafana-pyroscope-datasource,influxdb,jaeger,loki,mssql,mysql,opentsdb,stackdriver,tempo,zipkin"
   # A cold start on the HDD (SQLite migrations, plugin registration) can take >10 min;
   # give it up to 20 min before liveness checks start, and never run two Grafanas at once.
   startupProbe:
