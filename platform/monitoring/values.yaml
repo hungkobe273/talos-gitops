@@ -24,13 +24,19 @@ defaultRules:
     kubeControllerManager: false
     kubeProxy: false
     windows: false
+  # 03/11: KubeAPIErrorBudgetBurn fires every day: the error budget (1d/3d windows) is eaten by
+  # /readyz, /livez and pod creates answering 500 while the API boots at each cold start (207 + 14 + 32
+  # in the 6 h with 4 cold starts on 03/11; 0 errors in the 30 min after). The cluster is off every
+  # night, so the SLO math does not fit. API down is still covered by KubeAPIDown and the watchdog.
+  disabled:
+    KubeAPIErrorBudgetBurn: true
 
 prometheus:
   prometheusSpec:
     # On w3 (GCP worker over KubeSpan, 30/10, docs/ke-hoach-w3-gcp.md): frees 752Mi on w1 (97%).
     # Scrapes by pod IP and discovers targets via the API (TCP), so the KubeSpan path is enough.
     # w3 stops at 17:15 with its GCP schedule: if the cluster stays up overnight, Prometheus is
-    # down after that (pause the watchdog). Until 30/10 it was pinned to w1 (old PV kept, Retain).
+    # down after that (pause the watchdog). Until 30/10 it was pinned to w1 (old PV deleted 03/11).
     # Required, because local-path creates the PV on whatever node the pod lands on first.
     # The chart's default podAntiAffinity "soft" would override affinity, so off.
     podAntiAffinity: ""
