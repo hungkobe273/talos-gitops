@@ -19,7 +19,7 @@ ingress: "Lối vào" {
 
 gitops: "Triển khai" {
   class: nentang
-  argocd: "Argo CD\n19 app, self-heal" {icon: ${cncf}/argo/icon/color/argo-icon-color.svg}
+  argocd: "Argo CD\n24 app, self-heal" {icon: ${cncf}/argo/icon/color/argo-icon-color.svg}
   rollouts: "Argo Rollouts\nblue-green + phân tích" {icon: ${cncf}/argo/icon/color/argo-icon-color.svg}
   sealed: "Sealed Secrets\ngiải mã secret trong Git"
 }
@@ -70,6 +70,14 @@ logs: "Log tập trung" {
   otel -> vlogs: "OTLP" {class: luong}
 }
 
+bk: "Backup trong cụm" {
+  class: nentang
+  velero: "Velero\nobject Kubernetes, 09:30 T2–T6, trên w3" {icon: ${cncf}/velero/icon/color/velero-icon-color.svg}
+}
+
+gcs: "Google Cloud Storage\nbucket riêng của Velero" {class: db; icon: ${si}/googlecloud
+}
+
 user -> ingress.traefik: "HTTPS" {class: luong}
 ingress.traefik -> app.active: {class: luong}
 ingress.traefik -> idp.keycloak: {class: phu}
@@ -84,6 +92,7 @@ sec.eso -> app.active: ".env" {class: phu}
 mon.prom -> app.active: "thu metric" {class: phu}
 app.active -> logs.otel: "log pod" {class: luong}
 mon.grafana -> logs.vlogs: "dashboard Log tập trung" {class: phu}
+bk.velero -> gcs: "backup hằng ngày" {class: luong}
 
 note: |md
   Grafana, Argo CD, Headlamp, Vault, Harbor đăng nhập qua Keycloak (SSO); Prometheus và Alertmanager qua oauth2-proxy. Collector thu log của mọi pod, không riêng demo-app.
