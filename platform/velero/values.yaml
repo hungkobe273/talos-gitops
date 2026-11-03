@@ -1,0 +1,100 @@
+# Backup of Kubernetes objects to GCS (bucket talos-kvm-velero-vtc). No PV data: every PV is
+# hostPath (local-path), Velero FSB does not support it. Design: TTS_QTDV/design/velero-dien-tap-khoi-phuc.md
+image:
+  repository: docker.io/velero/velero
+  tag: v1.18.4
+initContainers:
+  - name: velero-plugin-for-gcp
+    image: docker.io/velero/velero-plugin-for-gcp:v1.14.4
+    imagePullPolicy: IfNotPresent
+    resources:
+      requests: {cpu: 10m, memory: 32Mi}
+      limits: {memory: 64Mi}
+    securityContext:
+      allowPrivilegeEscalation: false
+      capabilities: {drop: ["ALL"]}
+    volumeMounts:
+      - {mountPath: /target, name: plugins}
+upgradeCRDs: false
+cleanUpCRDs: false
+snapshotsEnabled: false
+deployNodeAgent: false
+credentials:
+  useSecret: true
+  existingSecret: velero-gcs
+configuration:
+  backupStorageLocation:
+    - name: default
+      provider: gcp
+      bucket: talos-kvm-velero-vtc
+      prefix: talos-kvm
+      default: true
+      accessMode: ReadWrite
+  volumeSnapshotLocation: []
+  defaultVolumesToFsBackup: false
+resources:
+  requests: {cpu: 50m, memory: 128Mi}
+  limits: {memory: 512Mi}
+# Image USER is a name (cnb), runAsNonRoot needs a numeric uid.
+podSecurityContext:
+  runAsNonRoot: true
+  runAsUser: 65532
+  runAsGroup: 65532
+  fsGroup: 65532
+  seccompProfile: {type: RuntimeDefault}
+containerSecurityContext:
+  allowPrivilegeEscalation: false
+  capabilities: {drop: ["ALL"]}
+  readOnlyRootFilesystem: true
+# Prefers w3 like other control loops; only talks to the API server and GCS.
+tolerations:
+  - {key: cloud, operator: Equal, value: gcp, effect: NoSchedule}
+affinity:
+  nodeAffinity:
+    preferredDuringSchedulingIgnoredDuringExecution:
+      - weight: 100
+        preference:
+          matchExpressions:
+            - {key: kubernetes.io/hostname, operator: In, values: ["w3"]}
+metrics:
+  serviceMonitor:
+    enabled: true
+  prometheusRule:
+    enabled: true
+    spec:
+      - alert: VeleroBackupFailed
+        expr: increase(velero_backup_failure_total{schedule!=""}[2h]) > 0
+        labels: {severity: warning}
+        annotations:
+          summary: "Velero backup failed, schedule {{ $labels.schedule }}"
+      - alert: VeleroNoRecentBackup
+        expr: time() - velero_backup_last_successful_timestamp{schedule!=""} > 60 * 60 * 80
+        for: 30m
+        labels: {severity: warning}
+        annotations:
+          summary: "No successful Velero backup for over 80 hours, schedule {{ $labels.schedule }}"
+schedules:
+  daily:
+    disabled: false
+    schedule: "30 2 * * 1-5"       # 09:30 VN (UTC+7): T2/T4 the cluster stops at 10:30, w3 is up
+    useOwnerReferencesInBackup: false
+    template:
+      ttl: 720h
+      storageLocation: default
+      includedNamespaces: ["*"]
+      excludedNamespaces: [kube-node-lease, kube-public]
+      excludedResources:
+        - events
+        - events.events.k8s.io
+        - pods
+        - replicasets.apps
+        - endpoints
+        - endpointslices.discovery.k8s.io
+        - ephemeralreports.reports.kyverno.io
+        - clusterephemeralreports.reports.kyverno.io
+        - policyreports.wgpolicyk8s.io
+        - clusterpolicyreports.wgpolicyk8s.io
+        - certificaterequests.cert-manager.io
+        - orders.acme.cert-manager.io
+        - challenges.acme.cert-manager.io
+      snapshotVolumes: false

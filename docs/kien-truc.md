@@ -92,6 +92,7 @@ GitHub Actions và GitLab CE vẫn build cùng app để so sánh, nhưng chỉ 
 | Giám sát | monitoring | kube-prometheus-stack 92.2.0 | Prometheus, Alertmanager, Grafana |
 | Log tập trung | victoria-logs | victoria-logs-single 0.13.10 | lưu log 7 ngày (tối đa 4 GiB), xem trên Grafana (dashboard "Log tập trung", đăng nhập Keycloak) |
 | | otel-collector | opentelemetry-collector 0.176.0 | DaemonSet trên cả 4 node, đọc `/var/log/pods`, gắn namespace/pod/container, đẩy OTLP về VictoriaLogs |
+| Backup | velero | velero 12.2.2 (Velero v1.18.4, plugin GCP v1.14.4) | backup object Kubernetes (không có dữ liệu PV) lên bucket GCS `talos-kvm-velero-vtc` 09:30 T2–T6, giữ 30 ngày; ưu tiên chạy trên w3 |
 | Ứng dụng | demo-app | | app Go mẫu, Rollout blue-green |
 
 Talos v1.14.2, Kubernetes v1.37.1, CNI Flannel.
@@ -105,7 +106,7 @@ Talos v1.14.2, Kubernetes v1.37.1, CNI Flannel.
 
 ## 6. Vận hành
 
-- **Backup** hằng ngày 16:45 trên host2 (ngoài cụm): snapshot etcd, dump DB Keycloak (Supabase), dump DB Harbor, snapshot Vault; gom thành một gói mã hóa GPG, đẩy lên Backblaze B2 và Google Cloud Storage (từ 30/10; tài khoản ghi lên GCS chỉ thêm được, không xoá được). Lỗi bước nào thì báo Telegram. Đã thử giải mã gói backup; đã diễn tập khôi phục Vault (29/10).
+- **Backup** hằng ngày 16:45 trên host2 (ngoài cụm): snapshot etcd, dump DB Keycloak (Supabase), dump DB Harbor, snapshot Vault; gom thành một gói mã hóa GPG, đẩy lên Backblaze B2 và Google Cloud Storage (từ 30/10; tài khoản ghi lên GCS chỉ thêm được, không xoá được). Lỗi bước nào thì báo Telegram. Đã thử giải mã gói backup; đã diễn tập khôi phục Vault (29/10). Từ 03/11 thêm Velero backup object Kubernetes lên GCS (bucket riêng, chặn public, SA chỉ có quyền với object của bucket này); dữ liệu PV vẫn lấy từ gói hằng ngày.
 - **Cảnh báo**: Prometheus/Alertmanager báo Telegram khi cụm còn sống (demo-app, ExternalSecret, Keycloak, `VaultNotReady`). Watchdog trên host2 và healthchecks.io báo khi cả cụm chết.
 - **Log tập trung** (30/10): OpenTelemetry Collector thu log mọi pod, đẩy về VictoriaLogs; xem trên Grafana qua Keycloak (viewer dùng dashboard "Log tập trung", Explore chỉ cho admin). Chọn VictoriaLogs thay SigNoz vì SigNoz tự host không có SSO và cần ClickHouse 2–4 GiB RAM; đầu thu là OTLP chuẩn nên đổi backend chỉ cần đổi exporter.
 - **Khởi động lạnh**: 9 phút 29 giây từ lúc bật cp1 tới khi mọi app Healthy (đo 28/10); 30/10 khoảng 25 phút do w2 đầy request (xem nhật ký).

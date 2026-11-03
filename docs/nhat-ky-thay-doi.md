@@ -8,6 +8,7 @@ Thay đổi nằm ngoài repo này (host2, cấu hình Talos) cũng ghi ở đâ
 
 | Thay đổi | Lý do | Commit |
 |---|---|---|
+| Velero (chart 12.2.2, Velero v1.18.4, plugin GCP v1.14.4): bucket `talos-kvm-velero-vtc` (asia-southeast1, chặn public, bỏ quyền đọc của Viewer), role tuỳ biến `veleroObjectStore` 4 quyền object gán ở bucket cho SA `talos-velero`, khoá dạng SealedSecret `velero-gcs`. Schedule 09:30 T2–T6, TTL 30 ngày, không backup PV | Chuẩn bị diễn tập khôi phục toàn cụm (`TTS_QTDV/design/velero-dien-tap-khoi-phuc.md`, Phần A). Velero 1.18 chưa được kiểm trên K8s 1.37 | commit này |
 | Cold start sáng: host2 08:23, VM 08:24:18, demo-app +9:07, Keycloak +10:14, tất cả xanh +11:30 tính từ lúc bật VM, không can thiệp tay. iowait 43–61%, hôm 02/11 khoảng 30%; w2 96% request lúc khởi động | Chậm hơn 02/11. Keycloak mất 280 giây khởi động JVM do chờ đĩa | ngoài repo (đo) |
 | `gcp-tunnel-*` thêm `ConnectTimeout=20`. Sáng 03/11 tunnel nối trước khi có Internet, ssh treo ở bước chào hỏi, service vẫn `active` nhưng không mở cổng, Jenkins/GitLab/SonarQube trả 502. Đã áp dụng trên host2 lúc 08:39 | Không có timeout thì ssh không tự thử lại | commit này |
 | Nâng GitLab 19.5.1 lên 19.5.3 trên `gitlab-1`, web gián đoạn khoảng 2 phút. Pipeline `test` và `build-image` chạy lại đạt, xác nhận token `GHCR_TOKEN` mới dùng được | Bản vá quan trọng | ngoài repo |
