@@ -58,18 +58,66 @@ securityContext:
 # Init container chờ PostgreSQL mở cổng 5432 rồi mới chạy Keycloak. Có ích mỗi sáng khởi động lạnh:
 # Keycloak không crash-loop vì DB lên chậm. securityContext đặt đủ cho PSA restricted
 # (mặc định của chart thiếu capabilities.drop -> bị PSA từ chối).
+# 03/11: dbchecker của chart tắt, viết lại trong extraInitContainers để chạy SAU sidecar prefetch
+# (chart luôn đặt dbchecker của nó trước extraInitContainers). Script giữ nguyên như chart 7.4.0.
 dbchecker:
-  enabled: true
-  image:
-    repository: docker.io/busybox
-    tag: "1.37"            # mặc định của chart 7.4.0
-  securityContext:
-    runAsUser: 1000
-    runAsGroup: 1000
-    runAsNonRoot: true
-    allowPrivilegeEscalation: false
-    capabilities:
-      drop: ["ALL"]
+  enabled: false
+
+# 03/11: sidecar "prefetch" (native sidecar, restartPolicy Always) đọc tuần tự ~340 MB jar của
+# Keycloak và JDK vào page cache, chạy song song với dbchecker và lúc JVM khởi động. Cold start
+# JVM mất 98–111 s vì đọc class ngẫu nhiên trên HDD (CPU 0,01–0,17 core, iowait cao); đọc tuần tự
+# nhanh hơn nhiều. Cùng image nên cùng file trên node, page cache dùng chung với container keycloak.
+# Limit 512Mi: page cache tính vào cgroup của container đọc; limit nhỏ thì cache bị đẩy ra ngay.
+# Gỡ: xoá khối prefetch, đặt lại dbchecker.enabled: true.
+extraInitContainers: |
+  - name: prefetch
+    image: "{{ .Values.image.repository }}:{{ .Values.image.tag }}"
+    restartPolicy: Always
+    command:
+      - bash
+      - -c
+      - |
+        s=$(date +%s)
+        find -L /opt/keycloak/lib /usr/lib/jvm/jre-21/lib -type f -print0 | xargs -0 cat > /dev/null
+        echo "prefetch xong sau $(( $(date +%s) - s )) s"
+        exec sleep infinity
+    securityContext:
+      runAsUser: 1000
+      runAsNonRoot: true
+      allowPrivilegeEscalation: false
+      capabilities:
+        drop: ["ALL"]
+    resources:
+      requests:
+        cpu: 10m
+        memory: 16Mi
+      limits:
+        memory: 512Mi
+  - name: dbchecker
+    image: docker.io/busybox:1.37
+    command:
+      - sh
+      - -c
+      - |
+        echo 'Waiting for Database to become ready...'
+        until printf "." && nc -z -w 2 {{ .Values.database.hostname }} {{ .Values.database.port }}; do
+            sleep 2;
+        done;
+        echo 'Database OK'
+    securityContext:
+      runAsUser: 1000
+      runAsGroup: 1000
+      runAsNonRoot: true
+      allowPrivilegeEscalation: false
+      capabilities:
+        drop: ["ALL"]
+    resources:
+      requests:
+        cpu: 20m
+        memory: 32Mi
+      limits:
+        cpu: 20m
+        memory: 32Mi
 
 # --- Database ---
 # Chart sinh KC_DB, KC_DB_URL_HOST/PORT/DATABASE, KC_DB_USERNAME, KC_DB_PASSWORD (từ Secret).
