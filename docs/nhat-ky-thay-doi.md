@@ -4,6 +4,16 @@ Ghi mỗi thay đổi về hạ tầng, cấu hình cụm hoặc ứng dụng: n
 
 Thay đổi nằm ngoài repo này (host2, cấu hình Talos) cũng ghi ở đây, vì repo không chứa file cấu hình Talos (có secret).
 
+## 03/11/2026
+
+| Thay đổi | Lý do | Commit |
+|---|---|---|
+| Cold start sáng: host2 08:23, VM 08:24:18, demo-app +9:07, Keycloak +10:14, tất cả xanh +11:30 tính từ lúc bật VM, không can thiệp tay. iowait 43–61%, hôm 02/11 khoảng 30%; w2 96% request lúc khởi động | Chậm hơn 02/11. Keycloak mất 280 giây khởi động JVM do chờ đĩa | ngoài repo (đo) |
+| `gcp-tunnel-*` thêm `ConnectTimeout=20`. Sáng 03/11 tunnel nối trước khi có Internet, ssh treo ở bước chào hỏi, service vẫn `active` nhưng không mở cổng, Jenkins/GitLab/SonarQube trả 502. Đã áp dụng trên host2 lúc 08:39 | Không có timeout thì ssh không tự thử lại | commit này |
+| Nâng GitLab 19.5.1 lên 19.5.3 trên `gitlab-1`, web gián đoạn khoảng 2 phút | Bản vá quan trọng | ngoài repo |
+| external-secrets `certController.requeueInterval` 30s (mặc định 5m) | `/readyz` chỉ xanh ở lần reconcile thứ hai, là mốc cuối của cold start 03/11 | commit này |
+| Quy trình tắt cụm dùng `talosctl shutdown --force`, bỏ drain (`TTS_QTDV/talos-kvm-runbook.md` 2.2) | Drain đẩy pod của w1 sang w2 ngay trước khi w2 tắt, và demo-app mất pod vì Kyverno cũng đang tắt. Sáng hôm sau w2 quá tải, ReplicaSet chờ backoff | ngoài repo |
+
 ## 02/11/2026
 
 | Thay đổi | Lý do | Commit |

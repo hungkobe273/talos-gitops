@@ -9,7 +9,7 @@ Wants=network-online.target
 [Service]
 User=ngochung
 ExecStart=/usr/bin/ssh -F /dev/null -N -i /home/ngochung/.ssh/gcp-tunnel -o IdentitiesOnly=yes -o BatchMode=yes \
-  -o ExitOnForwardFailure=yes -o ServerAliveInterval=30 -o ServerAliveCountMax=3 \
+  -o ConnectTimeout=20 -o ExitOnForwardFailure=yes -o ServerAliveInterval=30 -o ServerAliveCountMax=3 \
   -o UserKnownHostsFile=/home/ngochung/.ssh/known_hosts \
   -L 10.10.10.1:18081:127.0.0.1:18081 -L 10.10.10.1:19000:127.0.0.1:9000 hung@34.21.211.150
 Restart=always
