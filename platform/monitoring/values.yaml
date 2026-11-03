@@ -119,6 +119,13 @@ alertmanager:
         target_matchers:
           - alertname = "KeycloakDown"
         equal: [namespace]
+      # 03/11: the image-scan Job fails on purpose when an image has a CRITICAL CVE (ImageScanCritical
+      # reads kube_job_status_failed), so the generic KubeJobFailed for the same Job is a duplicate.
+      - source_matchers:
+          - alertname = "ImageScanCritical"
+        target_matchers:
+          - alertname = "KubeJobFailed"
+        equal: [namespace, job_name]
       - source_matchers: [severity = "critical"]
         target_matchers: [severity = "warning"]
         equal: [alertname, namespace]
