@@ -11,6 +11,8 @@ machine:
 ---
 apiVersion: v1alpha1
 kind: ResolverConfig
+# Company DNS servers: placeholders because this repo is public. Real values are in
+# ~/talos-kvm/patch-w2.yaml on host2; fill them in before using this patch.
 nameservers:
-  - address: 172.16.3.10
-  - address: 172.16.3.11
+  - address: COMPANY_DNS_1
+  - address: COMPANY_DNS_2

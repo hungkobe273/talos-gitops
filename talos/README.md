@@ -11,7 +11,7 @@ không có secret): mọi giá trị khớp, kể cả hash CA trong `harbor-reg
 
 | Patch | cp1 | w1 | w2 | w3 | Nội dung |
 |---|---|---|---|---|---|
-| `nodes/<node>.yaml` | x | x | x | x | IP tĩnh, gateway, VIP `10.10.10.100` (cp1), DNS công ty; w3: nhãn zone, taint `cloud=gcp:NoSchedule`, NTP của GCP |
+| `nodes/<node>.yaml` | x | x | x | x | IP tĩnh, gateway, VIP `10.10.10.100` (cp1), DNS công ty (để chỗ trống `COMPANY_DNS_1/2` vì repo public, giá trị thật ở `~/talos-kvm/patch-<node>.yaml` trên host2); w3: nhãn zone, taint `cloud=gcp:NoSchedule`, NTP của GCP |
 | `etcd-timeout.yaml` | x | | | | etcd heartbeat 500 ms, election 5 s (HDD chậm, 15/10) |
 | `authn-oidc.yaml` | x | | | | kube-apiserver tin ID token Keycloak cho Headlamp (22/10). Lùi: `rollback/authn-oidc-rollback.yaml` |
 | `timesync-kvm.yaml` | x | x | x | | Đồng bộ giờ qua `/dev/ptp_kvm` (16/10) |
