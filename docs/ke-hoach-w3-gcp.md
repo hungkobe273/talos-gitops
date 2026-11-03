@@ -63,7 +63,7 @@ Credit còn khoảng 7,54 triệu đ (hạn 22/01/2027). gitlab-1 + jenkins-1 ti
 |---|---|---|---|
 | 1 | w3 e2-standard-2 (8 GB), bật theo giờ làm (mục trên) | khoảng 1,2 triệu | T3 03/11 |
 | 2 | Backup lên Cloud Storage: bundle GPG hằng ngày (bản thứ hai ngoài B2), bucket asia-southeast1, giữ 30 ngày | dưới 50 nghìn | 30/10 |
-| 3 | Velero (backup object Kubernetes vào GCS) + diễn tập khôi phục toàn cụm lên 3 VM Talos tạm trên GCP, đo RTO, xoá sau khi xong | khoảng 100 nghìn | T5 06/11 |
+| 3 | Velero (backup object Kubernetes vào GCS) + diễn tập khôi phục toàn cụm lên 3 VM Talos tạm trên GCP, đo RTO, xoá sau khi xong | khoảng 100 nghìn | Velero cài 03/11; diễn tập T5 05/11 |
 | 4 | Staging GKE (zonal, 1 node e2-medium, bật theo giờ làm): Argo CD deploy demo-app sang 2 cụm | khoảng 0,7 triệu | tuần 09/11 |
 | 5 | Budget alert 50/80/95% (tính chi phí trước khi trừ credit), gửi mail admin billing | 0 | 30/10 |
 
@@ -117,7 +117,7 @@ Request RAM sau đó: w1 78% (từ 97%), w2 83%, cp1 36%, w3 14%. Grafana ở l�
 
 Mất gói còn lại đã đo 30/10 15:33 (600 gói, 5 phút): Internet trần host2 → w3 1,17%, host2 → 8.8.8.8 0,83%, trong đường hầm 0,83%, gói mất lẻ tẻ, không trùng lần cấu hình lại WireGuard nào. Vậy đó là mất gói của đường Internet công ty, KubeSpan không làm mất thêm; TCP tự gửi lại, pod tra DNS nhiều dùng `use-vc`.
 
-Còn mở: quan sát cold start sáng 02/11 có w3 (w3 bật 08:15 trước host2); Alertmanager vẫn ở w2.
+Cold start sáng 02/11 có w3 bật trước: khoảng 11 phút 20 từ lúc host2 boot, không can thiệp tay; pod trên w3 Ready từ +4:23. Alertmanager đã chuyển lên w3 (ưu tiên, DNS qua TCP).
 
 ## Vận hành w3
 
