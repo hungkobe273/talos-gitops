@@ -143,6 +143,12 @@ extraEnv: |
   # cần kiểm tra (đo): jvm_memory_used_bytes trên /metrics và working set của pod sau 1 ngày.
   - name: JAVA_OPTS_KC_HEAP
     value: "-XX:MaxRAMPercentage=50 -XX:InitialRAMPercentage=25"
+  # 03/11: AppCDS (JDK 21). The first run writes the class archive on clean exit, later starts map it
+  # instead of reading and parsing classes one by one from the HDD (JVM start was 98-280 s at cold
+  # start). The archive lives in emptyDir "cds", which survives container restarts and node reboots
+  # of the same pod; a new pod builds it again. Archive invalid or missing: JVM starts normally.
+  - name: JAVA_OPTS_APPEND
+    value: "-XX:+AutoCreateSharedArchive -XX:SharedArchiveFile=/opt/keycloak/cds/keycloak.jsa"
   # http_server_requests_seconds_bucket for the latency panels of the Keycloak dashboard (2026-10-22).
   - name: KC_HTTP_METRICS_HISTOGRAMS_ENABLED
     value: "true"
@@ -172,6 +178,9 @@ extraVolumes: |
   - name: supabase-ca
     configMap:
       name: supabase-ca
+  - name: cds
+    emptyDir:
+      sizeLimit: 256Mi
 extraVolumeMounts: |
   - name: realm-import
     mountPath: /opt/keycloak/data/import
@@ -179,6 +188,8 @@ extraVolumeMounts: |
   - name: supabase-ca
     mountPath: /opt/keycloak/supabase-ca
     readOnly: true
+  - name: cds
+    mountPath: /opt/keycloak/cds
 
 # Scheduling. Chart default = required anti-affinity to itself per node + preferred per zone (no zones here).
 # Added 22/10: prefer a node WITHOUT Grafana. After cold starts the scheduler kept stacking
