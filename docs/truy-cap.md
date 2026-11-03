@@ -23,14 +23,14 @@ Từ 16/10 các giao diện mở thẳng từ LAN qua HAProxy :443 trên kvm-hos
 
 | Dịch vụ | Link | Đăng nhập | Ghi chú |
 |---|---|---|---|
-| Argo CD | https://argocd.talos.internal | Keycloak ("LOG IN VIA KEYCLOAK") | trạng thái đồng bộ của 18 app |
+| Argo CD | https://argocd.talos.internal | Keycloak ("LOG IN VIA KEYCLOAK") | trạng thái đồng bộ của 24 app |
 | Grafana | https://grafana.talos.internal | Keycloak; xem ẩn danh quyền Viewer | dashboard cụm, demo-app, Keycloak |
 | Headlamp | https://headlamp.talos.internal | Keycloak | `talos-viewers` chỉ xem, không đọc Secret |
 | Harbor | https://harbor.talos.internal | Keycloak (LOGIN VIA OIDC PROVIDER) | project `talos`, replication từ GHCR |
 | Vault | https://vault.talos.internal | Keycloak (method OIDC) | `talos-viewers` chỉ đọc |
-| Prometheus | https://prometheus.talos.internal | Keycloak qua oauth2-proxy | chỉ nhóm `talos-admins` |
-| Alertmanager | https://alertmanager.talos.internal | Keycloak qua oauth2-proxy | chỉ nhóm `talos-admins` |
-| Keycloak | https://keycloak.talos.internal | tài khoản Keycloak | realm `talos`; quản trị realm chỉ admin |
+| Prometheus | https://prometheus.talos.internal | Keycloak qua oauth2-proxy | `talos-admins` và `talos-viewers` (từ 03/11); UI chỉ đọc |
+| Alertmanager | https://alertmanager.talos.internal | Keycloak qua oauth2-proxy | `talos-admins` và `talos-viewers` (từ 03/11); Alertmanager không phân quyền nên ai vào được cũng tạo/xoá được silence |
+| Keycloak | https://keycloak.talos.internal | tài khoản Keycloak | realm `talos`; console quản trị https://keycloak.talos.internal/admin/master/console/ dùng tài khoản realm `master` (khác realm `talos`) |
 | demo-app | https://demo.talos.internal | không cần | bản đang nhận traffic |
 | demo-app preview | https://demo-preview.talos.internal | không cần | bản mới trong lúc blue-green |
 | Jenkins | https://jenkins.talos.internal | Keycloak (SAML) | pipeline DevSecOps của demo-app; chạy trên Google Cloud |
@@ -40,6 +40,8 @@ Từ 16/10 các giao diện mở thẳng từ LAN qua HAProxy :443 trên kvm-hos
 Jenkins, GitLab CE, SonarQube chạy trên VM Google Cloud và chỉ nghe nội bộ trên VM; host2 giữ đường hầm SSH tới chúng (`host2/systemd/gcp-tunnel-*.service`), Traefik trong cụm cấp link `*.talos.internal`. Không mở cổng nào trên GCP ra Internet, nên 3 link này cũng chỉ vào được trong LAN công ty. VM GCP tự tắt 17:15, bật 08:15 (T2–T6): ngoài giờ đó 3 link báo lỗi 502.
 
 **Tài khoản Keycloak**: nhờ Hưng tạo user trong realm `talos` bằng `platform/keycloak/add-user.sh <user> talos-viewers|talos-admins` (mật khẩu tạm, bắt đổi ở lần đăng nhập đầu). Tài khoản chỉ xem cho anh hướng dẫn: `mentor_view` (`talos-viewers`).
+
+**Quản trị Keycloak (realm `master`)**: tài khoản riêng, tách khỏi realm `talos`, tạo bằng `platform/keycloak/add-master-admin.sh <user>` (role `admin` của master = toàn quyền mọi realm; mật khẩu tạm, bắt đổi ở lần đăng nhập đầu). Hiện có `hung-admin` và `mentor` (anh hướng dẫn, từ 03/11). User `mentor` của realm `talos` không đăng nhập được console này; hai realm không liên kết (giữ quyền quản trị Keycloak tách khỏi tài khoản dùng hằng ngày).
 
 **Khi Keycloak hỏng**: mỗi công cụ còn một tài khoản dự phòng cục bộ (Argo CD, Grafana, Harbor `admin`; Headlamp token ServiceAccount). Mật khẩu ở host2, xin Hưng khi cần.
 
