@@ -78,9 +78,9 @@ Danh sách import (kiểm kê 03/11):
 |---|---|
 | Compute | VM `w3`, `jenkins-1`, `gitlab-1` (đĩa boot đi theo VM); IP tĩnh `jenkins-ip`, `gitlab-ip`; image `talos-v1-14-2` |
 | Mạng | Firewall `default-allow-icmp`, `default-allow-internal`, `default-allow-ssh`, `talos-w3-apid`, `talos-w3-kubespan`; mạng `default` đọc bằng data source |
-| Lịch | Resource policy `jenkins-office-hours` (bật 08:15, tắt 17:15, gắn cả 3 VM), `cicd-daily-snap` (snapshot 17:00, giữ 7 ngày) |
+| Lịch | Resource policy `jenkins-office-hours` (bật 08:15, tắt 17:15, gắn cả 3 VM), `cicd-daily-snap` (snapshot 17:00, giữ 7 ngày); Cloud Scheduler job `w3-stop-mon-wed` (tắt w3 11:30 T2/T4, thêm 03/11), API `cloudscheduler` |
 | Lưu trữ | Bucket `talos-kvm-offsite-gcs-vtc`, `talos-kvm-velero-vtc` (cả lifecycle) và quyền trên bucket |
-| Danh tính | Service account `talos-backup-writer`, `talos-velero`, `vault-unseal`; custom role `veleroObjectStore`; các quyền cấp cho chúng |
+| Danh tính | Service account `talos-backup-writer`, `talos-velero`, `vault-unseal`, `w3-stopper`; custom role `veleroObjectStore`, `w3Stopper`; các quyền cấp cho chúng (quyền của `w3-stopper` gán ở mức VM w3) |
 | KMS | Keyring `talos-vault`, key `vault-unseal` (keyring GCP không xoá được, càng phải `prevent_destroy`) |
 | Khác | Cloud SQL `talos-kc-test` (STOPPED, anh bảo giữ); các API đang bật (`google_project_service`, `disable_on_destroy = false`) |
 | Không import | SA `talos-velero-drill` (tạm, xoá sau diễn tập); SA mặc định của Compute; 14 snapshot do lịch tự tạo; 2 budget (nằm ở billing account, cần quyền khác; thử, không được thì để ngoài và ghi lại) |
