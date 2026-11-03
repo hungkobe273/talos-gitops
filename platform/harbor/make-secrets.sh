@@ -19,7 +19,7 @@ DB_PASS=$(rand 32)
 POD="htpasswd-$(rand 6 | tr A-Z a-z)"
 REG_HTPASSWD=$(printf '%s' "$REG_PASS" | kubectl -n default run "$POD" \
   --image=docker.io/library/httpd:2.4.65-alpine --restart=Never --rm -i -q --pod-running-timeout=5m \
-  --overrides='{"spec":{"securityContext":{"runAsNonRoot":true,"runAsUser":65534,"seccompProfile":{"type":"RuntimeDefault"}},"containers":[{"name":"'"$POD"'","image":"docker.io/library/httpd:2.4.65-alpine","stdin":true,"stdinOnce":true,"command":["htpasswd","-niB","harbor_registry_user"],"securityContext":{"allowPrivilegeEscalation":false,"capabilities":{"drop":["ALL"]}}}]}}' \
+  --overrides='{"spec":{"securityContext":{"runAsNonRoot":true,"runAsUser":65534,"seccompProfile":{"type":"RuntimeDefault"}},"containers":[{"name":"'"$POD"'","image":"docker.io/library/httpd:2.4.65-alpine","stdin":true,"stdinOnce":true,"command":["htpasswd","-niB","harbor_registry_user"],"resources":{"requests":{"cpu":"10m","memory":"16Mi"},"limits":{"memory":"64Mi"}},"securityContext":{"allowPrivilegeEscalation":false,"capabilities":{"drop":["ALL"]}}}]}}' \
   | grep '^harbor_registry_user:')
 [ -n "$REG_HTPASSWD" ] || { echo "ERROR: htpasswd failed" >&2; exit 1; }
 

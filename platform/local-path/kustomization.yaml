@@ -83,6 +83,14 @@ patches:
             - name: helper-pod
               image: docker.io/library/busybox:1.38.0
               imagePullPolicy: IfNotPresent
+              # 03/11: memory request for policy require-memory-request (before it goes to Deny).
+              # The helper only runs mkdir/rm for a few seconds.
+              resources:
+                requests:
+                  cpu: 10m
+                  memory: 16Mi
+                limits:
+                  memory: 64Mi
 
   # 3) Resources cho provisioner (upstream không đặt). Số ước lượng, cần đo sau khi chạy
   #    (Grafana: container_memory_working_set_bytes{namespace="local-path-storage"}).
