@@ -1,8 +1,8 @@
 # Kiến trúc cụm talos-kvm
 
-Người thực hiện: Hưng, Phúc. Cập nhật: 02/11/2026.
+Người thực hiện: Hưng, Phúc. Cập nhật: 03/11/2026.
 
-Cụm Kubernetes on-premise trên một máy KVM (kvm-host2), vận hành theo GitOps. Code đi từ GitHub qua Jenkins, được quét và ký, rồi Argo CD triển khai blue-green. Cụm chỉ kéo image của ứng dụng từ Harbor nội bộ và chỉ chạy image có chữ ký của Jenkins.
+Cụm Kubernetes on-premise trên một máy KVM (kvm-host2), thêm một worker trên Google Cloud nối bằng KubeSpan, vận hành theo GitOps. Code đi từ GitHub qua Jenkins, được quét và ký, rồi Argo CD triển khai blue-green. Cụm chỉ kéo image của ứng dụng từ Harbor nội bộ và chỉ chạy image có chữ ký của Jenkins.
 
 Khi có thay đổi hạ tầng hoặc cấu hình, sửa file này cùng commit và ghi thêm vào [nhat-ky-thay-doi.md](nhat-ky-thay-doi.md).
 
@@ -18,7 +18,7 @@ Sáu hình, đọc từ tổng quát đến chi tiết; mỗi hình trả lời 
 
 ![Hạ tầng vật lý](so-do/ha-tang.svg)
 
-Ba VM Talos dùng chung một ổ HDD của host2 (nút thắt IO). Volume dùng local-path nên pod có dữ liệu bị ghim vào đúng một worker.
+Ba VM Talos on-prem dùng chung một ổ HDD của host2 (nút thắt IO: lúc khởi động lạnh 03/11, CPU chờ đĩa 43–64% thời gian). w3 trên GCP có đĩa riêng. Volume dùng local-path nên pod có dữ liệu bị ghim vào đúng một worker.
 
 ### 1.3 Thành phần trong cụm: ai gọi ai
 
@@ -46,7 +46,7 @@ Sơ đồ: mục 1.2.
 | VM | IP | vCPU | RAM | Tên node | Ghi chú |
 |---|---|---|---|---|---|
 | cp1 | 10.10.10.11 | 2 | 3,5 GB | talos-w9b-tsv | control plane duy nhất từ 20/10 |
-| w1 | 10.10.10.21 | 2 | 4,5 GB | talos-hdl-7jo | DB keycloak-db cũ ghim ở đây |
+| w1 | 10.10.10.21 | 2 | 4,5 GB | talos-hdl-7jo | thường chạy Keycloak, Kyverno, Argo CD application-controller (không ghim); PV DB keycloak-db cũ ghim ở đây |
 | w2 | 10.10.10.22 | 2 | 4,5 GB | talos-iv6-z5m | Harbor, Grafana, Vault ghim ở đây (PriorityClass `talos-pinned`) |
 | w3 (GCP) | 10.148.0.4 | 2 | 8 GB | w3 | VM GCP e2-standard-2 (asia-southeast1-b), nối cụm bằng KubeSpan (WireGuard) từ 30/10; taint `cloud=gcp:NoSchedule`; ghim Prometheus, VictoriaLogs; ưu tiên (preferred) Alertmanager, argo-rollouts, sealed-secrets, kube-state-metrics, prometheus-operator, Argo CD repo-server và applicationset, job ZAP, job image-scan; không đặt thứ cần `*.talos.internal` lên đây; bật 08:15–17:15 T2–T6 |
 | cp2, cp3 | .12, .13 | | | | tắt, giữ đĩa để bật lại khi cần HA |
@@ -61,7 +61,7 @@ Sơ đồ: mục 1.2.
 2. **Jenkins quét, build và ký**: gitleaks quét toàn bộ lịch sử Git, test có coverage, govulncheck, gosec, quality gate SonarQube; build image amd64 + arm64, đẩy lên GHCR một lần; Trivy quét đúng digest vừa đẩy; SBOM CycloneDX; ký cosign. Cổng nào lỗi thì dừng, không có image được ký.
 3. **Jenkins sửa `newTag`** trong `apps/demo-app/kustomization.yaml` của repo này và push.
 4. **Argo CD đồng bộ** commit mới vào Rollout của demo-app. Mọi thay đổi trong cụm đi qua Git; sửa tay sẽ bị self-heal đưa về.
-5. **Harbor replicate** từ GHCR 10 phút một lần, kèm chữ ký cosign. Cần nhanh thì bấm Replicate tay (Harbor → Replications → `ghcr-demo-app`).
+5. **Harbor replicate** từ GHCR 10 phút một lần, kèm chữ ký cosign. Cần nhanh thì bấm Replicate tay (Harbor → Replications → `ghcr-demo-app`). Trong lúc chờ, Kyverno từ chối pod mới; Argo CD thử lại khoảng 16 phút (`syncPolicy.retry` của app demo-app) nên tự qua được.
 6. **Blue-green**: pod preview kéo image từ `harbor.talos.internal/talos/talos-demo-app`; Kyverno từ chối nếu image không có chữ ký của Jenkins. Preview phải qua smoke test, phân tích tỉ lệ lỗi và quét ZAP rồi mới nhận traffic. Bản cũ giữ thêm 10 phút để quay lại nhanh.
 
 Đo ngày 28/10: từ lúc push tới lúc bản mới nhận traffic khoảng 12 phút (pipeline khoảng 6 phút, blue-green khoảng 6 phút). Kéo image từ Harbor 5 đến 7 giây.
@@ -70,7 +70,7 @@ GitHub Actions và GitLab CE vẫn build cùng app để so sánh, nhưng chỉ 
 
 ## 4. Thành phần trong cụm
 
-18 ứng dụng Argo CD theo mô hình app-of-apps: `bootstrap/root.yaml` apply tay một lần, app `root` quản lý các app còn lại trong `argocd-apps/`.
+24 ứng dụng Argo CD theo mô hình app-of-apps: `bootstrap/root.yaml` apply tay một lần, app `root` quản lý các app còn lại trong `argocd-apps/`.
 
 | Nhóm | App Argo CD | Chart / phiên bản | Vai trò |
 |---|---|---|---|
@@ -81,9 +81,12 @@ GitHub Actions và GitLab CE vẫn build cùng app để so sánh, nhưng chỉ 
 | | local-path | | lưu trữ trên đĩa worker |
 | | descheduler | 0.37.0 | cân bằng lại pod giữa w1 và w2 |
 | | argo-rollouts | 2.43.8 | blue-green và phân tích |
+| | admission-policies | | PriorityClass `talos-pinned` cho pod bị ghim; ValidatingAdmissionPolicy `require-memory-request` (Warn + Audit, chưa Deny) |
+| | gcp-tools | | pod nginx `tunnel-proxy` và Ingress cho Jenkins, GitLab, SonarQube trên GCP (qua tunnel SSH của host2) |
 | Bảo mật | kyverno | 3.9.1 (Kyverno 1.19) | ImageValidatingPolicy: chỉ nhận image ký bằng khoá Jenkins, webhook chỉ ở ns demo |
 | | vault | 0.34.1 (Vault 2.0) | secret của ứng dụng, tự unseal bằng GCP KMS, audit log |
 | | external-secrets | 2.14.0 | đưa secret từ Vault vào Secret của pod |
+| | image-scan | | CronJob Trivy 12:30 T2–T6 quét mọi image đang chạy, alert `ImageScanCritical` khi có CVE CRITICAL |
 | Registry | harbor | 1.19.2 (Harbor 2.15) | bản sao image và chữ ký trong mạng nội bộ, đăng nhập Keycloak |
 | Danh tính | keycloak | keycloakx 7.4.0 | SSO OIDC/SAML, DB trên Supabase |
 | | keycloak-db | | DB cũ giữ để lùi, gỡ sau 06/11 |
@@ -99,15 +102,15 @@ Talos v1.14.2, Kubernetes v1.37.1, CNI Flannel.
 
 ## 5. Bảo mật
 
-- **Chuỗi cung ứng**: mọi cổng của Jenkins đã thử bằng commit hoặc image lỗi cố ý. Image không ký bị Kyverno từ chối, kể cả khi lấy từ Harbor. Khoá công khai cosign ở `platform/cosign/cosign.pub`.
+- **Chuỗi cung ứng**: mọi cổng của Jenkins đã thử bằng commit hoặc image lỗi cố ý. Image không ký bị Kyverno từ chối, kể cả khi lấy từ Harbor. Khoá công khai cosign ở `platform/cosign/cosign.pub`. Image đang chạy được quét lại mỗi ngày làm việc (app `image-scan`); 02/11 còn 11/48 image có CVE CRITICAL, phân tích ở `TTS_QTDV/design/cve-con-lai-02-11.md`.
 - **Secret**: hạ tầng dùng Sealed Secrets. Biến môi trường của ứng dụng nằm ở Vault (`kv/demo/demo-app`), External Secrets đưa vào pod; đổi giá trị không cần commit.
-- **Đăng nhập**: Keycloak SSO cho Grafana, Argo CD, Headlamp, Vault, Jenkins, GitLab, SonarQube, Harbor. Quyền theo nhóm `talos-admins`, `talos-viewers`. Mỗi công cụ giữ một tài khoản dự phòng khi Keycloak hỏng.
-- **Mạng**: dịch vụ chỉ mở trong LAN qua HAProxy; DB của Harbor có NetworkPolicy.
+- **Đăng nhập**: Keycloak SSO cho Grafana, Argo CD, Headlamp, Vault, Jenkins, GitLab, SonarQube, Harbor, và Prometheus, Alertmanager qua oauth2-proxy. Quyền theo nhóm `talos-admins`, `talos-viewers`. Mỗi công cụ giữ một tài khoản dự phòng khi Keycloak hỏng.
+- **Mạng**: dịch vụ chỉ mở trong LAN qua HAProxy; DB của Harbor có NetworkPolicy. w3 nối cụm bằng WireGuard (KubeSpan); firewall GCP chỉ mở UDP 51820 và API Talos cho IP công ty.
 
 ## 6. Vận hành
 
 - **Backup** hằng ngày 16:45 trên host2 (ngoài cụm): snapshot etcd, dump DB Keycloak (Supabase), dump DB Harbor, snapshot Vault; gom thành một gói mã hóa GPG, đẩy lên Backblaze B2 và Google Cloud Storage (từ 30/10; tài khoản ghi lên GCS chỉ thêm được, không xoá được). Lỗi bước nào thì báo Telegram. Đã thử giải mã gói backup; đã diễn tập khôi phục Vault (29/10). Từ 03/11 thêm Velero backup object Kubernetes lên GCS (bucket riêng, chặn public, SA chỉ có quyền với object của bucket này); dữ liệu PV vẫn lấy từ gói hằng ngày.
-- **Cảnh báo**: Prometheus/Alertmanager báo Telegram khi cụm còn sống (demo-app, ExternalSecret, Keycloak, `VaultNotReady`). Watchdog trên host2 và healthchecks.io báo khi cả cụm chết.
+- **Cảnh báo**: Prometheus/Alertmanager báo Telegram khi cụm còn sống (demo-app, ExternalSecret, Keycloak, `VaultNotReady`, `ImageScanCritical`, `VeleroBackupFailed`, `VeleroNoRecentBackup`). Watchdog trên host2 và healthchecks.io báo khi cả cụm chết.
 - **Log tập trung** (30/10): OpenTelemetry Collector thu log mọi pod, đẩy về VictoriaLogs; xem trên Grafana qua Keycloak (viewer dùng dashboard "Log tập trung", Explore chỉ cho admin). Chọn VictoriaLogs thay SigNoz vì SigNoz tự host không có SSO và cần ClickHouse 2–4 GiB RAM; đầu thu là OTLP chuẩn nên đổi backend chỉ cần đổi exporter.
 - **Khởi động lạnh**: khoảng 11 phút từ lúc bật VM tới khi mọi app Healthy, không can thiệp tay (02/11, 03/11); nút thắt là ổ HDD. Tắt cụm bằng `talosctl shutdown --force`, control plane trước rồi worker, để pod giữ nguyên node (từ 03/11, xem nhật ký).
 - **Runbook**: bật/tắt hằng ngày, kiểm tra backup, xử lý các lỗi đã gặp (ngoài repo, file `talos-kvm-runbook.md`).
@@ -116,5 +119,6 @@ Talos v1.14.2, Kubernetes v1.37.1, CNI Flannel.
 
 - Một ổ HDD dùng chung cho etcd, Prometheus và kéo image: IO là giới hạn chính.
 - Chỉ 1 control plane để tiết kiệm RAM: mất cp1 thì mất API cho tới khi bật lại.
-- Phụ thuộc Internet qua captive portal: mất mạng thì Vault không unseal (cần KMS), Keycloak không vào được DB (Supabase), Argo CD không đọc được Git.
+- Phụ thuộc Internet qua captive portal: mất mạng thì Vault không unseal (cần KMS), Keycloak không vào được DB (Supabase), Argo CD không đọc được Git, w3 rời cụm (mất Prometheus, log). Tunnel tới GCP có `ConnectTimeout` để tự nối lại khi đăng nhập portal muộn.
+- w3 không tới được `*.talos.internal` và host2: thứ cần Keycloak, Harbor phải chạy on-prem. Pod trên w3 dùng DNS qua TCP vì UDP qua đường hầm mất khoảng 1% gói.
 - Harbor và các volume có trạng thái ghim vào một worker: worker đó tắt thì dịch vụ đó ngừng.

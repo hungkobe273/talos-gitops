@@ -1,6 +1,6 @@
 # talos-gitops
 
-Repo GitOps của cụm talos-kvm (Talos Linux, 1 control plane + 2 worker trên kvm-host2). Argo CD đọc repo này và đưa cụm về đúng trạng thái khai báo ở đây; không `kubectl apply` tay cho ứng dụng.
+Repo GitOps của cụm talos-kvm (Talos Linux, 1 control plane + 2 worker trên kvm-host2, thêm worker w3 trên Google Cloud nối bằng KubeSpan). Argo CD đọc repo này và đưa cụm về đúng trạng thái khai báo ở đây; không `kubectl apply` tay cho ứng dụng.
 
 ## Tài liệu
 
@@ -19,10 +19,11 @@ Quy ước: thay đổi nào làm khác kiến trúc, phiên bản hoặc cách 
 ```text
 talos-gitops/
 ├── bootstrap/        # apply tay một lần: root.yaml (app-of-apps), values Argo CD, secret OIDC của Argo CD
-├── argocd-apps/      # 17 Application do root quản lý (mỗi file một app)
+├── argocd-apps/      # 23 Application do root quản lý (mỗi file một app)
 ├── platform/         # values Helm, manifest và SealedSecret của từng thành phần nền tảng
-│   ├── traefik, cert-manager, local-path, descheduler, argo-rollouts
-│   ├── monitoring, headlamp, oauth2-proxy
+│   ├── traefik, cert-manager, local-path, descheduler, argo-rollouts, admission-policies
+│   ├── monitoring, headlamp, oauth2-proxy, victoria-logs, otel-collector, image-scan
+│   ├── velero, gcp-tools
 │   ├── keycloak, keycloak-db
 │   ├── vault, external-secrets, kyverno, cosign (khoá công khai ký image)
 │   └── harbor        # kèm script make-secrets.sh, setup-replication.sh, oidc.sh, make-pull-secret.sh
@@ -36,10 +37,10 @@ talos-gitops/
 |---|---|
 | -2 | sealed-secrets, cert-manager |
 | -1 | cert-manager-issuers, local-path, monitoring |
-| 0 | traefik, argo-rollouts, descheduler |
-| 1 | vault, external-secrets, kyverno, headlamp, demo-app |
-| 2 | harbor, keycloak-db |
-| 3 | keycloak |
+| 0 | traefik, argo-rollouts, descheduler, admission-policies |
+| 1 | vault, external-secrets, kyverno, headlamp, gcp-tools, velero, demo-app |
+| 2 | harbor, keycloak-db, victoria-logs |
+| 3 | keycloak, otel-collector, image-scan |
 | 4 | oauth2-proxy |
 
 Sealed Secrets và cert-manager lên trước để các app sau giải mã được secret và có chứng chỉ. demo-app đứng sau Vault/External Secrets (lấy `.env`) và Kyverno (kiểm chữ ký image).
