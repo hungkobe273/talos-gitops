@@ -9,16 +9,16 @@ title: |md
 
 app: "demo-app\nđọc .env" {class: ungdung}
 eso: "External Secrets" {class: baomat}
-vault: "Vault (trong cụm)" {class: baomat; icon: ${si}/vault}
-kms: "Google Cloud KMS\nkhoá unseal" {class: baomat; icon: ${si}/googlecloud}
-keycloak: "Keycloak\nSSO 8 công cụ" {class: danhtinh; icon: ${cncf}/keycloak/icon/color/keycloak-icon-color.svg}
-supabase: "Supabase PostgreSQL" {class: db; icon: ${si}/supabase}
-argocd: "Argo CD" {class: nentang; icon: ${cncf}/argo/icon/color/argo-icon-color.svg}
-github: "GitHub\ntalos-gitops" {class: ngoai; icon: ${si}/github}
-am: "Alertmanager" {class: giamsat; icon: ${cncf}/prometheus/icon/color/prometheus-icon-color.svg}
-tg: "Telegram" {class: ngoai; icon: ${si}/telegram}
-backup: "Backup trên host2" {class: giamsat; icon: ${si}/linux}
-b2: "Backblaze B2" {class: db; icon: ${si}/backblaze}
+vault: "Vault (trong cụm)" {class: baomat; icon: ${si}/vault; label.near: top-center; icon.near: bottom-center; height: 130}
+kms: "Google Cloud KMS\nkhoá unseal" {class: baomat; icon: ${si}/googlecloud; label.near: top-center; icon.near: bottom-center; height: 130}
+keycloak: "Keycloak\nSSO 10 công cụ" {class: danhtinh; icon: ${cncf}/keycloak/icon/color/keycloak-icon-color.svg; label.near: top-center; icon.near: bottom-center; height: 130}
+supabase: "Supabase PostgreSQL" {class: db; icon: ${si}/supabase; label.near: top-center; icon.near: bottom-center; height: 130}
+argocd: "Argo CD" {class: nentang; icon: ${cncf}/argo/icon/color/argo-icon-color.svg; label.near: top-center; icon.near: bottom-center; height: 130}
+github: "GitHub\ntalos-gitops" {class: ngoai; icon: ${si}/github; label.near: top-center; icon.near: bottom-center; height: 130}
+am: "Alertmanager" {class: giamsat; icon: ${cncf}/prometheus/icon/color/prometheus-icon-color.svg; label.near: top-center; icon.near: bottom-center; height: 130}
+tg: "Telegram" {class: ngoai; icon: ${si}/telegram; label.near: top-center; icon.near: bottom-center; height: 130}
+backup: "Backup trên host2" {class: giamsat; icon: ${si}/linux; label.near: top-center; icon.near: bottom-center; height: 130}
+b2: "Backblaze B2" {class: db; icon: ${si}/backblaze; label.near: top-center; icon.near: bottom-center; height: 130}
 
 app -> eso: "Secret demo-app-env" {class: phu}
 eso -> vault: "đọc secret" {class: phu}
