@@ -28,7 +28,8 @@ startupProbe:
 priorityClassName: system-node-critical
 resources:
   requests: {cpu: 20m, memory: 64Mi}
-  limits: {memory: 256Mi}
+  # 03/11: working set at 82% of 256Mi (binary page cache counts), room so it never thrashes like on 30/10.
+  limits: {memory: 384Mi}
 config:
   processors:
     memory_limiter: {check_interval: 5s, limit_mib: 150, spike_limit_mib: 32}
