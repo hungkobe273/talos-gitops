@@ -11,6 +11,8 @@ Thay đổi nằm ngoài repo này (host2, cấu hình Talos) cũng ghi ở đâ
 | Cold start thật buổi sáng (host2 tắt qua đêm, không can thiệp tay): host2 08:19:04, VM 08:19:35, API +2:19, CoreDNS Ready +4:27, **Keycloak +5:16**, pod cuối (Grafana) **+6:22**. dbchecker chờ DNS 50 s (endpoint kube-dns cũ), prefetch chạy chồng lên nên không mất thời gian. harbor-jobservice CrashLoop một vòng vì lên trước harbor-core, tự hồi | Xác nhận kết quả thử 03/11 giữ được ở lần bật thật | |
 | host2: `systemctl disable coldstart-watch` (unit và script giữ lại, log ở `~/talos-kvm/coldstart-logs/`) | Đã đủ số đo; bật lại khi cần đo | |
 | Laptop: cài Terraform 1.16.6 (winget), `gcloud auth application-default login` (ADC, quota project của lab) | Giai đoạn 0 của [de-xuat-iac.md](de-xuat-iac.md) | |
+| `.gitignore`: thêm machine config Talos (`secrets.yaml`, `controlplane.yaml`, `worker.yaml`, `talos/*.yaml`), `vault-init*.json`, `*.snap`, `*.dump`, `*.gpg`, `*.asc`, `.env`, `*password*.txt`, state và biến Terraform | Chặn commit nhầm trước khi bắt đầu Terraform; repo public | `2373857` |
+| `infra/gcp/`: khung Terraform (versions, backend gcs `talos-kvm-tfstate-vtc`, provider dùng ADC, 9 API, 31 khối `import {}` từ kiểm kê chỉ đọc 04/11), `validate` đạt, provider google 7.46.2 khoá cho Windows và Linux. **Chưa chạy `plan`, chưa tạo bucket state** | Chuẩn bị Giai đoạn 1 (06/11); thứ Sáu chỉ còn tạo bucket, `plan -generate-config-out`, dọn code | |
 
 ## 03/11/2026
 
