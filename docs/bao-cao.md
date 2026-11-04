@@ -107,15 +107,15 @@ Host2 bị tắt cuối ngày (T2/T4 lúc 10:30, các ngày khác khoảng 17:00
 
 **Số đo khởi động lạnh** (tới khi mọi app Healthy, không can thiệp tay trừ khi ghi):
 
-| | 29/10 sáng | 29/10 10:16 | 02/11 | 03/11 sáng | 03/11 10:12 (sau sửa) | 03/11 10:51 | 03/11 13:16 (prefetch) |
-|---|---|---|---|---|---|---|---|
-| Tổng (từ lúc bật VM) | khoảng 50 phút, xoá pod tay | 12:46 | khoảng 10:14 | 11:30 | 6:53 | 6:14 | **5:59** |
-| demo-app 2 pod | | | +8:32 | +9:07 | +4:17 | +4:34 | |
-| Keycloak Ready | bị startup probe kill | khoảng 11 phút | khoảng 7:51 | +10:14 (JVM 280 giây) | +6:45 (JVM 98 giây) | +6:14 (JVM 111 giây) | +5:48 (JVM 29 giây) |
-| Request RAM w1 / w2 lúc lên | 19% / 88% | 93% / 81% | 72% / 64% | 50% / 96% | 64% / 73% | | |
-| CPU chờ đĩa (iowait) | | | khoảng 30% | 43–64% | 30–41% | | |
+| | 29/10 sáng | 29/10 10:16 | 02/11 | 03/11 sáng | 03/11 10:12 (sau sửa) | 03/11 10:51 | 03/11 13:16 (prefetch) | 04/11 sáng (bật thật) |
+|---|---|---|---|---|---|---|---|---|
+| Tổng (từ lúc bật VM) | khoảng 50 phút, xoá pod tay | 12:46 | khoảng 10:14 | 11:30 | 6:53 | 6:14 | **5:59** | 6:22 |
+| demo-app 2 pod | | | +8:32 | +9:07 | +4:17 | +4:34 | | |
+| Keycloak Ready | bị startup probe kill | khoảng 11 phút | khoảng 7:51 | +10:14 (JVM 280 giây) | +6:45 (JVM 98 giây) | +6:14 (JVM 111 giây) | +5:48 (JVM 29 giây) | **+5:16** |
+| Request RAM w1 / w2 lúc lên | 19% / 88% | 93% / 81% | 72% / 64% | 50% / 96% | 64% / 73% | | | |
+| CPU chờ đĩa (iowait) | | | khoảng 30% | 43–64% | 30–41% | | | |
 
-Ba cột cuối đều là lần thử 03/11 có khởi động lại host2 (cache lạnh), sau 3 bản sửa: limit RAM của webhook external-secrets (trước đó đọc 10,7 GB từ đĩa trong 8 phút), tắt cụm không drain và tắt control plane trước, external-secrets kiểm tra chứng chỉ 30 giây. Cột 13:16 thêm sidecar `prefetch` cho Keycloak (đọc tuần tự 381 MB jar trước khi JVM chạy) và tắt 16 plugin Grafana không dùng. Chênh 6:53 và 6:14 là do thứ tự khởi động: Keycloak phải chờ DNS 8–40 giây vì EndpointSlice kube-dns còn trỏ IP CoreDNS cũ cho tới khi CoreDNS mới Ready. Lần 13:16, Keycloak, harbor-jobservice và Grafana về đích cách nhau 11 giây; cả cụm đọc khoảng 5,5 GB từ một ổ HDD, nên khoảng 6 phút là mức sàn nếu không đổi phần cứng.
+Ba cột cuối đều là lần thử 03/11 có khởi động lại host2 (cache lạnh), sau 3 bản sửa: limit RAM của webhook external-secrets (trước đó đọc 10,7 GB từ đĩa trong 8 phút), tắt cụm không drain và tắt control plane trước, external-secrets kiểm tra chứng chỉ 30 giây. Cột 13:16 thêm sidecar `prefetch` cho Keycloak (đọc tuần tự 381 MB jar trước khi JVM chạy) và tắt 16 plugin Grafana không dùng. Chênh 6:53 và 6:14 là do thứ tự khởi động: Keycloak phải chờ DNS 8–40 giây vì EndpointSlice kube-dns còn trỏ IP CoreDNS cũ cho tới khi CoreDNS mới Ready. Lần 13:16, Keycloak, harbor-jobservice và Grafana về đích cách nhau 11 giây; cả cụm đọc khoảng 5,5 GB từ một ổ HDD, nên khoảng 6 phút là mức sàn nếu không đổi phần cứng. Cột 04/11 là lần bật máy thật buổi sáng đầu tiên sau các bản sửa (host2 tắt qua đêm): Keycloak nhanh hơn 13:16, tổng chậm hơn 23 giây vì harbor-jobservice khởi động trước harbor-core, CrashLoop một vòng, và Grafana về cuối.
 
 Những gì đã sửa từ 29/10: request RAM theo p95 thực tế, Keycloak image optimized, PriorityClass cho pod bị ghim, chuyển Prometheus và bộ điều khiển lên w3, oauth2-proxy không còn phụ thuộc Keycloak lúc khởi động, external-secrets kiểm tra chứng chỉ 30 giây thay vì 5 phút, đổi cách tắt cụm, Keycloak đọc trước jar, Grafana tắt plugin không dùng. Đã thử và lùi AppCDS cho Keycloak (JVM sập khi nạp archive). Phần còn lại là giới hạn phần cứng, cần anh duyệt:
 
