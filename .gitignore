@@ -7,3 +7,28 @@
 kubeconfig
 talosconfig
 sealed-secrets-key*.yaml
+
+# Talos: full machine configs and cluster secrets stay on host2 (~/talos-kvm) and in
+# the encrypted backup bundle. Only patches under talos/patches/ belong here.
+secrets.yaml
+controlplane.yaml
+worker.yaml
+talos/*.yaml
+
+# Backups, dumps, key material, local credentials
+vault-init*.json
+*.snap
+*.dump
+*.gpg
+*.asc
+.env
+*password*.txt
+
+# Terraform: state can hold secrets, providers are downloaded; keep .terraform.lock.hcl
+.terraform/
+*.tfstate
+*.tfstate.*
+*.tfplan
+*.tfvars
+crash.log
+crash.*.log
