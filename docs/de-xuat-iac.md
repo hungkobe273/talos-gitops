@@ -6,7 +6,7 @@ Cập nhật 03/11 chiều: **bước 1 (patch Talos vào Git) đã làm** vì k
 
 ## 1. Hiện trạng
 
-Tầng Kubernetes đã là GitOps: Argo CD đồng bộ 25 app từ repo này, mọi thay đổi có commit và nhật ký. Tầng dưới vẫn làm tay theo runbook:
+Tầng Kubernetes đã là GitOps: Argo CD đồng bộ 24 app từ repo này, mọi thay đổi có commit và nhật ký. Tầng dưới vẫn làm tay theo runbook:
 
 | Tầng | Thành phần | Đang quản lý bằng | Rủi ro |
 |---|---|---|---|

@@ -7,7 +7,7 @@ File này là báo cáo tổng hợp, cập nhật mỗi khi có thay đổi l�
 ## Tóm tắt
 
 - Cụm Talos 1 control plane + 2 worker trên một máy KVM (kvm-host2 `192.168.136.38`), API qua VIP `10.10.10.100:6443`, thêm worker w3 trên Google Cloud nối bằng KubeSpan từ 30/10 (chạy Prometheus, VictoriaLogs và các bộ điều khiển). cp2, cp3 đã tắt từ 20/10 để tiết kiệm RAM và IO.
-- GitOps bằng Argo CD (25 app). Jenkins trên Google Cloud là deployer: quét bảo mật, build, ký image, rồi sửa tag trong repo này. Argo Rollouts triển khai blue-green có smoke test, phân tích tỉ lệ lỗi và quét ZAP.
+- GitOps bằng Argo CD (24 app). Jenkins trên Google Cloud là deployer: quét bảo mật, build, ký image, rồi sửa tag trong repo này. Argo Rollouts triển khai blue-green có smoke test, phân tích tỉ lệ lỗi và quét ZAP.
 - Cụm kéo image từ Harbor nội bộ; Kyverno chỉ cho chạy image có chữ ký của Jenkins. Secret của ứng dụng nằm ở Vault. Đăng nhập tập trung bằng Keycloak cho 10 công cụ.
 - Giám sát và cảnh báo về Telegram, log tập trung (OpenTelemetry, VictoriaLogs), quét CVE image đang chạy mỗi ngày làm việc, watchdog ngoài cụm. Backup hằng ngày mã hóa lên Backblaze B2 và Google Cloud Storage; từ 03/11 thêm Velero backup object Kubernetes.
 - Nút thắt lớn nhất vẫn là ổ HDD duy nhất: sáng 03/11 lúc khởi động lạnh, CPU của VM on-prem chờ đĩa 43–64% thời gian (w3 trên GCP 0%). Sau các bản sửa ngày 03/11, khởi động lạnh còn khoảng 6 phút (trước đó 11 phút), không cần can thiệp tay.
@@ -128,7 +128,7 @@ Những gì đã sửa từ 29/10: request RAM theo p95 thực tế, Keycloak im
 | Ưu tiên | Việc nhóm tự làm | Lý do |
 |---|---|---|
 | Xong 05/11 | Tra log theo trường: log JSON tách trường lúc thu (demo, argocd), vmui `logs.talos.internal` sau Keycloak | Góp ý anh 04/11; anh duyệt vmui 05/11. Còn: JSON cho Keycloak, Vault, Traefik access log |
-| Đang làm | Lưu trữ chung cho PV: NFS trên host2 + csi-driver-nfs, StorageClass `nfs-host2` | Anh: lưu trữ phải ở ngoài cụm. T1 (Postgres ghi 10 000 dòng trên NFS) đạt 05/11; còn T2–T8 (chuyển node, pgbench, mất NFS), rồi chuyển Harbor registry. Vault, Grafana, Prometheus giữ local-path |
+| Đang làm | Lưu trữ chung cho PV: NFS trên host2 + csi-driver-nfs, StorageClass `nfs-host2` | Anh: lưu trữ phải ở ngoài cụm. Test T1–T8 đạt 05/11 (pod chuyển w2 sang w1 giữ dữ liệu, sập giữa lúc ghi tự phục hồi, mất NFS 60 s chỉ treo không lỗi). fsync trên NFS chậm gấp 4 (51 ms so với 12,7 ms) nên DB (Harbor postgres, Vault) giữ local-path. Việc tiếp: chuyển Harbor registry (file blob) sang NFS |
 | Xong 05/11 | Diễn tập khôi phục toàn cụm lên GCP bằng Velero và gói backup | RTO chính 50:52, RTO đầy đủ 54:06, RPO 6–7 phút; cụm thật không bị ảnh hưởng. Chi tiết trong nhật ký 05/11. |
 | Xong 05/11 | Nâng Harbor lên chart 1.19.4 (Harbor 2.15.4) | Backup tay trước; chỉ đổi tag image. |
 | Xong 05/11 | Policy `require-memory-request` từ Warn sang Deny | 3 chỗ thiếu request đã sửa 03/11; 0 vi phạm trong 2 ngày. |
