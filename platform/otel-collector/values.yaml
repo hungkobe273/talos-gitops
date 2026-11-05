@@ -42,10 +42,13 @@ config:
       log_statements:
         - context: log
           conditions:
-            - IsMatch(resource.attributes["k8s.namespace.name"], "^(demo|argocd)$") and IsString(body) and IsMatch(body, "^\\{")
+            - IsMatch(resource.attributes["k8s.namespace.name"], "^(demo|argocd|keycloak)$") and IsString(body) and IsMatch(body, "^\\{")
           statements:
             - merge_maps(attributes, ParseJSON(body), "insert")
             - set(body, attributes["msg"]) where attributes["msg"] != nil
+            # Keycloak (Quarkus JSON, 05/11): text in "message"; drop per-line noise fields.
+            - set(body, attributes["message"]) where attributes["message"] != nil
+            - delete_matching_keys(attributes, "^(message|timestamp|sequence|loggerClassName|threadId|threadName|ndc|mdc|hostName|processName|processId)$")
             - set(severity_text, ToUpperCase(attributes["level"])) where attributes["level"] != nil
             - set(severity_number, SEVERITY_NUMBER_DEBUG) where severity_text == "DEBUG"
             - set(severity_number, SEVERITY_NUMBER_INFO) where severity_text == "INFO"
