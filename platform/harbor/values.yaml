@@ -31,7 +31,9 @@ persistence:
   resourcePolicy: keep
   persistentVolumeClaim:
     registry:
-      storageClass: local-path-retain
+      # 05/11: blobs on NFS of host2 (manifests/registry-pvc-nfs.yaml, copied from the old
+      # local-path PVC harbor-registry, which is kept with Prune=false for 7 days to roll back).
+      existingClaim: harbor-registry-nfs
       size: 10Gi
     jobservice:
       jobLog:
