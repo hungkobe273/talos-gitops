@@ -1,6 +1,6 @@
 # Terraform cho GCP
 
-Giai đoạn 1 của [docs/de-xuat-iac.md](../../docs/de-xuat-iac.md). Khung viết 04/11/2026 và **chưa chạy `plan`**.
+Giai đoạn 1 của [docs/de-xuat-iac.md](../../docs/de-xuat-iac.md). Khung viết 04/11/2026. **05/11:** đã tạo bucket state, `init`, `plan -generate-config-out` ra `40 to import, 0 to add, 0 to change, 0 to destroy` sau khi sửa lỗi sinh code; `generated.tf` chưa commit (còn IP công ty), chưa `apply`.
 Các khối `import {}` lấy từ kiểm kê chỉ đọc lúc 04/11. Phần code của từng tài nguyên sẽ để Terraform tự sinh vào
 thứ Sáu 06/11.
 
@@ -26,11 +26,12 @@ Các lệnh chạy trên laptop, trong thư mục `infra/gcp`.
    `gcloud storage buckets create gs://talos-kvm-tfstate-vtc --location=asia-southeast1 --uniform-bucket-level-access --public-access-prevention`
    rồi `gcloud storage buckets update gs://talos-kvm-tfstate-vtc --versioning`
 2. `terraform init`
-3. `terraform plan -generate-config-out=generated.tf`. Lệnh này chỉ đọc GCP và ghi file trên laptop.
+3. `terraform plan "-generate-config-out=generated.tf"` (PowerShell phải đặt tham số này trong nháy kép, không thì báo `Too many command line arguments`). Lệnh này chỉ đọc GCP và ghi file trên laptop.
+   Lỗi sinh code gặp 05/11 và cách sửa: firewall có các list rỗng xung đột (`source_tags = []`, `destination_ranges = []`...) thì xoá các dòng `= []`; Cloud SQL bỏ `server_certificate_rotation_mode` và khối `read_pool_auto_scale_config`; VM bỏ `vlan = 0`.
 4. Dọn `generated.tf` rồi chia thành `compute.tf`, `network.tf`, `storage.tf`, `iam.tf`, `kms.tf`, `schedule.tf`:
    - Xoá các trường chỉ đọc mà plan báo lỗi.
    - Thêm `lifecycle { prevent_destroy = true }` cho VM, IP, bucket, KMS, Cloud SQL.
-   - Kiểm tra code không chứa metadata nhạy cảm (repo đang public).
+   - Kiểm tra code không chứa metadata nhạy cảm (repo đang public). IP công ty (firewall `talos-w3-*`, `default-allow-ssh`, Cloud SQL authorized network) đưa thành biến trong `terraform.tfvars` (đã gitignore).
 5. Lặp lại `terraform plan` cho tới khi chỉ còn `N to import, 0 to add, 0 to change, 0 to destroy`.
 6. `terraform apply`: chỉ ghi các import vào state, GCP không đổi gì. Sau đó `plan` phải báo `No changes`.
 
