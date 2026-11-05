@@ -61,6 +61,26 @@ jobservice:
   existingSecret: harbor-secrets
   existingSecretKey: JOBSERVICE_SECRET
   resources: {requests: {cpu: 20m, memory: 64Mi}, limits: {memory: 256Mi}}
+  # Cold start: jobservice panics if harbor-core is not up yet and then waits out the
+  # CrashLoop backoff (seen 04/11, 05/11 and in the restore drill). Wait for core instead.
+  initContainers:
+    - name: wait-core
+      image: docker.io/busybox:1.37
+      command:
+        - sh
+        - -c
+        - |
+          until wget -q -O /dev/null -T 2 http://harbor-core/api/v2.0/ping; do sleep 2; done
+          echo 'harbor-core OK'
+      securityContext:
+        runAsUser: 1000
+        runAsGroup: 1000
+        runAsNonRoot: true
+        allowPrivilegeEscalation: false
+        capabilities:
+          drop: ["ALL"]
+        seccompProfile: {type: RuntimeDefault}
+      resources: {requests: {cpu: 10m, memory: 16Mi}, limits: {memory: 32Mi}}
 registry:
   nodeSelector: {kubernetes.io/hostname: talos-iv6-z5m}
   priorityClassName: talos-pinned
