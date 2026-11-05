@@ -1,0 +1,43 @@
+# Shared storage for PVs (05/11, design TTS_QTDV/design/storage-chung-pv.md, approved by Hưng): NFS server on host2
+# (/srv/nfs/k8s, export 10.10.10.0/24 rw,sync,no_root_squash,secure; set up by hand on host2, docs/nhat-ky-thay-doi.md)
+# + csi-driver-nfs. Data lives outside the VMs, a pod with a PVC can run on w1 or w2. First round: Postgres test
+# (namespace storage-test), then Harbor registry. Vault, Grafana, Prometheus, VictoriaLogs stay on local-path.
+# Wave -1 like local-path: before the apps that use PVCs.
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: csi-driver-nfs
+  namespace: argocd
+  annotations:
+    argocd.argoproj.io/sync-wave: "-1"
+spec:
+  project: default
+  sources:
+    - repoURL: https://raw.githubusercontent.com/kubernetes-csi/csi-driver-nfs/master/charts
+      chart: csi-driver-nfs
+      targetRevision: 4.13.6
+      helm:
+        releaseName: csi-nfs
+        valueFiles:
+          - $values/platform/csi-driver-nfs/values.yaml
+    - repoURL: git@github.com:hungkobe273/talos-gitops.git
+      targetRevision: main
+      ref: values
+    # StorageClass nfs-host2
+    - repoURL: git@github.com:hungkobe273/talos-gitops.git
+      targetRevision: main
+      path: platform/csi-driver-nfs/manifests
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: csi-nfs
+  syncPolicy:
+    automated:
+      prune: true
+      selfHeal: true
+    # Controller and node plugin run privileged with hostNetwork (they mount NFS on the node).
+    managedNamespaceMetadata:
+      labels:
+        pod-security.kubernetes.io/enforce: privileged
+        pod-security.kubernetes.io/warn: privileged
+    syncOptions:
+      - CreateNamespace=true

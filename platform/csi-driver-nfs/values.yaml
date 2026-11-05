@@ -1,0 +1,19 @@
+# Values for csi-driver-nfs 4.13.6 (argocd-apps/csi-driver-nfs.yaml). Every container keeps the chart's
+# resources.requests.memory (20Mi each), required by policy require-memory-request (Deny since 05/11).
+controller:
+  # No VolumeSnapshot CRDs in the cluster (externalSnapshotter stays off): without them the
+  # csi-snapshotter sidecar only logs errors. Backup of NFS data: host2 (design section 5).
+  enableSnapshotter: false
+  # Chart default 5 is debug: less log written to the HDD and to VictoriaLogs.
+  logLevel: 2
+  # Only the on-prem workers: not cp1, not w3 (w3 cannot reach host2, KubeSpan only links the nodes).
+  tolerations: []
+  # PVs of nfs-host2 are Retain; if a PV with Delete is ever removed, keep its directory on host2.
+  defaultOnDeletePolicy: retain
+node:
+  logLevel: 2
+  # Chart default tolerates every taint (cp1 and w3 too). Without tolerations the node plugin runs on w1, w2 only;
+  # a pod pinned to w3 must therefore never use a nfs-host2 PVC (it would hang in ContainerCreating).
+  tolerations: []
+externalSnapshotter:
+  enabled: false
