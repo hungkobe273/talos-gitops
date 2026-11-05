@@ -18,7 +18,7 @@ Sáu hình, đọc từ tổng quát đến chi tiết; mỗi hình trả lời 
 
 ![Hạ tầng vật lý](so-do/ha-tang.svg)
 
-Ba VM Talos on-prem dùng chung một ổ HDD của host2 (nút thắt IO: lúc khởi động lạnh 03/11, CPU chờ đĩa 43–64% thời gian). w3 trên GCP có đĩa riêng. Volume dùng local-path nên pod có dữ liệu bị ghim vào đúng một worker. Từ 05/11 có thêm StorageClass `nfs-host2`: PV nằm trên NFS server của host2 (`/srv/nfs/k8s`, ngoài các VM), mount được từ w1 và w2; đợt đầu cho test Postgres rồi Harbor registry, còn Vault, Grafana, Prometheus, VictoriaLogs vẫn dùng local-path.
+Ba VM Talos on-prem dùng chung một ổ HDD của host2 (nút thắt IO: lúc khởi động lạnh 03/11, CPU chờ đĩa 43–64% thời gian). w3 trên GCP có đĩa riêng. Volume dùng local-path nên pod có dữ liệu bị ghim vào đúng một worker. Từ 05/11 có thêm StorageClass `nfs-host2`: PV nằm trên NFS server của host2 (`/srv/nfs/k8s`, ngoài các VM), mount được từ w1 và w2; Harbor registry (image, chữ ký) chạy trên `nfs-host2` từ 05/11. Test Postgres T1–T8 đạt (pod chuyển node giữ dữ liệu, sập khi ghi tự phục hồi, mất NFS 60 s chỉ treo), nhưng fsync qua NFS chậm gấp 4, nên DB (Harbor postgres, Vault) cùng Grafana, Prometheus, VictoriaLogs vẫn dùng local-path.
 
 ### 1.3 Thành phần trong cụm: ai gọi ai
 
@@ -88,7 +88,7 @@ GitHub Actions và GitLab CE vẫn build cùng app để so sánh, nhưng chỉ 
 | | vault | 0.34.1 (Vault 2.0) | secret của ứng dụng, tự unseal bằng GCP KMS, audit log |
 | | external-secrets | 2.14.0 | đưa secret từ Vault vào Secret của pod |
 | | image-scan | | CronJob Trivy 12:30 T2–T6 quét mọi image đang chạy, alert `ImageScanCritical` khi có CVE CRITICAL |
-| Registry | harbor | 1.19.4 (Harbor 2.15) | bản sao image và chữ ký trong mạng nội bộ, đăng nhập Keycloak |
+| Registry | harbor | 1.19.4 (Harbor 2.15) | bản sao image và chữ ký trong mạng nội bộ, đăng nhập Keycloak; blob trên NFS host2 (`harbor-registry-nfs`, từ 05/11), DB trên local-path |
 | Danh tính | keycloak | keycloakx 7.4.0 | SSO OIDC/SAML, DB trên Supabase |
 | | oauth2-proxy | | đăng nhập Keycloak trước Prometheus, Alertmanager, vmui của VictoriaLogs (`logs.talos.internal`, chỉ mở `/select`) |
 | | headlamp | 0.45.0 | giao diện cụm |

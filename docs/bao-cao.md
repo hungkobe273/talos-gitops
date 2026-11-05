@@ -128,7 +128,7 @@ Những gì đã sửa từ 29/10: request RAM theo p95 thực tế, Keycloak im
 | Ưu tiên | Việc nhóm tự làm | Lý do |
 |---|---|---|
 | Xong 05/11 | Tra log theo trường: log JSON tách trường lúc thu (demo, argocd), vmui `logs.talos.internal` sau Keycloak | Góp ý anh 04/11; anh duyệt vmui 05/11. Còn: JSON cho Keycloak, Vault, Traefik access log |
-| Đang làm | Lưu trữ chung cho PV: NFS trên host2 + csi-driver-nfs, StorageClass `nfs-host2` | Anh: lưu trữ phải ở ngoài cụm. Test T1–T8 đạt 05/11 (pod chuyển w2 sang w1 giữ dữ liệu, sập giữa lúc ghi tự phục hồi, mất NFS 60 s chỉ treo không lỗi). fsync trên NFS chậm gấp 4 (51 ms so với 12,7 ms) nên DB (Harbor postgres, Vault) giữ local-path. Việc tiếp: chuyển Harbor registry (file blob) sang NFS |
+| Đang làm | Lưu trữ chung cho PV: NFS trên host2 + csi-driver-nfs, StorageClass `nfs-host2` | Anh: lưu trữ phải ở ngoài cụm. Test T1–T8 đạt 05/11 (pod chuyển w2 sang w1 giữ dữ liệu, sập giữa lúc ghi tự phục hồi, mất NFS 60 s chỉ treo không lỗi). fsync trên NFS chậm gấp 4 (51 ms so với 12,7 ms) nên DB (Harbor postgres, Vault) giữ local-path. Harbor registry đã chuyển sang NFS 05/11 (847 file, 550 MB, kéo image thử đạt). Việc tiếp: thêm `/srv/nfs/k8s` vào backup 16:45, cảnh báo NFS, sau 7 ngày xoá PVC registry cũ |
 | Xong 05/11 | Diễn tập khôi phục toàn cụm lên GCP bằng Velero và gói backup | RTO chính 50:52, RTO đầy đủ 54:06, RPO 6–7 phút; cụm thật không bị ảnh hưởng. Chi tiết trong nhật ký 05/11. |
 | Xong 05/11 | Nâng Harbor lên chart 1.19.4 (Harbor 2.15.4) | Backup tay trước; chỉ đổi tag image. |
 | Xong 05/11 | Policy `require-memory-request` từ Warn sang Deny | 3 chỗ thiếu request đã sửa 03/11; 0 vi phạm trong 2 ngày. |
