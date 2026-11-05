@@ -1,6 +1,6 @@
 # Kiến trúc cụm talos-kvm
 
-Người thực hiện: Hưng, Phúc. Cập nhật: 03/11/2026.
+Người thực hiện: Hưng, Phúc. Cập nhật: 05/11/2026.
 
 Cụm Kubernetes on-premise trên một máy KVM (kvm-host2), thêm một worker trên Google Cloud nối bằng KubeSpan, vận hành theo GitOps. Code đi từ GitHub qua Jenkins, được quét và ký, rồi Argo CD triển khai blue-green. Cụm chỉ kéo image của ứng dụng từ Harbor nội bộ và chỉ chạy image có chữ ký của Jenkins.
 
@@ -18,7 +18,7 @@ Sáu hình, đọc từ tổng quát đến chi tiết; mỗi hình trả lời 
 
 ![Hạ tầng vật lý](so-do/ha-tang.svg)
 
-Ba VM Talos on-prem dùng chung một ổ HDD của host2 (nút thắt IO: lúc khởi động lạnh 03/11, CPU chờ đĩa 43–64% thời gian). w3 trên GCP có đĩa riêng. Volume dùng local-path nên pod có dữ liệu bị ghim vào đúng một worker.
+Ba VM Talos on-prem dùng chung một ổ HDD của host2 (nút thắt IO: lúc khởi động lạnh 03/11, CPU chờ đĩa 43–64% thời gian). w3 trên GCP có đĩa riêng. Volume dùng local-path nên pod có dữ liệu bị ghim vào đúng một worker. Từ 05/11 có thêm StorageClass `nfs-host2`: PV nằm trên NFS server của host2 (`/srv/nfs/k8s`, ngoài các VM), mount được từ w1 và w2; đợt đầu cho test Postgres rồi Harbor registry, còn Vault, Grafana, Prometheus, VictoriaLogs vẫn dùng local-path.
 
 ### 1.3 Thành phần trong cụm: ai gọi ai
 
@@ -79,6 +79,7 @@ GitHub Actions và GitLab CE vẫn build cùng app để so sánh, nhưng chỉ 
 | | cert-manager, cert-manager-issuers | cert-manager v1.21.2 | chứng chỉ từ CA nội bộ `talos-internal-ca` |
 | | sealed-secrets | 2.20.0 | secret mã hóa nằm trong Git |
 | | local-path | | lưu trữ trên đĩa worker |
+| | csi-driver-nfs | csi-driver-nfs 4.13.6 | StorageClass `nfs-host2`: PV trên NFS của host2, driver chỉ chạy trên w1/w2 (từ 05/11) |
 | | descheduler | 0.37.0 | cân bằng lại pod giữa w1 và w2 |
 | | argo-rollouts | 2.43.8 | blue-green và phân tích |
 | | admission-policies | | PriorityClass `talos-pinned` cho pod bị ghim; ValidatingAdmissionPolicy `require-memory-request` (Warn + Audit, chưa Deny) |
@@ -89,11 +90,11 @@ GitHub Actions và GitLab CE vẫn build cùng app để so sánh, nhưng chỉ 
 | | image-scan | | CronJob Trivy 12:30 T2–T6 quét mọi image đang chạy, alert `ImageScanCritical` khi có CVE CRITICAL |
 | Registry | harbor | 1.19.4 (Harbor 2.15) | bản sao image và chữ ký trong mạng nội bộ, đăng nhập Keycloak |
 | Danh tính | keycloak | keycloakx 7.4.0 | SSO OIDC/SAML, DB trên Supabase |
-| | oauth2-proxy | | đăng nhập Keycloak trước Prometheus, Alertmanager |
+| | oauth2-proxy | | đăng nhập Keycloak trước Prometheus, Alertmanager, vmui của VictoriaLogs (`logs.talos.internal`, chỉ mở `/select`) |
 | | headlamp | 0.45.0 | giao diện cụm |
 | Giám sát | monitoring | kube-prometheus-stack 92.2.0 | Prometheus, Alertmanager, Grafana |
-| Log tập trung | victoria-logs | victoria-logs-single 0.13.10 | lưu log 7 ngày (tối đa 4 GiB), xem trên Grafana (dashboard "Log tập trung", đăng nhập Keycloak) |
-| | otel-collector | opentelemetry-collector 0.176.0 | DaemonSet trên cả 4 node, đọc `/var/log/pods`, gắn namespace/pod/container, đẩy OTLP về VictoriaLogs |
+| Log tập trung | victoria-logs | victoria-logs-single 0.13.10 | lưu log 7 ngày (tối đa 4 GiB), xem trên Grafana (dashboard "Log tập trung", đăng nhập Keycloak) và vmui `https://logs.talos.internal/select/vmui/` (LogsQL tự do, từ 05/11) |
+| | otel-collector | opentelemetry-collector 0.176.0 | DaemonSet trên cả 4 node, đọc `/var/log/pods`, gắn namespace/pod/container, đẩy OTLP về VictoriaLogs; từ 05/11 tách log JSON thành trường ngay lúc thu (processor `transform/parse`, namespace `demo`, `argocd`), `level` thành severity |
 | Backup | velero | velero 12.2.2 (Velero v1.18.4, plugin GCP v1.14.4) | backup object Kubernetes (không có dữ liệu PV) lên bucket GCS `talos-kvm-velero-vtc` 09:30 T2–T6, giữ 30 ngày; ưu tiên chạy trên w3 |
 | Ứng dụng | demo-app | | app Go mẫu, Rollout blue-green |
 
@@ -103,14 +104,14 @@ Talos v1.14.2, Kubernetes v1.37.1, CNI Flannel.
 
 - **Chuỗi cung ứng**: mọi cổng của Jenkins đã thử bằng commit hoặc image lỗi cố ý. Image không ký bị Kyverno từ chối, kể cả khi lấy từ Harbor. Khoá công khai cosign ở `platform/cosign/cosign.pub`. Image đang chạy được quét lại mỗi ngày làm việc (app `image-scan`); 02/11 còn 11/48 image có CVE CRITICAL, phân tích ở `TTS_QTDV/design/cve-con-lai-02-11.md`.
 - **Secret**: hạ tầng dùng Sealed Secrets. Biến môi trường của ứng dụng nằm ở Vault (`kv/demo/demo-app`), External Secrets đưa vào pod; đổi giá trị không cần commit.
-- **Đăng nhập**: Keycloak SSO cho Grafana, Argo CD, Headlamp, Vault, Jenkins, GitLab, SonarQube, Harbor, và Prometheus, Alertmanager qua oauth2-proxy. Quyền theo nhóm `talos-admins`, `talos-viewers`. Mỗi công cụ giữ một tài khoản dự phòng khi Keycloak hỏng.
+- **Đăng nhập**: Keycloak SSO cho Grafana, Argo CD, Headlamp, Vault, Jenkins, GitLab, SonarQube, Harbor, và Prometheus, Alertmanager, vmui của VictoriaLogs qua oauth2-proxy. Quyền theo nhóm `talos-admins`, `talos-viewers`. Mỗi công cụ giữ một tài khoản dự phòng khi Keycloak hỏng.
 - **Mạng**: dịch vụ chỉ mở trong LAN qua HAProxy; DB của Harbor có NetworkPolicy. w3 nối cụm bằng WireGuard (KubeSpan); firewall GCP chỉ mở UDP 51820 và API Talos cho IP công ty.
 
 ## 6. Vận hành
 
 - **Backup** hằng ngày 16:45 trên host2 (ngoài cụm): snapshot etcd, dump DB Keycloak (Supabase), dump DB Harbor, snapshot Vault; gom thành một gói mã hóa GPG, đẩy lên Backblaze B2 và Google Cloud Storage (từ 30/10; tài khoản ghi lên GCS chỉ thêm được, không xoá được). Lỗi bước nào thì báo Telegram. Đã thử giải mã gói backup; đã diễn tập khôi phục Vault (29/10) và **toàn cụm lên GCP (05/11): RTO chính 51 phút (demo-app trả 200 từ cụm mới), RTO đầy đủ 54 phút, RPO 6–7 phút**; ước lượng chạy sạch khoảng 40 phút. Từ 03/11 thêm Velero backup object Kubernetes lên GCS (bucket riêng, chặn public, SA chỉ có quyền với object của bucket này); dữ liệu PV vẫn lấy từ gói hằng ngày.
 - **Cảnh báo**: Prometheus/Alertmanager báo Telegram khi cụm còn sống (demo-app, ExternalSecret, Keycloak, `VaultNotReady`, `ImageScanCritical`, `VeleroBackupFailed`, `VeleroNoRecentBackup`). Watchdog trên host2 và healthchecks.io báo khi cả cụm chết.
-- **Log tập trung** (30/10): OpenTelemetry Collector thu log mọi pod, đẩy về VictoriaLogs; xem trên Grafana qua Keycloak (viewer dùng dashboard "Log tập trung", Explore chỉ cho admin). Chọn VictoriaLogs thay SigNoz vì SigNoz tự host không có SSO và cần ClickHouse 2–4 GiB RAM; đầu thu là OTLP chuẩn nên đổi backend chỉ cần đổi exporter.
+- **Log tập trung** (30/10): OpenTelemetry Collector thu log mọi pod, đẩy về VictoriaLogs; xem trên Grafana qua Keycloak (viewer dùng dashboard "Log tập trung", Explore chỉ cho admin). Chọn VictoriaLogs thay SigNoz vì SigNoz tự host không có SSO và cần ClickHouse 2–4 GiB RAM; đầu thu là OTLP chuẩn nên đổi backend chỉ cần đổi exporter. Từ 05/11 (anh góp ý tra theo trường như ELK): log JSON được tách thành trường lúc thu, tra theo trường và hàm tổng hợp, ví dụ `route:* | stats by (status) count()`; vmui cho tra tự do.
 - **Khởi động lạnh**: khoảng 6 phút (5:59, đo 03/11 13:16) từ lúc bật VM tới khi mọi app Healthy, không can thiệp tay, có khởi động lại host2; trước các bản sửa ngày 03/11 là khoảng 11 phút. Keycloak có sidecar `prefetch` đọc tuần tự jar vào page cache nên JVM khởi động 25–29 giây thay vì 98–111 giây; Grafana tắt 16 plugin không dùng. Nút thắt vẫn là ổ HDD: lúc khởi động cụm đọc khoảng 5,5 GB, ba pod về cuối (Keycloak, harbor-jobservice, Grafana) chỉ cách nhau 11 giây. Tắt cụm bằng `talosctl shutdown --force`, control plane trước rồi worker, để pod giữ nguyên node (từ 03/11, xem nhật ký).
 - **Runbook**: bật/tắt hằng ngày, kiểm tra backup, xử lý các lỗi đã gặp (ngoài repo, file `talos-kvm-runbook.md`).
 

@@ -8,6 +8,7 @@ Thay đổi nằm ngoài repo này (host2, cấu hình Talos) cũng ghi ở đâ
 
 | Thay đổi | Lý do | Commit |
 |---|---|---|
+| `docs/kien-truc.md`: thêm StorageClass `nfs-host2` (mục 1.2, bảng thành phần), vmui qua oauth2-proxy, log JSON tách trường lúc thu (otel-collector, mục Log tập trung) | Cập nhật kiến trúc theo các thay đổi sáng 05/11 | commit này |
 | otel-collector `transform/parse`: thêm namespace `argocd` (điều kiện thành `IsMatch(..., "^(demo|argocd)$")`), validate exit 0 | Argo CD ghi log JSON từ `helm upgrade` rev 10 lúc 10:42, cùng khoá `level`/`msg`/`time` với demo-app | commit này |
 | App `csi-driver-nfs` (chart 4.13.6, ns `csi-nfs`, chỉ chạy trên w1/w2, tắt snapshotter, log mức 2) và StorageClass `nfs-host2` (10.10.10.1:/srv/nfs/k8s, thư mục theo namespace/PVC, Retain, Immediate, `nfsvers=4.1,hard`). Không đặt mặc định; chưa app nào dùng | Lưu trữ dùng chung ngoài cụm theo `TTS_QTDV/design/storage-chung-pv.md` (Hưng duyệt 05/11); bước tiếp: test Postgres T1–T8 | commit này |
 | vmui của VictoriaLogs sau oauth2-proxy (`platform/oauth2-proxy/victorialogs.yaml`): `https://logs.talos.internal/select/vmui/`, đăng nhập Keycloak nhóm `talos-admins`, `talos-viewers`; Ingress chỉ cho `/select` và `/oauth2` (không lộ `/insert`). Client Keycloak `oauth2-proxy` thêm redirect URI `logs.talos.internal` trong `realm-import.json`. Còn: HAProxy host2 + `upsert-client.sh oauth2-proxy` (Hưng) | Anh góp ý Grafana khó tuỳ biến; vmui gõ LogsQL tự do, xem theo trường, gần Kibana Discover nhất (`TTS_QTDV/design/log-truong-json.md` 5.2) | commit này |
