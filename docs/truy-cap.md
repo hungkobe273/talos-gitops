@@ -13,7 +13,7 @@ Từ 16/10 các giao diện mở thẳng từ LAN qua HAProxy :443 trên kvm-hos
    ```text
    192.168.136.38 grafana.talos.internal headlamp.talos.internal argocd.talos.internal keycloak.talos.internal
    192.168.136.38 demo.talos.internal demo-preview.talos.internal harbor.talos.internal vault.talos.internal
-   192.168.136.38 prometheus.talos.internal alertmanager.talos.internal
+   192.168.136.38 prometheus.talos.internal alertmanager.talos.internal logs.talos.internal
    192.168.136.38 jenkins.talos.internal gitlab.talos.internal sonarqube.talos.internal
    ```
 
@@ -30,6 +30,7 @@ Từ 16/10 các giao diện mở thẳng từ LAN qua HAProxy :443 trên kvm-hos
 | Vault | https://vault.talos.internal | Keycloak (method OIDC) | `talos-viewers` chỉ đọc |
 | Prometheus | https://prometheus.talos.internal | Keycloak qua oauth2-proxy | `talos-admins` và `talos-viewers` (từ 03/11); UI chỉ đọc |
 | Alertmanager | https://alertmanager.talos.internal | Keycloak qua oauth2-proxy | `talos-admins` và `talos-viewers` (từ 03/11); Alertmanager không phân quyền nên ai vào được cũng tạo/xoá được silence |
+| Log (vmui) | https://logs.talos.internal/select/vmui/ | Keycloak qua oauth2-proxy | `talos-admins` và `talos-viewers` (từ 05/11); giao diện LogsQL của VictoriaLogs: lọc theo trường, `stats`, chỉ mở `/select` (vào `/` báo 404 là đúng) |
 | Keycloak | https://keycloak.talos.internal | tài khoản Keycloak | realm `talos`; console quản trị https://keycloak.talos.internal/admin/master/console/ dùng tài khoản realm `master` (khác realm `talos`) |
 | demo-app | https://demo.talos.internal | không cần | bản đang nhận traffic |
 | demo-app preview | https://demo-preview.talos.internal | không cần | bản mới trong lúc blue-green |
