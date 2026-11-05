@@ -12,6 +12,10 @@ notifications:
 # global.domain also sets url: https://argocd.talos.internal in argocd-cm (needed for OIDC redirects).
 global:
   domain: argocd.talos.internal
+  # JSON logs (05/11): otel-collector parses them into fields in VictoriaLogs
+  # (TTS_QTDV/design/log-truong-json.md).
+  logging:
+    format: json
 
 configs:
   params:
