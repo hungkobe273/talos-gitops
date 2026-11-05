@@ -1,4 +1,4 @@
-# Values for goharbor/harbor chart 1.19.2 (Harbor 2.15.2). See argocd-apps/harbor.yaml.
+# Values for goharbor/harbor chart 1.19.4 (Harbor 2.15.4). See argocd-apps/harbor.yaml.
 externalURL: https://harbor.talos.internal
 
 # Trust the internal CA (Keycloak OIDC at https://keycloak.talos.internal).
