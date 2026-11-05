@@ -33,6 +33,25 @@ resources:
 config:
   processors:
     memory_limiter: {check_interval: 5s, limit_mib: 150, spike_limit_mib: 32}
+    # 05/11 (TTS_QTDV/design/log-truong-json.md): JSON log lines become fields at ingest, so
+    # VictoriaLogs can filter and aggregate by key (status:500 | stats by (route) ...) without
+    # unpack_json. Only namespaces listed here; one expression, since lines in conditions are ORed.
+    # error_mode ignore: a line that fails to parse is sent unchanged, never dropped.
+    transform/parse:
+      error_mode: ignore
+      log_statements:
+        - context: log
+          conditions:
+            - resource.attributes["k8s.namespace.name"] == "demo" and IsString(body) and IsMatch(body, "^\\{")
+          statements:
+            - merge_maps(attributes, ParseJSON(body), "insert")
+            - set(body, attributes["msg"]) where attributes["msg"] != nil
+            - set(severity_text, ToUpperCase(attributes["level"])) where attributes["level"] != nil
+            - set(severity_number, SEVERITY_NUMBER_DEBUG) where severity_text == "DEBUG"
+            - set(severity_number, SEVERITY_NUMBER_INFO) where severity_text == "INFO"
+            - set(severity_number, SEVERITY_NUMBER_WARN) where severity_text == "WARN"
+            - set(severity_number, SEVERITY_NUMBER_ERROR) where severity_text == "ERROR"
+            - delete_matching_keys(attributes, "^(msg|level|time)$")
   exporters:
     otlphttp/vl:
       logs_endpoint: http://vl-victoria-logs-single-server.observability.svc:9428/insert/opentelemetry/v1/logs
@@ -41,7 +60,7 @@ config:
   service:
     pipelines:
       logs:
-        processors: [memory_limiter, k8sattributes, batch]
+        processors: [memory_limiter, k8sattributes, transform/parse, batch]
         exporters: [otlphttp/vl]
       # The chart enables traces/metrics pipelines with a debug exporter by default.
       traces: null
