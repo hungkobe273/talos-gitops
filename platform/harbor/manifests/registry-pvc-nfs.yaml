@@ -1,0 +1,15 @@
+# Harbor registry blobs on NFS of host2 (05/11, design TTS_QTDV/design/storage-chung-pv.md).
+# Tests T1-T8 passed; blobs are large files with few fsyncs, so NFS fits (DB stays on local-path:
+# fsync on NFS is 4x slower). The chart uses it via persistence...registry.existingClaim.
+# Old PVC harbor-registry (local-path-retain on w2) is kept 7 days to roll back.
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: harbor-registry-nfs
+  namespace: harbor
+spec:
+  accessModes: [ReadWriteMany]
+  storageClassName: nfs-host2
+  resources:
+    requests:
+      storage: 10Gi
