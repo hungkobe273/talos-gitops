@@ -42,7 +42,7 @@ config:
       log_statements:
         - context: log
           conditions:
-            - resource.attributes["k8s.namespace.name"] == "demo" and IsString(body) and IsMatch(body, "^\\{")
+            - IsMatch(resource.attributes["k8s.namespace.name"], "^(demo|argocd)$") and IsString(body) and IsMatch(body, "^\\{")
           statements:
             - merge_maps(attributes, ParseJSON(body), "insert")
             - set(body, attributes["msg"]) where attributes["msg"] != nil
