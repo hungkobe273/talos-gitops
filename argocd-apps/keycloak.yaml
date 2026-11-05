@@ -7,8 +7,8 @@
 # `helm template` offline trên host2 trước khi commit (README bước 3).
 # Nguồn: https://github.com/codecentric/helm-charts/releases , https://www.keycloak.org/downloads
 #
-# Namespace keycloak đã do app keycloak-db tạo (PSA restricted) -> app này KHÔNG CreateNamespace,
-# KHÔNG managedNamespaceMetadata.
+# Namespace keycloak (PSA restricted): từ 05/11 app này tạo và giữ nhãn, thay app keycloak-db đã gỡ
+# (DB nằm ở Supabase từ 23/10; manifest platform/keycloak-db chỉ còn dùng cho diễn tập khôi phục).
 apiVersion: argoproj.io/v1alpha1
 kind: Application
 metadata:
@@ -43,3 +43,9 @@ spec:
     automated:
       prune: true
       selfHeal: true
+    managedNamespaceMetadata:
+      labels:
+        pod-security.kubernetes.io/enforce: restricted
+        pod-security.kubernetes.io/warn: restricted
+    syncOptions:
+      - CreateNamespace=true

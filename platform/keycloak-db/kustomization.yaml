@@ -1,4 +1,8 @@
-# platform/keycloak-db — PostgreSQL 18 một instance cho Keycloak. NHÁP.
+# platform/keycloak-db — PostgreSQL 18 một instance cho Keycloak.
+#
+# 05/11: không còn là Application (DB thật ở Supabase từ 23/10, app gỡ sau diễn tập). Giữ lại cho
+# diễn tập khôi phục: cụm tạm dựng DB này rồi nạp pg_dump Keycloak, để không chạm Supabase thật
+# (TTS_QTDV/design/velero-dien-tap-khoi-phuc.md Bước 17). Dùng: kubectl apply -k platform/keycloak-db
 #
 # keycloak-db-sealed.yaml KHÔNG có trong bản nháp: Hưng tạo trên host2 bằng kubeseal theo
 # secrets-plan.md (Secret keycloak-db, khóa `password`). Thiếu file này thì kustomize build lỗi,

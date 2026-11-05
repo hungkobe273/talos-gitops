@@ -46,7 +46,7 @@ Sơ đồ: mục 1.2.
 | VM | IP | vCPU | RAM | Tên node | Ghi chú |
 |---|---|---|---|---|---|
 | cp1 | 10.10.10.11 | 2 | 3,5 GB | talos-w9b-tsv | control plane duy nhất từ 20/10 |
-| w1 | 10.10.10.21 | 2 | 4,5 GB | talos-hdl-7jo | thường chạy Keycloak, Kyverno, Argo CD application-controller (không ghim); PV DB keycloak-db cũ ghim ở đây |
+| w1 | 10.10.10.21 | 2 | 4,5 GB | talos-hdl-7jo | thường chạy Keycloak, Kyverno, Argo CD application-controller (không ghim) |
 | w2 | 10.10.10.22 | 2 | 4,5 GB | talos-iv6-z5m | Harbor, Grafana, Vault ghim ở đây (PriorityClass `talos-pinned`) |
 | w3 (GCP) | 10.148.0.4 | 2 | 8 GB | w3 | VM GCP e2-standard-2 (asia-southeast1-b), nối cụm bằng KubeSpan (WireGuard) từ 30/10; taint `cloud=gcp:NoSchedule`; ghim Prometheus, VictoriaLogs; ưu tiên (preferred) Alertmanager, argo-rollouts, sealed-secrets, kube-state-metrics, prometheus-operator, Argo CD repo-server và applicationset, job ZAP, job image-scan; không đặt thứ cần `*.talos.internal` lên đây; bật 08:15–17:15 T2–T6 |
 | cp2, cp3 | .12, .13 | | | | tắt, giữ đĩa để bật lại khi cần HA |
@@ -89,7 +89,6 @@ GitHub Actions và GitLab CE vẫn build cùng app để so sánh, nhưng chỉ 
 | | image-scan | | CronJob Trivy 12:30 T2–T6 quét mọi image đang chạy, alert `ImageScanCritical` khi có CVE CRITICAL |
 | Registry | harbor | 1.19.2 (Harbor 2.15) | bản sao image và chữ ký trong mạng nội bộ, đăng nhập Keycloak |
 | Danh tính | keycloak | keycloakx 7.4.0 | SSO OIDC/SAML, DB trên Supabase |
-| | keycloak-db | | DB cũ giữ để lùi, gỡ sau 06/11 |
 | | oauth2-proxy | | đăng nhập Keycloak trước Prometheus, Alertmanager |
 | | headlamp | 0.45.0 | giao diện cụm |
 | Giám sát | monitoring | kube-prometheus-stack 92.2.0 | Prometheus, Alertmanager, Grafana |

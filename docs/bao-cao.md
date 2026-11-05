@@ -7,7 +7,7 @@ File này là báo cáo tổng hợp, cập nhật mỗi khi có thay đổi l�
 ## Tóm tắt
 
 - Cụm Talos 1 control plane + 2 worker trên một máy KVM (kvm-host2 `192.168.136.38`), API qua VIP `10.10.10.100:6443`, thêm worker w3 trên Google Cloud nối bằng KubeSpan từ 30/10 (chạy Prometheus, VictoriaLogs và các bộ điều khiển). cp2, cp3 đã tắt từ 20/10 để tiết kiệm RAM và IO.
-- GitOps bằng Argo CD (24 app). Jenkins trên Google Cloud là deployer: quét bảo mật, build, ký image, rồi sửa tag trong repo này. Argo Rollouts triển khai blue-green có smoke test, phân tích tỉ lệ lỗi và quét ZAP.
+- GitOps bằng Argo CD (23 app). Jenkins trên Google Cloud là deployer: quét bảo mật, build, ký image, rồi sửa tag trong repo này. Argo Rollouts triển khai blue-green có smoke test, phân tích tỉ lệ lỗi và quét ZAP.
 - Cụm kéo image từ Harbor nội bộ; Kyverno chỉ cho chạy image có chữ ký của Jenkins. Secret của ứng dụng nằm ở Vault. Đăng nhập tập trung bằng Keycloak cho 10 công cụ.
 - Giám sát và cảnh báo về Telegram, log tập trung (OpenTelemetry, VictoriaLogs), quét CVE image đang chạy mỗi ngày làm việc, watchdog ngoài cụm. Backup hằng ngày mã hóa lên Backblaze B2 và Google Cloud Storage; từ 03/11 thêm Velero backup object Kubernetes.
 - Nút thắt lớn nhất vẫn là ổ HDD duy nhất: sáng 03/11 lúc khởi động lạnh, CPU của VM on-prem chờ đĩa 43–64% thời gian (w3 trên GCP 0%). Sau các bản sửa ngày 03/11, khởi động lạnh còn khoảng 6 phút (trước đó 11 phút), không cần can thiệp tay.
