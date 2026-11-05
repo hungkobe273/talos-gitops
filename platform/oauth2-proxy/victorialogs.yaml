@@ -1,0 +1,132 @@
+# https://logs.talos.internal/select/vmui/ -> Traefik -> oauth2-proxy-victorialogs (login with Keycloak, talos-admins,
+# talos-viewers) -> http://vl-victoria-logs-single-server.observability.svc:9428/select/
+# 05/11 (TTS_QTDV/design/log-truong-json.md 5.2): vmui = free LogsQL with fields, the closest thing to Kibana Discover
+# (mentor finds Grafana hard to customise). VictoriaLogs has no auth of its own, so only /select/* (read-only query
+# API + vmui) is reachable: the upstream carries the /select/ path and the Ingress only routes /select and /oauth2.
+# /insert/* and the other HTTP endpoints of VictoriaLogs stay cluster-internal.
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: oauth2-proxy-victorialogs
+  labels:
+    app.kubernetes.io/name: oauth2-proxy
+    app.kubernetes.io/instance: victorialogs
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: oauth2-proxy
+      app.kubernetes.io/instance: victorialogs
+  template:
+    metadata:
+      annotations:
+        talos/config-rev: "5"   # keep equal to prometheus.yaml/alertmanager.yaml; bump all when oauth2-proxy-common changes
+      labels:
+        app.kubernetes.io/name: oauth2-proxy
+        app.kubernetes.io/instance: victorialogs
+    spec:
+      automountServiceAccountToken: false
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 65532
+        runAsGroup: 65532
+        seccompProfile:
+          type: RuntimeDefault
+      containers:
+        - name: oauth2-proxy
+          image: quay.io/oauth2-proxy/oauth2-proxy:v7.15.5
+          args:
+            - --upstream=http://vl-victoria-logs-single-server.observability.svc:9428/select/
+            - --redirect-url=https://logs.talos.internal/oauth2/callback
+            - --cookie-name=_oauth2_victorialogs
+          envFrom:
+            - configMapRef:
+                name: oauth2-proxy-common
+          env:
+            - name: OAUTH2_PROXY_CLIENT_SECRET
+              valueFrom:
+                secretKeyRef:
+                  name: oauth2-proxy
+                  key: client-secret
+            - name: OAUTH2_PROXY_COOKIE_SECRET
+              valueFrom:
+                secretKeyRef:
+                  name: oauth2-proxy
+                  key: cookie-secret
+          ports:
+            - name: http
+              containerPort: 4180
+          readinessProbe:
+            httpGet:
+              path: /ready
+              port: http
+            periodSeconds: 10
+          livenessProbe:
+            httpGet:
+              path: /ping
+              port: http
+            periodSeconds: 20
+          resources:
+            requests:
+              cpu: 10m
+              memory: 32Mi
+            limits:
+              memory: 128Mi
+          securityContext:
+            allowPrivilegeEscalation: false
+            readOnlyRootFilesystem: true
+            capabilities:
+              drop: ["ALL"]
+          volumeMounts:
+            - name: talos-ca
+              mountPath: /etc/talos-ca
+              readOnly: true
+      volumes:
+        - name: talos-ca
+          configMap:
+            name: talos-internal-ca
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: oauth2-proxy-victorialogs
+spec:
+  selector:
+    app.kubernetes.io/name: oauth2-proxy
+    app.kubernetes.io/instance: victorialogs
+  ports:
+    - name: http
+      port: 80
+      targetPort: http
+---
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: victorialogs
+  annotations:
+    cert-manager.io/cluster-issuer: talos-internal-ca
+spec:
+  ingressClassName: traefik
+  tls:
+    - hosts:
+        - logs.talos.internal
+      secretName: victorialogs-tls
+  rules:
+    - host: logs.talos.internal
+      http:
+        paths:
+          # Only these two prefixes; anything else (/, /insert, /metrics...) gets a 404 from Traefik.
+          - path: /select
+            pathType: Prefix
+            backend:
+              service:
+                name: oauth2-proxy-victorialogs
+                port:
+                  name: http
+          - path: /oauth2
+            pathType: Prefix
+            backend:
+              service:
+                name: oauth2-proxy-victorialogs
+                port:
+                  name: http

@@ -477,11 +477,13 @@
       "baseUrl": "/",
       "redirectUris": [
         "https://prometheus.talos.internal/oauth2/callback",
-        "https://alertmanager.talos.internal/oauth2/callback"
+        "https://alertmanager.talos.internal/oauth2/callback",
+        "https://logs.talos.internal/oauth2/callback"
       ],
       "webOrigins": [
         "https://prometheus.talos.internal",
-        "https://alertmanager.talos.internal"
+        "https://alertmanager.talos.internal",
+        "https://logs.talos.internal"
       ],
       "attributes": {
         "pkce.code.challenge.method": "S256"

@@ -1,5 +1,6 @@
-# oauth2-proxy: Keycloak login (group talos-admins only) in front of the Prometheus and Alertmanager UIs,
-# https://prometheus.talos.internal and https://alertmanager.talos.internal. Manifests: platform/oauth2-proxy.
+# oauth2-proxy: Keycloak login (groups talos-admins, talos-viewers) in front of web UIs without their own login:
+# https://prometheus.talos.internal, https://alertmanager.talos.internal and https://logs.talos.internal/select/vmui/ (05/11).
+# Manifests: platform/oauth2-proxy.
 # Wave 4: after keycloak (3); pods start without Keycloak too, only logins wait for it.
 apiVersion: argoproj.io/v1alpha1
 kind: Application
