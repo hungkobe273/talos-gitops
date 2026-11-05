@@ -5,7 +5,8 @@
 # keeps working when Kyverno is down. Kyverno's webhook stays limited to namespace demo.
 #
 # kube-system is excluded: its pods (flannel, apiserver, ...) are managed by Talos.
-# Rollout: Warn + Audit first (29/10), Deny once no pod is reported.
+# Rollout: Warn + Audit first (29/10), Deny from 05/11 (0 violations in 2 days, every running pod
+# and CronJob template has a memory request; last offenders fixed 03/11).
 apiVersion: admissionregistration.k8s.io/v1
 kind: ValidatingAdmissionPolicy
 metadata:
@@ -42,7 +43,7 @@ metadata:
   name: require-memory-request
 spec:
   policyName: require-memory-request
-  validationActions: [Warn, Audit]
+  validationActions: [Deny, Audit]
   matchResources:
     namespaceSelector:
       matchExpressions:

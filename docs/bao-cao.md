@@ -128,8 +128,8 @@ Những gì đã sửa từ 29/10: request RAM theo p95 thực tế, Keycloak im
 | Ưu tiên | Việc nhóm tự làm | Lý do |
 |---|---|---|
 | Xong 05/11 | Diễn tập khôi phục toàn cụm lên GCP bằng Velero và gói backup | RTO chính 50:52, RTO đầy đủ 54:06, RPO 6–7 phút; cụm thật không bị ảnh hưởng. Chi tiết trong nhật ký 05/11. |
-| Trung bình | Nâng Harbor lên chart 1.19.4 (sau diễn tập, backup tay trước) | Hết 7 trong 11 image còn CVE CRITICAL. |
-| Trung bình | Policy `require-memory-request` từ Warn sang Deny | Còn 3 chỗ thiếu request: helper pod local-path, `redisSecretInit` của Argo CD, script `make-secrets.sh` của Harbor. Deny trước khi sửa thì PVC mới sẽ kẹt. |
+| Xong 05/11 | Nâng Harbor lên chart 1.19.4 (Harbor 2.15.4) | Backup tay trước; chỉ đổi tag image. |
+| Xong 05/11 | Policy `require-memory-request` từ Warn sang Deny | 3 chỗ thiếu request đã sửa 03/11; 0 vi phạm trong 2 ngày. |
 | Trung bình | Diễn tập khôi phục etcd từ snapshot (cần anh có mặt) | Vault đã diễn tập 29/10; etcd chưa. |
-| Trung bình | Gỡ `keycloak-db` sau diễn tập | Dọn DB cũ khi hết thời gian giữ để lùi. |
+| Xong 05/11 | Gỡ `keycloak-db` sau diễn tập | Manifest giữ lại cho diễn tập. |
 | Thấp | Thu hồi sudo NOPASSWD trên host2 | Đưa cấu hình về gần production. |

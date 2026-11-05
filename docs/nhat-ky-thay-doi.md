@@ -14,6 +14,8 @@ Thay đổi nằm ngoài repo này (host2, cấu hình Talos) cũng ghi ở đâ
 | harbor-jobservice: initContainer `wait-core` (busybox 1.37) chờ `harbor-core/api/v2.0/ping` trước khi chạy. Thử restart core và jobservice cùng lúc: jobservice 0 restart, log `harbor-core OK`; kiểm thật ở cold start sáng 06/11 | jobservice panic khi core chưa lên rồi chờ hết backoff CrashLoop (sáng 04/11, 05/11, Bước 16 diễn tập) | `18e97d5` |
 | Gỡ app `keycloak-db` (DB thật ở Supabase từ 23/10, giữ tới sau diễn tập để lùi): xoá `argocd-apps/keycloak-db.yaml`; app `keycloak` nhận tạo namespace và nhãn PSA restricted. Thư mục `platform/keycloak-db` giữ lại cho Bước 17 diễn tập (dựng tay bằng `kubectl apply -k`). Còn 23 app | Dump Keycloak đã kiểm được ở diễn tập 05/11 | commit này |
 | Harbor chart 1.19.2 lên **1.19.4** (Harbor 2.15.2 lên 2.15.4): chỉ đổi tag image, template không đổi (đã so 2 chart). Backup tay trước lúc 10:03 (`harbor-2026-11-05-100334.dump`, bundle `talos-offsite-20261105-1003`). Lùi: revert commit này | Hết 7/11 image còn CVE CRITICAL | commit này |
+| Harbor 2.15.4 lên lúc 10:07–10:11: 7 pod Ready, jobservice 0 restart dù core và jobservice khởi động lại cùng lúc (lần thử thật đầu của `wait-core`); `/v2/` 401, đăng nhập vẫn OIDC | Kiểm sau nâng cấp | |
+| `require-memory-request`: `validationActions` từ `[Warn, Audit]` sang `[Deny, Audit]`. Trước khi đổi: 0 vi phạm trong 2 ngày (Prometheus), mọi pod đang chạy và mẫu CronJob (image-scan, descheduler) đều có memory request. Pod thiếu request từ giờ bị apiserver từ chối (trừ kube-system) | Hết giai đoạn thử từ 29/10 | commit này |
 | Job `w3-stop-mon-wed` chạy đúng lịch lần đầu 04/11: stop 11:30:04, xong 11:30:57, principal `w3-stopper` | Kiểm job Scheduler | |
 
 ## 04/11/2026
