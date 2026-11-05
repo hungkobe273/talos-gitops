@@ -23,7 +23,7 @@ Từ 16/10 các giao diện mở thẳng từ LAN qua HAProxy :443 trên kvm-hos
 
 | Dịch vụ | Link | Đăng nhập | Ghi chú |
 |---|---|---|---|
-| Argo CD | https://argocd.talos.internal | Keycloak ("LOG IN VIA KEYCLOAK") | trạng thái đồng bộ của 23 app |
+| Argo CD | https://argocd.talos.internal | Keycloak ("LOG IN VIA KEYCLOAK") | trạng thái đồng bộ của 25 app |
 | Grafana | https://grafana.talos.internal | Keycloak; xem ẩn danh quyền Viewer | dashboard cụm, demo-app, Keycloak |
 | Headlamp | https://headlamp.talos.internal | Keycloak | `talos-viewers` chỉ xem, không đọc Secret |
 | Harbor | https://harbor.talos.internal | Keycloak (LOGIN VIA OIDC PROVIDER) | project `talos`, replication từ GHCR |

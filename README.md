@@ -19,11 +19,11 @@ Quy ước: thay đổi nào làm khác kiến trúc, phiên bản hoặc cách 
 ```text
 talos-gitops/
 ├── bootstrap/        # apply tay một lần: root.yaml (app-of-apps), values Argo CD, secret OIDC của Argo CD
-├── argocd-apps/      # 22 Application do root quản lý (mỗi file một app)
+├── argocd-apps/      # 24 Application do root quản lý (mỗi file một app)
 ├── platform/         # values Helm, manifest và SealedSecret của từng thành phần nền tảng
-│   ├── traefik, cert-manager, local-path, descheduler, argo-rollouts, admission-policies
+│   ├── traefik, cert-manager, local-path, csi-driver-nfs, descheduler, argo-rollouts, admission-policies
 │   ├── monitoring, headlamp, oauth2-proxy, victoria-logs, otel-collector, image-scan
-│   ├── velero, gcp-tools
+│   ├── velero, gcp-tools, storage-test (Postgres thử NFS, tạm)
 │   ├── keycloak, keycloak-db (chỉ dùng cho diễn tập khôi phục, không còn là app)
 │   ├── vault, external-secrets, kyverno, cosign (khoá công khai ký image)
 │   └── harbor        # kèm script make-secrets.sh, setup-replication.sh, oidc.sh, make-pull-secret.sh
@@ -36,8 +36,8 @@ talos-gitops/
 | Wave | App |
 |---|---|
 | -2 | sealed-secrets, cert-manager |
-| -1 | cert-manager-issuers, local-path, monitoring |
-| 0 | traefik, argo-rollouts, descheduler, admission-policies |
+| -1 | cert-manager-issuers, local-path, csi-driver-nfs, monitoring |
+| 0 | traefik, argo-rollouts, descheduler, admission-policies, storage-test |
 | 1 | vault, external-secrets, kyverno, headlamp, gcp-tools, velero, demo-app |
 | 2 | harbor, victoria-logs |
 | 3 | keycloak, otel-collector, image-scan |
