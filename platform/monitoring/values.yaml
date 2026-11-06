@@ -346,8 +346,9 @@ grafana:
     # Datasources in use: prometheus, alertmanager, victoriametrics-logs-datasource. These plugins
     # have no datasource here and cost ~30 s; most start their own backend binary from the HDD.
     # To use one again, remove it from this list.
+    # 06/11 cold start: grafana-metricsdrilldown-app took ~11 s of the 25 s plugin load and is not used.
     plugins:
-      disable_plugins: "grafana-advisor-app,grafana-exploretraces-app,grafana-lokiexplore-app,grafana-pyroscope-app,elasticsearch,grafana-postgresql-datasource,grafana-pyroscope-datasource,influxdb,jaeger,loki,mssql,mysql,opentsdb,stackdriver,tempo,zipkin"
+      disable_plugins: "grafana-metricsdrilldown-app,grafana-advisor-app,grafana-exploretraces-app,grafana-lokiexplore-app,grafana-pyroscope-app,elasticsearch,grafana-postgresql-datasource,grafana-pyroscope-datasource,influxdb,jaeger,loki,mssql,mysql,opentsdb,stackdriver,tempo,zipkin"
   # A cold start on the HDD (SQLite migrations, plugin registration) can take >10 min;
   # give it up to 20 min before liveness checks start, and never run two Grafanas at once.
   startupProbe:
