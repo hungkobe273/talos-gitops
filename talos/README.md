@@ -20,9 +20,16 @@ không có secret): mọi giá trị khớp, kể cả hash CA trong `harbor-reg
 | `local-path.yaml` | | x | x | x | UserVolume cho local-path-provisioner (20/10) |
 | `kubespan.yaml` | x | x | x | x | KubeSpan, MTU 1380, học thêm endpoint sau NAT (30/10) |
 | `flannel-csum.yaml` | x | x | x | x | Tắt checksum offload trên `flannel.1` (VXLAN trong WireGuard, 30/10) |
+| `longhorn.yaml` | | x | x | | `UserVolumeConfig` `longhorn` kiểu `disk` trên `/dev/vdb` (đĩa qcow2 20G riêng), mount `/var/mnt/longhorn` cho Longhorn (06/11) |
 
 `statichost-keycloak.yaml` và `harbor-registry.yaml` cùng `name: 192.168.136.38`; Talos gộp `hostnames` theo thứ tự
 áp (đang chạy: keycloak rồi harbor).
+
+**Schematic (extension):** w1, w2 dùng [schematics/longhorn.yaml](schematics/longhorn.yaml) (ID `53513e54...`: qemu-guest-agent,
+iscsi-tools, util-linux-tools) từ 06/11; cp1 và w3 vẫn schematic cũ `ce4c9805...` (chỉ qemu-guest-agent). Khi upgrade Talos
+phải ghi rõ `--image factory.talos.dev/metal-installer/<ID>:<version>` đúng schematic của từng node. Document
+`UnattendedInstallConfig` trong machine config của w1, w2 vẫn ghi image `ce4c9805...` (chỉ dùng khi cài lại node), cần
+đổi sang `53513e54...` trước lần cài lại.
 
 Không đưa vào: `patch-cp2.yaml`, `patch-cp3.yaml` (cp2, cp3 tắt từ 20/10, còn trong bundle backup),
 `patch-kubespan.yaml` bản đầu (thay bằng bản có `harvestExtraEndpoints`).

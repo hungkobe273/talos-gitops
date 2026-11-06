@@ -9,7 +9,7 @@ mật khẩu VNC), chỉ có IP `10.10.10.x` của lab.
 | `talos-net.xml` | Mạng NAT `talos-net`, bridge `virbr-talos`, `10.10.10.1/24`, DHCP gán IP theo MAC (đuôi MAC trùng đuôi IP) |
 | `pool-images.xml` | Pool `images` ở `/var/lib/libvirt/images` |
 | `cp1.xml` | 2 vCPU, 3,5 GiB, đĩa `cp1.qcow2` (`cache=none`, `io=native`), ISO Talos còn gắn ở cdrom |
-| `w1.xml`, `w2.xml` | 2 vCPU, 4,5 GiB, đĩa `w1.qcow2` / `w2.qcow2` |
+| `w1.xml`, `w2.xml` | 2 vCPU, 4,5 GiB, đĩa `w1.qcow2` / `w2.qcow2`; từ 06/11 thêm `vdb` = `w1-longhorn.qcow2` / `w2-longhorn.qcow2` (20G, dữ liệu Longhorn) |
 
 Không đưa vào: `cp2`, `cp3` (tắt từ 20/10), mạng `default` (không dùng).
 
@@ -21,7 +21,7 @@ sudo virsh pool-define pool-images.xml && sudo virsh pool-autostart images && su
 for v in cp1 w1 w2; do sudo virsh define $v.xml && sudo virsh autostart $v; done
 ```
 
-Đĩa không nằm trong Git. Còn file qcow2 thì chỉ cần `define` rồi bật. Mất đĩa: tạo qcow2 mới
+Đĩa không nằm trong Git. Mất đĩa Longhorn (`*-longhorn.qcow2`): tạo lại bằng `qemu-img create -f qcow2 ... 20G`, Longhorn tự dựng lại bản sao từ worker kia. Còn file qcow2 thì chỉ cần `define` rồi bật. Mất đĩa: tạo qcow2 mới
 (`qemu-img create -f qcow2`), boot từ ISO `talos-v1.14.2-qga-amd64.iso`, áp machine config dựng từ
 `secrets.yaml` trong bundle backup và các patch ở [talos/](../../talos/README.md).
 

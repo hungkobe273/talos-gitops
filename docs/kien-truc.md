@@ -1,6 +1,6 @@
 # Kiến trúc cụm talos-kvm
 
-Người thực hiện: Hưng, Phúc. Cập nhật: 05/11/2026.
+Người thực hiện: Hưng, Phúc. Cập nhật: 06/11/2026.
 
 Cụm Kubernetes on-premise trên một máy KVM (kvm-host2), thêm một worker trên Google Cloud nối bằng KubeSpan, vận hành theo GitOps. Code đi từ GitHub qua Jenkins, được quét và ký, rồi Argo CD triển khai blue-green. Cụm chỉ kéo image của ứng dụng từ Harbor nội bộ và chỉ chạy image có chữ ký của Jenkins.
 
@@ -18,7 +18,7 @@ Sáu hình, đọc từ tổng quát đến chi tiết; mỗi hình trả lời 
 
 ![Hạ tầng vật lý](so-do/ha-tang.svg)
 
-Ba VM Talos on-prem dùng chung một ổ HDD của host2 (nút thắt IO: lúc khởi động lạnh 03/11, CPU chờ đĩa 43–64% thời gian). w3 trên GCP có đĩa riêng. Volume dùng local-path nên pod có dữ liệu bị ghim vào đúng một worker. Từ 05/11 có thêm StorageClass `nfs-host2`: PV nằm trên NFS server của host2 (`/srv/nfs/k8s`, ngoài các VM), mount được từ w1 và w2; Harbor registry (image, chữ ký) chạy trên `nfs-host2` từ 05/11. Test Postgres T1–T8 đạt (pod chuyển node giữ dữ liệu, sập khi ghi tự phục hồi, mất NFS 60 s chỉ treo), nhưng fsync qua NFS chậm gấp 4, nên DB (Harbor postgres, Vault) cùng Grafana, Prometheus, VictoriaLogs vẫn dùng local-path.
+Ba VM Talos on-prem dùng chung một ổ HDD của host2 (nút thắt IO: lúc khởi động lạnh 03/11, CPU chờ đĩa 43–64% thời gian). w3 trên GCP có đĩa riêng. Volume dùng local-path nên pod có dữ liệu bị ghim vào đúng một worker. Từ 05/11 có thêm StorageClass `nfs-host2`: PV nằm trên NFS server của host2 (`/srv/nfs/k8s`, ngoài các VM), mount được từ w1 và w2; Harbor registry (image, chữ ký) chạy trên `nfs-host2` từ 05/11. Test Postgres T1–T8 đạt (pod chuyển node giữ dữ liệu, sập khi ghi tự phục hồi, mất NFS 60 s chỉ treo), nhưng fsync qua NFS chậm gấp 4, nên DB (Harbor postgres, Vault) cùng Grafana, Prometheus, VictoriaLogs vẫn dùng local-path. Anh góp ý 05/11: NFS là một server đơn, không HA. Từ 06/11 có **Longhorn** (StorageClass `longhorn`): mỗi worker w1, w2 có thêm đĩa qcow2 20G `vdb` dành riêng, mỗi PV giữ 2 bản sao trên 2 worker. Test L1–L6: rút điện một worker thì Postgres tự lên ở worker kia sau 4:45 với đủ dữ liệu, sập giữa lúc ghi vẫn toàn vẹn, fdatasync 4,7 ms (NFS 51 ms), Velero backup/khôi phục được dữ liệu volume. Giới hạn: 2 bản sao vẫn cùng ổ HDD của host2, chống mất một node chứ không chống mất host2; và memory request của w1, w2 đang 84–95%, nên khi mất một worker, worker còn lại chưa chạy được hết pod (cần rà request). Kế hoạch: chuyển Harbor registry sang Longhorn rồi gỡ NFS (chờ anh duyệt).
 
 ### 1.3 Thành phần trong cụm: ai gọi ai
 
@@ -96,7 +96,7 @@ GitHub Actions và GitLab CE vẫn build cùng app để so sánh, nhưng chỉ 
 | Giám sát | monitoring | kube-prometheus-stack 92.2.0 | Prometheus, Alertmanager, Grafana |
 | Log tập trung | victoria-logs | victoria-logs-single 0.13.10 | lưu log 7 ngày (tối đa 4 GiB), tra cứu bằng vmui `https://logs.talos.internal/select/vmui/` (LogsQL, theo trường, từ 05/11, anh duyệt); Grafana dashboard "Log tập trung" chỉ để theo dõi (số dòng theo pod, dòng có chữ error) |
 | | otel-collector | opentelemetry-collector 0.176.0 | DaemonSet trên cả 4 node, đọc `/var/log/pods`, gắn namespace/pod/container, đẩy OTLP về VictoriaLogs; từ 05/11 tách log JSON thành trường ngay lúc thu (processor `transform/parse`, namespace `demo`, `argocd`), `level` thành severity |
-| Backup | velero | velero 12.2.2 (Velero v1.18.4, plugin GCP v1.14.4) | backup object Kubernetes (không có dữ liệu PV) lên bucket GCS `talos-kvm-velero-vtc` 09:30 T2–T6, giữ 30 ngày; ưu tiên chạy trên w3 |
+| Backup | velero | velero 12.2.2 (Velero v1.18.4, plugin GCP v1.14.4) | backup object Kubernetes lên bucket GCS `talos-kvm-velero-vtc` 09:30 T2–T6, giữ 30 ngày; ưu tiên chạy trên w3. Từ 06/11 có node-agent (w1, w2) để backup dữ liệu PV Longhorn theo file (kopia) khi chọn `--default-volumes-to-fs-backup`; PV local-path (hostPath) vẫn không backup được |
 | Ứng dụng | demo-app | | app Go mẫu, Rollout blue-green |
 
 Talos v1.14.2, Kubernetes v1.37.1, CNI Flannel.

@@ -1,0 +1,13 @@
+# Talos patch for Longhorn workers (w1, w2), 06/11/2026. No secret (only a disk selector).
+# The second data disk (/dev/vdb, a qcow2 file of its own) is used whole as volume "longhorn",
+# mounted by Talos at /var/mnt/longhorn.
+# No kubelet extraMounts: in Talos 1.14 kubelet settings live in a KubeletConfig document, which
+# has no mounts field, and the Sidero Labs Longhorn guide for user volumes has no extraMounts either.
+apiVersion: v1alpha1
+kind: UserVolumeConfig
+name: longhorn
+volumeType: disk
+provisioning:
+  diskSelector:
+    # volumeType disk has no system_disk attribute (06/11 error), so pick the device directly.
+    match: disk.dev_path == '/dev/vdb'

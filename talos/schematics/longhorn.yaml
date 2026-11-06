@@ -1,0 +1,11 @@
+# Image Factory schematic of w1/w2 from 06/11/2026 (Longhorn), ID
+# 53513e54bb39202f35694412577a6bc53d484744d35a126e5d42ef34785c0d83
+# (curl -X POST --data-binary @longhorn.yaml https://factory.talos.dev/schematics).
+# Upgrade w1/w2 with factory.talos.dev/metal-installer/<ID>:<version>. The old schematic ce4c9805... (qemu-guest-agent
+# only) would drop iscsi-tools and util-linux-tools and break Longhorn on that node. cp1 still uses ce4c9805...
+customization:
+  systemExtensions:
+    officialExtensions:
+      - siderolabs/qemu-guest-agent
+      - siderolabs/iscsi-tools
+      - siderolabs/util-linux-tools

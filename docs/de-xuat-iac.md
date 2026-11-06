@@ -65,7 +65,9 @@ Tổng khoảng 3 ngày công. Mỗi bước có commit riêng, ghi nhật ký; 
 | `gcloud auth application-default login` bằng tài khoản Owner | Hưng | Mở trình duyệt; Terraform dùng thông tin này. Hiện chưa có |
 | Đọc nhanh Terraform: provider, resource, state, plan/apply, import | Hưng | Dùng session học |
 
-### Giai đoạn 1: Terraform cho GCP hiện có (T6 06/11, khoảng 1,5 ngày)
+### Giai đoạn 1: Terraform cho GCP hiện có (T6 06/11, khoảng 1,5 ngày) — xong 06/11
+
+**Kết quả 06/11:** 40 tài nguyên import vào state (`apply` 08:46, `40 imported, 0 changed`), `plan` báo `No changes`, code ở `infra/gcp/` (commit `1ff7d0b`).
 
 1. Tạo bucket state `talos-kvm-tfstate-vtc` bằng `gcloud` (asia-southeast1, versioning, uniform access, chặn public). Đây là tài nguyên duy nhất tạo tay; sau đó import chính nó.
 2. Tạo thư mục `infra/gcp/`: `versions.tf`, `backend.tf` (gcs), `providers.tf`, `imports.tf`, `.gitignore`, `README.md`.
