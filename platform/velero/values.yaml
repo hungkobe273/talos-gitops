@@ -55,15 +55,19 @@ containerSecurityContext:
   allowPrivilegeEscalation: false
   capabilities: {drop: ["ALL"]}
   readOnlyRootFilesystem: true
-# Kopia writes its repository config and cache under /udmrepo. With a read-only root filesystem the first file-system
-# backup failed (06/11, "mkdir /udmrepo: read-only file system"), so give it a writable emptyDir; it is rebuilt from
-# the bucket on restart.
+# Kopia writes its repository config under /udmrepo and its cache under $HOME/.cache (HOME is / for uid 65532).
+# With a read-only root filesystem the first file-system backups failed (06/11, "mkdir /udmrepo" then "mkdir /.cache:
+# read-only file system"), so both get a writable emptyDir; everything there is rebuilt from the bucket on restart.
 extraVolumes:
   - name: udmrepo
     emptyDir: {sizeLimit: 1Gi}
 extraVolumeMounts:
   - name: udmrepo
     mountPath: /udmrepo
+    subPath: config
+  - name: udmrepo
+    mountPath: /.cache
+    subPath: cache
 # Prefers w3 like other control loops; only talks to the API server and GCS.
 tolerations:
   - {key: cloud, operator: Equal, value: gcp, effect: NoSchedule}
