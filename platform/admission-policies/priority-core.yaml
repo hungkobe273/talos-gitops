@@ -1,0 +1,14 @@
+# Core services when a worker is lost (06/11, TTS_QTDV/design/ram-khi-mat-mot-worker.md). Two 4.5 GiB workers cannot
+# hold every pod: RAM really in use (~4.5 GiB) is more than one worker (3.9 GiB allocatable). Test L2 showed that when
+# w1 died, w2 was full of priority 0 and talos-pinned (1000) pods, so Keycloak and Kyverno from w1 stayed Pending.
+# talos-core (2000) lets the request path (Traefik, Keycloak, Kyverno, cert-manager, External Secrets, Vault, Harbor,
+# demo-app; ~2.7 GiB of requests) preempt pinned or movable pods (Grafana, VictoriaLogs, Argo CD, Headlamp...), which
+# wait Pending until the worker is back. Below longhorn-critical and system-*-critical.
+apiVersion: scheduling.k8s.io/v1
+kind: PriorityClass
+metadata:
+  name: talos-core
+value: 2000
+globalDefault: false
+preemptionPolicy: PreemptLowerPriority
+description: "Request path services that must run on the surviving worker; may preempt talos-pinned and priority-0 pods."
