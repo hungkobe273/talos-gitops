@@ -8,7 +8,9 @@ resources:
 webhook:
   resources:
     requests: {cpu: 10m, memory: 80Mi}    # 29/10: p95 71Mi
-    limits: {memory: 128Mi}
+    # 06/11 cold start: read 576 MB from the HDD with a ~50 MB binary: at 128Mi its page cache was evicted again and
+    # again (same as external-secrets on 03/11). Limit only, the request (scheduling) is unchanged.
+    limits: {memory: 256Mi}
 cainjector:
   resources:
     requests: {cpu: 10m, memory: 112Mi}   # 29/10: p95 85Mi, max 120Mi
