@@ -2,6 +2,8 @@
 # talos-watchdog.sh - "nguoi canh" ngoai cum talos-kvm, chay tren host2 bang systemd timer.
 # Viet 23/10 (Phuc), chay tren host2 tu 23/10; dua vao Git 05/11 khi them kiem tra NFS.
 #
+# 06/11: them taint out-of-service cho worker da tat han (oos_reconcile), de StatefulSet chuyen node.
+#
 # Kiem tra moi lan chay: Internet cua host2, PSI io, 3 VM running, NFS server (nfs-server active,
 # cong 2049 tren 10.10.10.1) va dung luong /srv, kube-apiserver /readyz, so node Ready,
 # Prometheus /-/ready, Alertmanager /-/ready, Watchdog co dang firing trong Alertmanager
@@ -42,6 +44,9 @@ PSI_FILE="${WATCHDOG_PSI_FILE:-/proc/pressure/io}"  # doi duoc khi thu tren may 
 NFS_ADDR="${WATCHDOG_NFS_ADDR:-10.10.10.1}"  # dia chi NFS ma worker mount (bridge talos-net)
 NFS_DIR="${WATCHDOG_NFS_DIR:-/srv/nfs/k8s}"
 SRV_DISK_MAX="${WATCHDOG_SRV_DISK_MAX:-85}" # % dung cua filesystem chua NFS_DIR
+# Worker VM -> ten node, cho taint out-of-service (06/11, xem oos_reconcile)
+OOS_MAP="${WATCHDOG_OOS_MAP:-w1=talos-hdl-7jo w2=talos-iv6-z5m}"
+OOS_TAINT=node.kubernetes.io/out-of-service
 
 NS=monitoring
 PROM_SVC=kps-kube-prometheus-stack-prometheus:9090
@@ -222,8 +227,43 @@ chk_pipeline() {
   echo "Watchdog KHONG co trong Alertmanager (Prometheus -> Alertmanager dut?)"; return 1
 }
 
+# --- Taint out-of-service (06/11) ---------------------------------------------------------
+# Test N-1 06/11: rut dien w1 thi keycloak-0 (StatefulSet) ket tren node chet, Kubernetes khong tu tao
+# ban moi (tranh 2 ban cung chay) nen SSO mat 20 phut. Cach chuan: gan taint
+# node.kubernetes.io/out-of-service=nodeshutdown:NoExecute len node DA TAT HAN -> Kubernetes xoa cuong buc
+# pod va thao volume, StatefulSet tao lai o worker con lai. Chi host2 biet chac VM da tat (virsh domstate),
+# nen chi gan khi VM "shut off"/"crashed" VA node khong Ready. VM chay lai -> go taint ngay (ca luc
+# boot grace va pause, de taint khong o lai lam hong cold start).
+#   oos_reconcile remove : chi go taint khi VM da running
+#   oos_reconcile apply  : gan taint khi VM tat va node khong Ready
+oos_reconcile() {
+  local mode=$1 pair vm node vs ready tainted
+  for pair in $OOS_MAP; do
+    vm=${pair%%=*}; node=${pair#*=}
+    vs=$(virsh -c qemu:///system domstate "$vm" 2>/dev/null | one_line) || continue
+    tainted=$(kk get node "$node" -o jsonpath="{.spec.taints[?(@.key==\"$OOS_TAINT\")].effect}" 2>/dev/null) || continue
+    if [[ $mode == remove ]]; then
+      [[ -n $tainted && $vs == running ]] || continue
+      if [[ $DRY_RUN == 1 ]]; then log "DRY_RUN: se go taint $OOS_TAINT khoi $node"; continue; fi
+      kk taint nodes "$node" "$OOS_TAINT-" >/dev/null \
+        && notify "DA GO taint out-of-service khoi $node: VM $vm da chay lai"
+      continue
+    fi
+    [[ -z $tainted ]] || continue
+    case $vs in "shut off"|crashed) ;; *) continue ;; esac
+    ready=$(kk get node "$node" -o jsonpath='{.status.conditions[?(@.type=="Ready")].status}' 2>/dev/null) || continue
+    [[ $ready != True ]] || continue
+    if [[ $DRY_RUN == 1 ]]; then log "DRY_RUN: se gan taint $OOS_TAINT len $node (VM $vm $vs, Ready=$ready)"; continue; fi
+    kk taint nodes "$node" "$OOS_TAINT=nodeshutdown:NoExecute" --overwrite >/dev/null \
+      && notify "GAN taint out-of-service len $node: VM $vm $vs, node Ready=$ready. Pod tren node (ca StatefulSet nhu Keycloak) bi xoa cuong buc de chay lai o worker con lai. VM chay lai thi watchdog tu go taint"
+  done
+}
+
 # --- Chay ---------------------------------------------------------------------------------
 mkdir -p "$STATE/kube-cache"
+
+# Go taint truoc moi dieu kien bo qua (boot grace, pause): VM da chay lai thi node phai nhan pod binh thuong.
+oos_reconcile remove || true
 
 uptime_s=$(cut -d. -f1 /proc/uptime)
 if (( uptime_s < BOOT_GRACE )); then
@@ -266,6 +306,7 @@ run_check srv_disk chk_srv_disk || true
 # Moi kiem tra Kubernetes phu thuoc apiserver: API chet thi chi bao 1 tin, cac muc sau giu nguyen trang thai
 if run_check api chk_api; then
   run_check nodes chk_nodes || true
+  oos_reconcile apply || true
   run_check prometheus chk_prometheus || true
   if run_check alertmanager chk_alertmanager; then
     run_check pipeline chk_pipeline || true
