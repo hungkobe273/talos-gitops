@@ -1,10 +1,16 @@
 # Ingress controller behind HAProxy on kvm-host2 (192.168.136.38:80/443 -> NodePort 30080/30443 on w1/w2).
 deployment:
   replicas: 2
+# 06/11: was ScheduleAnyway, and after the talos-core rollout both replicas sat on w2 (one node down = no ingress).
+# DoNotSchedule keeps them on different workers; nodeTaintsPolicy Honor leaves cp1/w3 (tainted) and a NotReady
+# node out of the count, so a rolling update (3rd pod) and a lost worker still schedule.
 topologySpreadConstraints:
   - maxSkew: 1
     topologyKey: kubernetes.io/hostname
-    whenUnsatisfiable: ScheduleAnyway
+    whenUnsatisfiable: DoNotSchedule
+    nodeTaintsPolicy: Honor
+    # Count only pods of the same ReplicaSet, so the new pods of a rolling update spread among themselves.
+    matchLabelKeys: [pod-template-hash]
     labelSelector:
       matchLabels:
         app.kubernetes.io/name: traefik
