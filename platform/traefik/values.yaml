@@ -39,3 +39,5 @@ ingressClass:
 resources:
   requests: {cpu: 50m, memory: 224Mi}   # 29/10: p95 189Mi (trước 64Mi)
   limits: {memory: 384Mi}
+# 06/11: talos-core (platform/admission-policies/priority-core.yaml): must run on the surviving worker when one is lost.
+priorityClassName: talos-core

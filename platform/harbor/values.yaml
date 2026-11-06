@@ -44,13 +44,15 @@ persistence:
       size: 1Gi
 
 # All Harbor pods on w2 (most free memory), so the PVCs sit together on one node.
+# 06/11: core, jobservice, registry, redis, postgres on talos-core (must run when a worker is lost,
+# platform/admission-policies/priority-core.yaml); portal and exporter stay talos-pinned (UI, metrics).
 portal:
   nodeSelector: {kubernetes.io/hostname: talos-iv6-z5m}
   priorityClassName: talos-pinned
   resources: {requests: {cpu: 10m, memory: 16Mi}, limits: {memory: 64Mi}}   # 30/10: max 4Mi
 core:
   nodeSelector: {kubernetes.io/hostname: talos-iv6-z5m}
-  priorityClassName: talos-pinned
+  priorityClassName: talos-core
   existingSecret: harbor-secrets
   existingXsrfSecret: harbor-secrets
   existingXsrfSecretKey: CSRF_KEY
@@ -59,7 +61,7 @@ core:
   resources: {requests: {cpu: 50m, memory: 128Mi}, limits: {memory: 512Mi}}
 jobservice:
   nodeSelector: {kubernetes.io/hostname: talos-iv6-z5m}
-  priorityClassName: talos-pinned
+  priorityClassName: talos-core
   existingSecret: harbor-secrets
   existingSecretKey: JOBSERVICE_SECRET
   resources: {requests: {cpu: 20m, memory: 64Mi}, limits: {memory: 256Mi}}
@@ -85,7 +87,7 @@ jobservice:
       resources: {requests: {cpu: 10m, memory: 16Mi}, limits: {memory: 32Mi}}
 registry:
   nodeSelector: {kubernetes.io/hostname: talos-iv6-z5m}
-  priorityClassName: talos-pinned
+  priorityClassName: talos-core
   existingSecret: harbor-secrets
   existingSecretKey: REGISTRY_HTTP_SECRET
   credentials:
@@ -117,7 +119,7 @@ redis:
   type: internal
   internal:
     nodeSelector: {kubernetes.io/hostname: talos-iv6-z5m}
-    priorityClassName: talos-pinned
+    priorityClassName: talos-core
     resources: {requests: {cpu: 10m, memory: 32Mi}, limits: {memory: 128Mi}}
 
 metrics:

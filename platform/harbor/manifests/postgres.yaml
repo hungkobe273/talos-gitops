@@ -43,7 +43,7 @@ spec:
     spec:
       nodeSelector:
         kubernetes.io/hostname: talos-iv6-z5m
-      priorityClassName: talos-pinned
+      priorityClassName: talos-core  # 06/11, was talos-pinned
       automountServiceAccountToken: false
       enableServiceLinks: false
       terminationGracePeriodSeconds: 60

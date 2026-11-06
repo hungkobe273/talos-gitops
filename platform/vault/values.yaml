@@ -15,8 +15,9 @@ ui:
   enabled: true
 
 server:
-  # local-path PV pins Vault to w2: may preempt movable pods there (30/10, platform/admission-policies/priority-pinned.yaml).
-  priorityClassName: talos-pinned
+  # local-path PV pins Vault to w2 (30/10: talos-pinned). 06/11: talos-core, above pinned (priority-core.yaml).
+  # updateStrategy OnDelete: takes effect at the next restart of vault-0.
+  priorityClassName: talos-core
   # Request ~ expected usage, memory limit as a runaway cap (cluster has little spare RAM).
   resources:
     requests:

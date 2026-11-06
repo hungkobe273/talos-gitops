@@ -29,6 +29,8 @@ spec:
         valuesObject:
           admissionController:
             replicas: 1
+            # 06/11: talos-core, must run on the surviving worker (platform/admission-policies/priority-core.yaml).
+            priorityClassName: talos-core
             container:
               resources:
                 requests:

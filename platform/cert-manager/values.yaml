@@ -15,3 +15,6 @@ cainjector:
     limits: {memory: 256Mi}
 startupapicheck:
   enabled: false
+# 06/11: talos-core (platform/admission-policies/priority-core.yaml): must run on the surviving worker when one is lost.
+global:
+  priorityClassName: talos-core
