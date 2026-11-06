@@ -1,0 +1,14 @@
+# Velero 1.18 node-agent runs each file-system backup/restore in a short-lived "hosting pod" in this namespace,
+# created without a memory request, so policy require-memory-request (Deny) rejected it (06/11, test L6). The
+# LimitRanger admission plugin fills in this default before validating policies run (same as longhorn-system).
+# Containers that declare a request (velero, node-agent) keep their own value. No default limit.
+apiVersion: v1
+kind: LimitRange
+metadata:
+  name: default-memory-request
+  namespace: velero
+spec:
+  limits:
+    - type: Container
+      defaultRequest:
+        memory: 64Mi
