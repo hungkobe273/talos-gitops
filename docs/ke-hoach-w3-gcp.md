@@ -30,7 +30,7 @@ Cụm gần hết RAM: request trên worker 85–97% (30/10), host2 còn khoản
    MTU 1380 = MTU mạng GCP 1460 trừ 80 (khuyến nghị của Talos). Lúc bật, traffic giữa các node on-prem cũng đi qua WireGuard.
 2. **w3 gọi API server**: VIP `10.10.10.100` đang nằm trong danh sách địa chỉ member của cp1 (`talosctl get members`), nên KubeSpan quảng bá và định tuyến được tới cp1. Giữ endpoint `https://10.10.10.100:6443`; nếu w3 không join được thì đổi endpoint của riêng w3 sang `https://10.10.10.11:6443` (cụm chỉ có 1 control plane). Không mở 6443 ra Internet.
 3. **Mạng pod**: giữ `advertiseKubernetesNetworks: false` (mặc định). Flannel đóng gói VXLAN giữa IP node; IP nội bộ của w3 (subnet GCP `10.148.0.0/20`, không trùng `10.10.10.0/24`, pod `10.244.0.0/16`, service `10.96.0.0/12`) được KubeSpan quảng bá. Flannel trên w1/w2 dùng MTU 1450 lớn hơn đường KubeSpan 1380, gói lớn sẽ bị phân mảnh: thử bằng `ping -M do -s 1300/1400` giữa pod w3 và pod w1; chấp nhận được cho traffic quan sát.
-4. **Đưa machine config vào w3**: không dùng metadata `user-data` (ai xem được project là đọc được secret). Boot image Talos GCP vào maintenance mode, firewall chỉ mở TCP 50000 và UDP 51820 cho IP công cộng công ty `118.70.124.66/32` (kiểm lại hôm thi công, IP có thể đổi), rồi `talosctl apply-config --insecure -n <IP công cộng w3> --file w3.yaml`. Cấm `--dry-run` cùng `--insecure`. Sau khi join thì đóng 50000 hoặc chỉ để cho IP công ty.
+4. **Đưa machine config vào w3**: không dùng metadata `user-data` (ai xem được project là đọc được secret). Boot image Talos GCP vào maintenance mode, firewall chỉ mở TCP 50000 và UDP 51820 cho IP công cộng của công ty (`<OFFICE_CIDR>`, giá trị thật trong `infra/gcp/terraform.tfvars`, không đưa lên repo) (kiểm lại hôm thi công, IP có thể đổi), rồi `talosctl apply-config --insecure -n <IP công cộng w3> --file w3.yaml`. Cấm `--dry-run` cùng `--insecure`. Sau khi join thì đóng 50000 hoặc chỉ để cho IP công ty.
 5. **PV trên w3**: thêm `UserVolumeConfig` `local-path-provisioner` (kiểu directory) như w1/w2, StorageClass `local-path-retain` dùng lại. Đĩa VM 50 GB pd-balanced.
 
 Ghi chú bảo mật: 30/10 một lệnh đọc `talosctl get kubespanconfig` đã in `sharedSecret` KubeSpan ra log phiên làm việc trên laptop (không lên chat hay Git). Rủi ro thấp; cân nhắc tạo khoá mới khi bật.
@@ -88,8 +88,8 @@ ssh kvm-host2 'export TALOSCONFIG=~/talos-kvm/talosconfig; cd ~/talos-kvm; N=10.
 Giai đoạn 2 (laptop):
 
 ```bash
-gcloud compute firewall-rules create talos-w3-kubespan --network=default --direction=INGRESS --allow=udp:51820 --source-ranges=118.70.124.66/32 --target-tags=talos-w3
-gcloud compute firewall-rules create talos-w3-apid --network=default --direction=INGRESS --allow=tcp:50000 --source-ranges=118.70.124.66/32 --target-tags=talos-w3
+gcloud compute firewall-rules create talos-w3-kubespan --network=default --direction=INGRESS --allow=udp:51820 --source-ranges=<OFFICE_CIDR> --target-tags=talos-w3
+gcloud compute firewall-rules create talos-w3-apid --network=default --direction=INGRESS --allow=tcp:50000 --source-ranges=<OFFICE_CIDR> --target-tags=talos-w3
 gcloud compute instances create w3 --zone=asia-southeast1-b --machine-type=e2-standard-2 --image=talos-v1-14-2 --boot-disk-size=50GB --boot-disk-type=pd-balanced --tags=talos-w3 --resource-policies=jenkins-office-hours --no-service-account --no-scopes
 ```
 
