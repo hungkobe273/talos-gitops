@@ -3,6 +3,9 @@
 # LimitRanger admission plugin mutates pods before validating policies run, so this default request lets them
 # in without weakening the policy. Containers that declare a request keep their own value. No default limit.
 # Wave -1: must exist before the chart's pods are created.
+# 32Mi from 06/11 (was 64Mi): about 14 containers per worker get this default (CSI sidecars, csi-plugin, UI...),
+# and at 64Mi the requests on each worker reached 97-99% of allocatable while Longhorn really uses ~350 MiB per
+# node, so a Velero restore pod no longer fit (test L6). Only pods created after the change get the new value.
 apiVersion: v1
 kind: LimitRange
 metadata:
@@ -14,4 +17,4 @@ spec:
   limits:
     - type: Container
       defaultRequest:
-        memory: 64Mi
+        memory: 32Mi
