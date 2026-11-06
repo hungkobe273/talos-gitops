@@ -25,6 +25,11 @@ snapshotsEnabled: false
 # Chart has no default requests; kopia needs memory while uploading, the limit keeps it from starving a worker.
 deployNodeAgent: true
 nodeAgent:
+  # 06/11 test N-1: as a priority-0 pod the node-agent was preempted to make room, then stayed Terminating for up
+  # to 1 h (terminationGracePeriodSeconds 3600 is shared with the velero server), and the scheduler will not
+  # preempt again while a victim is still terminating: Keycloak waited 20 min. A DaemonSet pod is recreated on the
+  # same node anyway, so it must never be a victim: system-node-critical like the other DaemonSets.
+  priorityClassName: system-node-critical
   resources:
     requests: {cpu: 20m, memory: 64Mi}
     limits: {memory: 512Mi}

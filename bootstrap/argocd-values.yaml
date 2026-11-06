@@ -79,6 +79,20 @@ server:
 
 # Metrics for kps Prometheus (2026-10-22, design/argocd-followup.md c): Service + ServiceMonitor only, pods unchanged.
 controller:
+  # 06/11: prefers w3 like repoServer (frees ~850 Mi on w1/w2 so a lost worker's core pods fit on the other one,
+  # TTS_QTDV/design/ram-khi-mat-mot-worker.md). Needs only the API, repo-server and redis; back on-prem when w3 is off.
+  tolerations:
+    - {key: cloud, operator: Equal, value: gcp, effect: NoSchedule}
+  affinity:
+    nodeAffinity:
+      preferredDuringSchedulingIgnoredDuringExecution:
+        - weight: 100
+          preference:
+            matchExpressions:
+              - {key: kubernetes.io/hostname, operator: In, values: ["w3"]}
+  dnsConfig:
+    options:
+      - name: use-vc
   resources:
     requests:
       cpu: 100m
@@ -166,6 +180,20 @@ redisSecretInit:
       memory: 64Mi
 
 redis:
+  # 06/11: prefers w3 like repoServer (frees ~850 Mi on w1/w2 so a lost worker's core pods fit on the other one,
+  # TTS_QTDV/design/ram-khi-mat-mot-worker.md). Needs only the API, repo-server and redis; back on-prem when w3 is off.
+  tolerations:
+    - {key: cloud, operator: Equal, value: gcp, effect: NoSchedule}
+  affinity:
+    nodeAffinity:
+      preferredDuringSchedulingIgnoredDuringExecution:
+        - weight: 100
+          preference:
+            matchExpressions:
+              - {key: kubernetes.io/hostname, operator: In, values: ["w3"]}
+  dnsConfig:
+    options:
+      - name: use-vc
   resources:
     requests:
       cpu: 10m

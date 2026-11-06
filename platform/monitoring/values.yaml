@@ -418,6 +418,8 @@ kube-state-metrics:
     limits:
       memory: 192Mi
 prometheus-node-exporter:
+  # 06/11: DaemonSet, must not be a preemption victim (recreated on the same node anyway; see velero nodeAgent).
+  priorityClassName: system-node-critical
   resources:
     requests:
       cpu: 10m
