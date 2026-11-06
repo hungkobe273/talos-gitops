@@ -4,6 +4,14 @@ Ghi mỗi thay đổi về hạ tầng, cấu hình cụm hoặc ứng dụng: n
 
 Thay đổi nằm ngoài repo này (host2, cấu hình Talos) cũng ghi ở đây, vì repo không chứa file cấu hình Talos (có secret).
 
+## 06/11/2026
+
+| Thay đổi | Lý do | Commit |
+|---|---|---|
+| Cold start sáng (host2 lên 08:24:49): `nfs-server` active 08:25:35, `libvirtd` 08:25:36, drop-in `10-nfs.conf` giữ đúng thứ tự NFS trước VM. harbor-jobservice không CrashLoop: initContainer `wait-core` chờ khoảng 1 phút (2 lần chưa có DNS `harbor-core`, 22 lần `Connection refused`, rồi `harbor-core OK`). Registry trên NFS 2/2 Running. 08:33 mọi app `Synced Healthy` | Lần kiểm thật đầu của `wait-core` (`18e97d5`) và drop-in NFS (05/11) qua cold start | |
+| harbor-exporter restart 1 lần lúc cold start: không phân giải được `harbor-postgres` trong 60 s rồi FATAL. Service `harbor-postgres` là headless (`clusterIP: None`) nên chỉ có bản ghi DNS khi pod postgres Ready. Không sửa: exporter chỉ xuất metric, restart xong chạy bình thường | Ghi lại để không nhầm là lỗi mới | |
+| **Terraform Giai đoạn 1 xong**: chia code sinh ra thành `compute.tf`, `network.tf`, `storage.tf`, `iam.tf`, `kms.tf`, `schedule.tf`, `sql.tf`. IP công ty và khoá SSH thành biến `office_cidrs`, `admin_ssh_keys` (giá trị thật trong `terraform.tfvars`, gitignore; mẫu ở `terraform.tfvars.example`). IP tĩnh jenkins/gitlab lấy từ `google_compute_address`, w3 không ghim `nat_ip` (IP công khai đổi mỗi lần tắt/bật). `prevent_destroy` cho VM, IP, image, bucket, KMS, Cloud SQL; Cloud SQL bỏ qua `maintenance_version`. Plan lần 1 lệch 1 chỗ (URI job Scheduler ghi nhầm `www.googleapis.com`), sửa rồi plan `40 to import, 0 to change`; `apply` 08:46 chỉ import (`40 imported, 0 added, 0 changed, 0 destroyed`); plan sau đó **`No changes`** | Hạ tầng GCP từ nay sửa qua Terraform; `plan` cho thấy lệch so với Console | commit này |
+
 ## 05/11/2026
 
 | Thay đổi | Lý do | Commit |
