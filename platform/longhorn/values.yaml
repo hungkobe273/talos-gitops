@@ -15,6 +15,11 @@ defaultSettings:
   # When a node dies, delete the StatefulSet/Deployment pod stuck there so it starts on the other worker
   # (otherwise the pod stays Terminating and the volume stays attached to the dead node).
   nodeDownPodDeletionPolicy: delete-both-statefulset-and-deployment-pod
+  # 06/11 cold start: the volume of the Grafana Deployment looked 'detached unexpectedly' after the nightly shutdown,
+  # Longhorn deleted the pod, the new pod landed on the other worker and had to wait for the old node's Longhorn to
+  # detach (Grafana +9:37 instead of ~+7). Deployments are left alone: the pod stays on its node and mounts once
+  # Longhorn is up there. Trade-off: if an engine crashes, delete the Deployment pod by hand. StatefulSets unchanged.
+  blacklistForAutoDeletePodWhenVolumeDetachedUnexpectedly: apps/Deployment
   # Default 12% of 2 vCPU (240m) per instance manager; the workers are small and mostly idle.
   guaranteedInstanceManagerCPU: '{"v1":"5","v2":"5"}'
   # Uninstall guard: set to true in Git only when Longhorn is really to be removed.
