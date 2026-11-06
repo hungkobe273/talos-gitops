@@ -29,10 +29,12 @@ spec:
     automated:
       prune: true
       selfHeal: true
+    # privileged from 06/11: the node-agent DaemonSet mounts /var/lib/kubelet/pods (hostPath) as root to back up
+    # Longhorn volumes. The velero Deployment itself still runs non-root with a read-only root filesystem.
     managedNamespaceMetadata:
       labels:
-        pod-security.kubernetes.io/enforce: restricted
-        pod-security.kubernetes.io/warn: restricted
+        pod-security.kubernetes.io/enforce: privileged
+        pod-security.kubernetes.io/warn: privileged
     syncOptions:
       - CreateNamespace=true
       - ServerSideApply=true

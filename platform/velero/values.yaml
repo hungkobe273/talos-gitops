@@ -1,5 +1,7 @@
-# Backup of Kubernetes objects to GCS (bucket talos-kvm-velero-vtc). No PV data: every PV is
-# hostPath (local-path), Velero FSB does not support it. Design: TTS_QTDV/design/velero-dien-tap-khoi-phuc.md
+# Backup of Kubernetes objects to GCS (bucket talos-kvm-velero-vtc). Design: TTS_QTDV/design/velero-dien-tap-khoi-phuc.md
+# PV data: local-path PVs are hostPath, Velero FSB does not support them. From 06/11 Longhorn PVs can be backed up
+# file by file (node-agent + kopia, same bucket and SA): opt-in per backup (--default-volumes-to-fs-backup) or per
+# pod annotation backup.velero.io/backup-volumes. Test L6 in TTS_QTDV/design/longhorn-ha.md.
 image:
   repository: docker.io/velero/velero
   tag: v1.18.4
@@ -18,7 +20,14 @@ initContainers:
 upgradeCRDs: false
 cleanUpCRDs: false
 snapshotsEnabled: false
-deployNodeAgent: false
+# node-agent DaemonSet: reads pod volumes under /var/lib/kubelet/pods (hostPath, runs as root), so the velero
+# namespace is PSA privileged (argocd-apps/velero.yaml). No tolerations: w1/w2 only, where Longhorn volumes live.
+# Chart has no default requests; kopia needs memory while uploading, the limit keeps it from starving a worker.
+deployNodeAgent: true
+nodeAgent:
+  resources:
+    requests: {cpu: 20m, memory: 64Mi}
+    limits: {memory: 512Mi}
 credentials:
   useSecret: true
   existingSecret: velero-gcs
