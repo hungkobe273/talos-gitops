@@ -1,0 +1,45 @@
+# Replicated block storage for PVs (06/11, design TTS_QTDV/design/longhorn-ha.md, direction approved by the mentor):
+# every volume keeps 2 replicas, one on w1 and one on w2, so a pod can move to the other worker when a node dies.
+# Mentor feedback 05/11: NFS on host2 is a single server, no HA. Limit: all VMs share host2 and its HDD, so this
+# protects against losing a node, not against losing host2 (that is what offsite backups and Velero are for).
+# Prerequisites done by hand on 06/11 (docs/nhat-ky-thay-doi.md): Talos schematic with iscsi-tools and
+# util-linux-tools on w1/w2, a 20G disk vdb on each worker as Talos user volume "longhorn" (/var/mnt/longhorn),
+# node label node.longhorn.io/create-default-disk=true on w1/w2.
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: longhorn
+  namespace: argocd
+  annotations:
+    argocd.argoproj.io/sync-wave: "-1"
+spec:
+  project: default
+  sources:
+    - repoURL: https://charts.longhorn.io
+      chart: longhorn
+      targetRevision: 1.13.0
+      helm:
+        releaseName: longhorn
+        valueFiles:
+          - $values/platform/longhorn/values.yaml
+    - repoURL: git@github.com:hungkobe273/talos-gitops.git
+      targetRevision: main
+      ref: values
+    # LimitRange: default memory request for pods that longhorn-manager creates itself.
+    - repoURL: git@github.com:hungkobe273/talos-gitops.git
+      targetRevision: main
+      path: platform/longhorn/manifests
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: longhorn-system
+  syncPolicy:
+    automated:
+      prune: true
+      selfHeal: true
+    # longhorn-manager, the CSI plugin and instance managers are privileged (iSCSI, mounts on the node).
+    managedNamespaceMetadata:
+      labels:
+        pod-security.kubernetes.io/enforce: privileged
+        pod-security.kubernetes.io/warn: privileged
+    syncOptions:
+      - CreateNamespace=true

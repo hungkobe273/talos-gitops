@@ -19,9 +19,9 @@ Quy ước: thay đổi nào làm khác kiến trúc, phiên bản hoặc cách 
 ```text
 talos-gitops/
 ├── bootstrap/        # apply tay một lần: root.yaml (app-of-apps), values Argo CD, secret OIDC của Argo CD
-├── argocd-apps/      # 23 Application do root quản lý (mỗi file một app)
+├── argocd-apps/      # 24 Application do root quản lý (mỗi file một app)
 ├── platform/         # values Helm, manifest và SealedSecret của từng thành phần nền tảng
-│   ├── traefik, cert-manager, local-path, csi-driver-nfs, descheduler, argo-rollouts, admission-policies
+│   ├── traefik, cert-manager, local-path, csi-driver-nfs, longhorn, descheduler, argo-rollouts, admission-policies
 │   ├── monitoring, headlamp, oauth2-proxy, victoria-logs, otel-collector, image-scan
 │   ├── velero, gcp-tools
 │   ├── keycloak, keycloak-db (chỉ dùng cho diễn tập khôi phục, không còn là app)
@@ -36,7 +36,7 @@ talos-gitops/
 | Wave | App |
 |---|---|
 | -2 | sealed-secrets, cert-manager |
-| -1 | cert-manager-issuers, local-path, csi-driver-nfs, monitoring |
+| -1 | cert-manager-issuers, local-path, csi-driver-nfs, longhorn, monitoring |
 | 0 | traefik, argo-rollouts, descheduler, admission-policies |
 | 1 | vault, external-secrets, kyverno, headlamp, gcp-tools, velero, demo-app |
 | 2 | harbor, victoria-logs |

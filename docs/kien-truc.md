@@ -70,7 +70,7 @@ GitHub Actions và GitLab CE vẫn build cùng app để so sánh, nhưng chỉ 
 
 ## 4. Thành phần trong cụm
 
-24 ứng dụng Argo CD theo mô hình app-of-apps: `bootstrap/root.yaml` apply tay một lần, app `root` quản lý các app còn lại trong `argocd-apps/`.
+25 ứng dụng Argo CD theo mô hình app-of-apps: `bootstrap/root.yaml` apply tay một lần, app `root` quản lý các app còn lại trong `argocd-apps/`.
 
 | Nhóm | App Argo CD | Chart / phiên bản | Vai trò |
 |---|---|---|---|
@@ -80,9 +80,10 @@ GitHub Actions và GitLab CE vẫn build cùng app để so sánh, nhưng chỉ 
 | | sealed-secrets | 2.20.0 | secret mã hóa nằm trong Git |
 | | local-path | | lưu trữ trên đĩa worker |
 | | csi-driver-nfs | csi-driver-nfs 4.13.6 | StorageClass `nfs-host2`: PV trên NFS của host2, driver chỉ chạy trên w1/w2 (từ 05/11) |
+| | longhorn | longhorn 1.13.0 | StorageClass `longhorn`: mỗi PV 2 bản sao trên w1 và w2 (đĩa riêng `vdb` 20G mỗi worker), node chết thì pod lên worker kia với đúng dữ liệu (từ 06/11, theo góp ý NFS không HA) |
 | | descheduler | 0.37.0 | cân bằng lại pod giữa w1 và w2 |
 | | argo-rollouts | 2.43.8 | blue-green và phân tích |
-| | admission-policies | | PriorityClass `talos-pinned` cho pod bị ghim; ValidatingAdmissionPolicy `require-memory-request` (Warn + Audit, chưa Deny) |
+| | admission-policies | | PriorityClass `talos-pinned` cho pod bị ghim; ValidatingAdmissionPolicy `require-memory-request` (Deny + Audit từ 05/11) |
 | | gcp-tools | | pod nginx `tunnel-proxy` và Ingress cho Jenkins, GitLab, SonarQube trên GCP (qua tunnel SSH của host2) |
 | Bảo mật | kyverno | 3.9.1 (Kyverno 1.19) | ImageValidatingPolicy: chỉ nhận image ký bằng khoá Jenkins, webhook chỉ ở ns demo |
 | | vault | 0.34.1 (Vault 2.0) | secret của ứng dụng, tự unseal bằng GCP KMS, audit log |

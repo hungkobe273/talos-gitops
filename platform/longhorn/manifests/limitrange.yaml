@@ -1,0 +1,17 @@
+# Policy require-memory-request (Deny) rejects pods without resources.requests.memory. longhorn-manager creates
+# instance-manager, engine-image, share-manager and CSI sidecar pods itself, without a memory request. The
+# LimitRanger admission plugin mutates pods before validating policies run, so this default request lets them
+# in without weakening the policy. Containers that declare a request keep their own value. No default limit.
+# Wave -1: must exist before the chart's pods are created.
+apiVersion: v1
+kind: LimitRange
+metadata:
+  name: default-memory-request
+  namespace: longhorn-system
+  annotations:
+    argocd.argoproj.io/sync-wave: "-1"
+spec:
+  limits:
+    - type: Container
+      defaultRequest:
+        memory: 64Mi

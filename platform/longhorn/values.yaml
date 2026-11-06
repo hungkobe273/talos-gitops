@@ -1,0 +1,55 @@
+# Values for Longhorn 1.13.0 (argocd-apps/longhorn.yaml). Engine V1 only: V2 needs 2 GiB hugepages and vfio.
+# No tolerations anywhere: Longhorn runs on w1 and w2 only (cp1 has the control-plane taint, w3 the cloud taint;
+# replicas over KubeSpan/WAN would be slow and w3 stops at 17:15).
+defaultSettings:
+  # Talos user volume on the dedicated disk vdb (UserVolumeConfig "longhorn").
+  defaultDataPath: /var/mnt/longhorn
+  # Only nodes labelled node.longhorn.io/create-default-disk=true (w1, w2) get a Longhorn disk.
+  createDefaultDiskLabeledNodes: true
+  # Dedicated disk: nothing else lives on it, so no reserved space (default 30 is meant for a shared system disk).
+  storageReservedPercentageForDefaultDisk: 0
+  # 2 replicas, and replicaSoftAntiAffinity stays false: the 2 replicas must sit on different nodes.
+  defaultReplicaCount: '{"v1":"2","v2":"2"}'
+  v1DataEngine: true
+  v2DataEngine: false
+  # When a node dies, delete the StatefulSet/Deployment pod stuck there so it starts on the other worker
+  # (otherwise the pod stays Terminating and the volume stays attached to the dead node).
+  nodeDownPodDeletionPolicy: delete-both-statefulset-and-deployment-pod
+  # Default 12% of 2 vCPU (240m) per instance manager; the workers are small and mostly idle.
+  guaranteedInstanceManagerCPU: '{"v1":"5","v2":"5"}'
+  # Uninstall guard: set to true in Git only when Longhorn is really to be removed.
+  deletingConfirmationFlag: false
+  upgradeChecker: false
+  allowCollectingLonghornUsageMetrics: false
+persistence:
+  # StorageClass "longhorn". Not the default class: charts without storageClassName stay on local-path.
+  defaultClass: false
+  defaultClassReplicaCount: 2
+  # Deleting a PVC by mistake keeps the volume (remove it in the Longhorn UI).
+  reclaimPolicy: Retain
+# Recommended by Longhorn when installing with Argo CD (the pre-upgrade Job is a Helm hook).
+preUpgradeChecker:
+  jobEnabled: false
+csi:
+  # Default 3 of each sidecar; 2 = one per worker, so attach/provision still work when one worker is down.
+  attacherReplicaCount: 2
+  provisionerReplicaCount: 2
+  resizerReplicaCount: 2
+  snapshotterReplicaCount: 2
+longhornManager:
+  log:
+    format: json
+  resources:
+    requests: {cpu: 50m, memory: 128Mi}
+longhornGlobalManager:
+  replicas: 2
+  resources:
+    requests: {cpu: 10m, memory: 64Mi}
+longhornDriver:
+  log:
+    format: json
+longhornUI:
+  replicas: 1
+metrics:
+  serviceMonitor:
+    enabled: true
