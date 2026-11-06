@@ -1,0 +1,16 @@
+# Grafana DB (SQLite) on Longhorn from 06/11 (TTS_QTDV/design/ram-khi-mat-mot-worker.md, cold start analysis):
+# - cold start: Grafana only opens HTTP after provisioning 32 dashboards into SQLite, 49 s on local-path (HDD,
+#   fdatasync 12.7 ms); Longhorn measured 4.7 ms (test L5, design/longhorn-ha.md).
+# - Grafana is no longer pinned to w2: it can run on either worker (2 replicas of the volume).
+# Old PVC kps-grafana (local-path-retain on w2) is kept for a week to roll back.
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: grafana-longhorn
+  namespace: monitoring
+spec:
+  accessModes: [ReadWriteOnce]
+  storageClassName: longhorn
+  resources:
+    requests:
+      storage: 1Gi

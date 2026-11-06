@@ -24,6 +24,10 @@ spec:
     - repoURL: git@github.com:hungkobe273/talos-gitops.git
       targetRevision: main
       path: platform/monitoring/secrets
+    # 4) Plain manifests (06/11: PVC grafana-longhorn).
+    - repoURL: git@github.com:hungkobe273/talos-gitops.git
+      targetRevision: main
+      path: platform/monitoring/manifests
   destination:
     server: https://kubernetes.default.svc
     namespace: monitoring

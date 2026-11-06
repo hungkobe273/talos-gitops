@@ -153,6 +153,8 @@ alertmanager:
     templates: []
 
 grafana:
+  # 06/11 TEMPORARY: 0 replicas while grafana.db is copied to PVC grafana-longhorn (Job, see nhat-ky).
+  replicas: 0
   # Pinned to w2 by its PV (below): may preempt movable pods there (30/10).
   priorityClassName: talos-pinned
   # Datasource for central logs (platform/victoria-logs/manifests/grafana-datasource.yaml, 30/10).
