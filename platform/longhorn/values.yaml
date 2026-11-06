@@ -19,7 +19,9 @@ defaultSettings:
   # Longhorn deleted the pod, the new pod landed on the other worker and had to wait for the old node's Longhorn to
   # detach (Grafana +9:37 instead of ~+7). Deployments are left alone: the pod stays on its node and mounts once
   # Longhorn is up there. Trade-off: if an engine crashes, delete the Deployment pod by hand. StatefulSets unchanged.
-  blacklistForAutoDeletePodWhenVolumeDetachedUnexpectedly: apps/Deployment
+  # Longhorn matches the pod's direct owner: a Deployment pod is owned by a ReplicaSet (apps/Deployment alone had no
+  # effect, cold start 16:00 06/11).
+  blacklistForAutoDeletePodWhenVolumeDetachedUnexpectedly: apps/ReplicaSet;apps/Deployment
   # Default 12% of 2 vCPU (240m) per instance manager; the workers are small and mostly idle.
   guaranteedInstanceManagerCPU: '{"v1":"5","v2":"5"}'
   # Uninstall guard: set to true in Git only when Longhorn is really to be removed.
