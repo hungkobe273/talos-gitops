@@ -153,32 +153,27 @@ alertmanager:
     templates: []
 
 grafana:
-  # 06/11 TEMPORARY: 0 replicas while grafana.db is copied to PVC grafana-longhorn (Job, see nhat-ky).
-  replicas: 0
-  # Pinned to w2 by its PV (below): may preempt movable pods there (30/10).
-  priorityClassName: talos-pinned
+  # 06/11: no priorityClassName (priority 0). Grafana is no longer pinned to w2 (PV on Longhorn below), so it is a
+  # low-tier pod that waits when a worker is lost (TTS_QTDV/design/ram-khi-mat-mot-worker.md); was talos-pinned.
   # Datasource for central logs (platform/victoria-logs/manifests/grafana-datasource.yaml, 30/10).
   # Downloaded from grafana.com at pod start; without Internet Grafana starts without it.
   plugins:
     - victoriametrics-logs-datasource
   # Grafana DB (SQLite) on a PV (K7, 2026-10-22, design/grafana-pvc.md): keeps Keycloak-login users and
-  # skips the ~813 migrations on every new pod. The local-path PV pins Grafana to w2 for good; keep
-  # deploymentStrategy Recreate (only one process may open grafana.db). PV is Retain: a prune keeps the dir.
+  # skips the ~813 migrations on every new pod. Keep deploymentStrategy Recreate (only one process may open
+  # grafana.db, and the Longhorn volume is ReadWriteOnce).
+  # 06/11: PVC grafana-longhorn (platform/monitoring/manifests/grafana-pvc-longhorn.yaml), copied from the old
+  # local-path PVC kps-grafana (md5 of grafana.db equal, 595 files). Faster fsync for the 49 s dashboard
+  # provisioning at cold start, and Grafana can run on w1 or w2 (no more nodeAffinity to w2). Old PVC kps-grafana
+  # kept with Prune=false and no Argo CD tracking until ~13/11. Roll back: drop existingClaim, restore
+  # storageClassName local-path-retain + the w2 nodeAffinity (git revert of this commit).
   persistence:
     enabled: true
     type: pvc
-    storageClassName: local-path-retain
+    existingClaim: grafana-longhorn
     accessModes:
       - ReadWriteOnce
     size: 1Gi
-  affinity:
-    nodeAffinity:
-      requiredDuringSchedulingIgnoredDuringExecution:
-        nodeSelectorTerms:
-          - matchExpressions:
-              - key: kubernetes.io/hostname
-                operator: In
-                values: ["talos-iv6-z5m"]   # w2: keep Grafana off the Keycloak + keycloak-db node
   # Admin user/password come from a SealedSecret, not from values.
   admin:
     existingSecret: grafana-admin
