@@ -3,9 +3,10 @@
 # Viet 23/10 (Phuc), chay tren host2 tu 23/10; dua vao Git 05/11 khi them kiem tra NFS.
 #
 # 06/11: them taint out-of-service cho worker da tat han (oos_reconcile), de StatefulSet chuyen node.
+# 09/11: bo kiem tra NFS (go NFS cung Harbor); srv_disk nay do dia chua VM.
 #
-# Kiem tra moi lan chay: Internet cua host2, PSI io, 3 VM running, NFS server (nfs-server active,
-# cong 2049 tren 10.10.10.1) va dung luong /srv, kube-apiserver /readyz, so node Ready,
+# Kiem tra moi lan chay: Internet cua host2, PSI io, 3 VM running, dung luong dia chua VM
+# (/var/lib/libvirt/images), kube-apiserver /readyz, so node Ready,
 # Prometheus /-/ready, Alertmanager /-/ready, Watchdog co dang firing trong Alertmanager
 # (= duong Prometheus -> Alertmanager con song).
 # Chi bao Telegram khi doi trang thai (OK->LOI sau FAIL_AFTER lan lien tiep, LOI->OK),
@@ -22,7 +23,7 @@
 # File dieu khien trong $STATE_DIRECTORY (user ngochung tu tao/xoa, khong can sudo):
 #   pause-until     so epoch; truoc thoi diem do script bo qua moi kiem tra
 #   force-test      co file -> gui 1 tin thu roi xoa file
-#   simulate-fail   moi dong 1 ten kiem tra (internet, psi_io, vms, nfs, srv_disk, api, nodes,
+#   simulate-fail   moi dong 1 ten kiem tra (internet, psi_io, vms, srv_disk, api, nodes,
 #                   prometheus, alertmanager, pipeline) -> coi nhu loi, de thu ma khong dong vao cum
 #
 # Khong bao gio dung `set -x`: token Telegram nam trong bien cuc bo cua tg_send.
@@ -41,9 +42,8 @@ BOOT_GRACE="${WATCHDOG_BOOT_GRACE:-900}"    # 15 phut dau sau boot: khoi dong la
 PSI_HIGH=40                                 # vao LOI khi full avg60 >= 40 (runbook 3.8)
 PSI_LOW=25                                  # ra LOI khi < 25 (tre de khong nhap nhay)
 PSI_FILE="${WATCHDOG_PSI_FILE:-/proc/pressure/io}"  # doi duoc khi thu tren may khac
-NFS_ADDR="${WATCHDOG_NFS_ADDR:-10.10.10.1}"  # dia chi NFS ma worker mount (bridge talos-net)
-NFS_DIR="${WATCHDOG_NFS_DIR:-/srv/nfs/k8s}"
-SRV_DISK_MAX="${WATCHDOG_SRV_DISK_MAX:-85}" # % dung cua filesystem chua NFS_DIR
+DISK_DIR="${WATCHDOG_DISK_DIR:-/var/lib/libvirt/images}"
+SRV_DISK_MAX="${WATCHDOG_SRV_DISK_MAX:-85}" # % dung cua filesystem chua DISK_DIR (dia qcow2 cua VM)
 # Worker VM -> ten node, cho taint out-of-service (06/11, xem oos_reconcile)
 OOS_MAP="${WATCHDOG_OOS_MAP:-w1=talos-hdl-7jo w2=talos-iv6-z5m}"
 OOS_TAINT=node.kubernetes.io/out-of-service
@@ -169,23 +169,12 @@ chk_vms() {
   echo "VM khong chay: ${bad[*]}"; return 1
 }
 
-# NFS cho PV nfs-host2 (05/11; Harbor registry nam tren day). Mount hard: NFS chet thi pod treo
-# chu khong bao loi, nen canh tu ngoai cum.
-chk_nfs() {
-  local s
-  s=$(systemctl is-active nfs-server 2>&1) || true
-  [[ $s == active ]] || { echo "nfs-server: $s (registry Harbor treo)"; return 1; }
-  timeout 5 bash -c "</dev/tcp/$NFS_ADDR/2049" 2>/dev/null \
-    || { echo "nfs-server active nhung $NFS_ADDR:2049 khong nhan ket noi"; return 1; }
-  echo "nfs-server active, $NFS_ADDR:2049 mo"
-}
-
 chk_srv_disk() {
   local p
-  p=$(df --output=pcent "$NFS_DIR" 2>/dev/null | tail -1 | tr -cd '0-9')
-  [[ -n $p ]] || { echo "khong doc duoc df $NFS_DIR"; return 1; }
-  if (( p < SRV_DISK_MAX )); then echo "$NFS_DIR dung ${p}%"; return 0; fi
-  echo "$NFS_DIR dung ${p}% (nguong ${SRV_DISK_MAX}%): PV NFS va VM chung o dia nay"; return 1
+  p=$(df --output=pcent "$DISK_DIR" 2>/dev/null | tail -1 | tr -cd '0-9')
+  [[ -n $p ]] || { echo "khong doc duoc df $DISK_DIR"; return 1; }
+  if (( p < SRV_DISK_MAX )); then echo "$DISK_DIR dung ${p}%"; return 0; fi
+  echo "$DISK_DIR dung ${p}% (nguong ${SRV_DISK_MAX}%): dia qcow2 cua VM sap day"; return 1
 }
 
 chk_api() {
@@ -300,7 +289,6 @@ fi
 
 run_check psi_io chk_psi_io || true
 run_check vms chk_vms || true
-run_check nfs chk_nfs || true
 run_check srv_disk chk_srv_disk || true
 
 # Moi kiem tra Kubernetes phu thuoc apiserver: API chet thi chi bao 1 tin, cac muc sau giu nguyen trang thai
