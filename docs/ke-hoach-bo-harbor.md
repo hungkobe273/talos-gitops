@@ -2,7 +2,7 @@
 
 Ngày viết: 09/11. Người làm: Hưng chạy các bước CHANGE.
 
-Tiến độ: bước 1–3 xong sáng 09/11 (`9cdeef9`, `03aaa63`, `f84a995`). Bước 4–5 dự kiến T3 10/11.
+Tiến độ: bước 1–5 xong sáng 09/11 (`9cdeef9`, `03aaa63`, `f84a995`, `be54d3c`, `c6f1b79`, `9f44ce1`, `613435f`). Còn bước 6 (dọn PVC, ns, `/srv/nfs/k8s` khoảng 12/11), client `harbor` trong Keycloak, patch Talos `harbor-registry.yaml`.
 
 ## 1. Vì sao
 

@@ -8,7 +8,7 @@ Repo GitOps của cụm talos-kvm (Talos Linux, 1 control plane + 2 worker trên
 |---|---|
 | [docs/bao-cao.md](docs/bao-cao.md) | Báo cáo hiện trạng: tóm tắt, bảo mật, vận hành, sự cố, giới hạn, việc tiếp theo |
 | [docs/kien-truc.md](docs/kien-truc.md) | Sơ đồ tổng thể, hạ tầng, luồng đưa code lên production, bảng thành phần và phiên bản |
-| [docs/truy-cap.md](docs/truy-cap.md) | Link và cách đăng nhập các giao diện (Argo CD, Grafana, Headlamp, Harbor, Vault, ...) |
+| [docs/truy-cap.md](docs/truy-cap.md) | Link và cách đăng nhập các giao diện (Argo CD, Grafana, Headlamp, Vault, ...) |
 | [docs/nhat-ky-thay-doi.md](docs/nhat-ky-thay-doi.md) | Nhật ký thay đổi theo ngày, kể cả thay đổi ngoài repo |
 | [docs/ke-hoach-w3-gcp.md](docs/ke-hoach-w3-gcp.md) | Kế hoạch worker w3 trên GCP (KubeSpan), đã duyệt 30/10 |
 
@@ -21,12 +21,11 @@ talos-gitops/
 ├── bootstrap/        # apply tay một lần: root.yaml (app-of-apps), values Argo CD, secret OIDC của Argo CD
 ├── argocd-apps/      # 24 Application do root quản lý (mỗi file một app)
 ├── platform/         # values Helm, manifest và SealedSecret của từng thành phần nền tảng
-│   ├── traefik, cert-manager, local-path, csi-driver-nfs, longhorn, descheduler, argo-rollouts, admission-policies
+│   ├── traefik, cert-manager, local-path, longhorn, descheduler, argo-rollouts, admission-policies
 │   ├── monitoring, headlamp, oauth2-proxy, victoria-logs, otel-collector, image-scan
 │   ├── velero, gcp-tools
 │   ├── keycloak, keycloak-db (chỉ dùng cho diễn tập khôi phục, không còn là app)
-│   ├── vault, external-secrets, kyverno, cosign (khoá công khai ký image)
-│   └── harbor        # kèm script make-secrets.sh, setup-replication.sh, oidc.sh, make-pull-secret.sh
+│   └── vault, external-secrets, kyverno, cosign (khoá công khai ký image)
 ├── apps/demo-app/    # Rollout blue-green, AnalysisTemplate (smoke, tỉ lệ lỗi, ZAP), ExternalSecret
 └── docs/
 ```
@@ -36,10 +35,10 @@ talos-gitops/
 | Wave | App |
 |---|---|
 | -2 | sealed-secrets, cert-manager |
-| -1 | cert-manager-issuers, local-path, csi-driver-nfs, longhorn, monitoring |
+| -1 | cert-manager-issuers, local-path, longhorn, monitoring |
 | 0 | traefik, argo-rollouts, descheduler, admission-policies |
 | 1 | vault, external-secrets, kyverno, headlamp, gcp-tools, velero, demo-app |
-| 2 | harbor, victoria-logs |
+| 2 | victoria-logs |
 | 3 | keycloak, otel-collector, image-scan |
 | 4 | oauth2-proxy |
 
@@ -55,4 +54,4 @@ Sealed Secrets và cert-manager lên trước để các app sau giải mã đư
 
 1. Cài Argo CD: `helm install argocd argo-cd --repo https://argoproj.github.io/argo-helm --version 10.10.1 -n argocd --create-namespace -f bootstrap/argocd-values.yaml`
 2. `kubectl apply -f bootstrap/argocd-oidc-keycloak-sealed.yaml -f bootstrap/root.yaml`
-3. Khoá giải mã Sealed Secrets phải được khôi phục từ backup trước khi các SealedSecret trong repo dùng được. Vault cần khoá init và quyền KMS; Harbor, Keycloak cần dữ liệu DB từ backup. Chi tiết trong runbook (ngoài repo).
+3. Khoá giải mã Sealed Secrets phải được khôi phục từ backup trước khi các SealedSecret trong repo dùng được. Vault cần khoá init và quyền KMS; Keycloak cần dữ liệu DB từ backup. Chi tiết trong runbook (ngoài repo).

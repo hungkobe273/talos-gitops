@@ -12,7 +12,7 @@ Từ 16/10 các giao diện mở thẳng từ LAN qua HAProxy :443 trên kvm-hos
 
    ```text
    192.168.136.38 grafana.talos.internal headlamp.talos.internal argocd.talos.internal keycloak.talos.internal
-   192.168.136.38 demo.talos.internal demo-preview.talos.internal harbor.talos.internal vault.talos.internal
+   192.168.136.38 demo.talos.internal demo-preview.talos.internal vault.talos.internal
    192.168.136.38 prometheus.talos.internal alertmanager.talos.internal logs.talos.internal
    192.168.136.38 jenkins.talos.internal gitlab.talos.internal sonarqube.talos.internal
    ```
@@ -26,7 +26,6 @@ Từ 16/10 các giao diện mở thẳng từ LAN qua HAProxy :443 trên kvm-hos
 | Argo CD | https://argocd.talos.internal | Keycloak ("LOG IN VIA KEYCLOAK") | trạng thái đồng bộ của 24 app |
 | Grafana | https://grafana.talos.internal | Keycloak; xem ẩn danh quyền Viewer | dashboard cụm, demo-app, Keycloak |
 | Headlamp | https://headlamp.talos.internal | Keycloak | `talos-viewers` chỉ xem, không đọc Secret |
-| Harbor | https://harbor.talos.internal | Keycloak (LOGIN VIA OIDC PROVIDER) | project `talos`, replication từ GHCR |
 | Vault | https://vault.talos.internal | Keycloak (method OIDC) | `talos-viewers` chỉ đọc |
 | Prometheus | https://prometheus.talos.internal | Keycloak qua oauth2-proxy | `talos-admins` và `talos-viewers` (từ 03/11); UI chỉ đọc |
 | Alertmanager | https://alertmanager.talos.internal | Keycloak qua oauth2-proxy | `talos-admins` và `talos-viewers` (từ 03/11); Alertmanager không phân quyền nên ai vào được cũng tạo/xoá được silence |
@@ -44,7 +43,7 @@ Jenkins, GitLab CE, SonarQube chạy trên VM Google Cloud và chỉ nghe nội 
 
 **Quản trị Keycloak (realm `master`)**: tài khoản riêng, tách khỏi realm `talos`, tạo bằng `platform/keycloak/add-master-admin.sh <user>` (role `admin` của master = toàn quyền mọi realm; mật khẩu tạm, bắt đổi ở lần đăng nhập đầu). Hiện có `hung-admin` và `mentor` (anh hướng dẫn, từ 03/11). User `mentor` của realm `talos` không đăng nhập được console này; hai realm không liên kết (giữ quyền quản trị Keycloak tách khỏi tài khoản dùng hằng ngày).
 
-**Khi Keycloak hỏng**: mỗi công cụ còn một tài khoản dự phòng cục bộ (Argo CD, Grafana, Harbor `admin`; Headlamp token ServiceAccount). Mật khẩu ở host2, xin Hưng khi cần.
+**Khi Keycloak hỏng**: mỗi công cụ còn một tài khoản dự phòng cục bộ (Argo CD, Grafana; Headlamp token ServiceAccount). Mật khẩu ở host2, xin Hưng khi cần.
 
 ## 3. Dự phòng: SSH tunnel qua kvm-host2
 

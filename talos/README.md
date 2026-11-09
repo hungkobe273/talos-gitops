@@ -16,7 +16,7 @@ không có secret): mọi giá trị khớp, kể cả hash CA trong `harbor-reg
 | `authn-oidc.yaml` | x | | | | kube-apiserver tin ID token Keycloak cho Headlamp (22/10). Lùi: `rollback/authn-oidc-rollback.yaml` |
 | `timesync-kvm.yaml` | x | x | x | | Đồng bộ giờ qua `/dev/ptp_kvm` (16/10) |
 | `statichost-keycloak.yaml` | x | x | x | | `keycloak.talos.internal` → host2 (21/10) |
-| `harbor-registry.yaml` | x | x | x | | `harbor.talos.internal` → host2, containerd tin CA nội bộ (27/10) |
+| `harbor-registry.yaml` | x | x | x | | `harbor.talos.internal` → host2, containerd tin CA nội bộ (27/10). Harbor đã bỏ 09/11: patch vẫn còn trên node, vô hại, gỡ sau (`--mode=no-reboot`) |
 | `local-path.yaml` | | x | x | x | UserVolume cho local-path-provisioner (20/10) |
 | `kubespan.yaml` | x | x | x | x | KubeSpan, MTU 1380, học thêm endpoint sau NAT (30/10) |
 | `flannel-csum.yaml` | x | x | x | x | Tắt checksum offload trên `flannel.1` (VXLAN trong WireGuard, 30/10) |
