@@ -2,7 +2,7 @@
 
 Ngày viết: 09/11. Người làm: Hưng chạy các bước CHANGE.
 
-Tiến độ: bước 1–5 xong sáng 09/11 (`9cdeef9`, `03aaa63`, `f84a995`, `be54d3c`, `c6f1b79`, `9f44ce1`, `613435f`). Bước 6 dọn luôn trong ngày 09/11 (cả PVC Grafana cũ). Còn: client `harbor` trong Keycloak, patch Talos `harbor-registry.yaml`.
+Tiến độ: bước 1–5 xong sáng 09/11 (`9cdeef9`, `03aaa63`, `f84a995`, `be54d3c`, `c6f1b79`, `9f44ce1`, `613435f`). Bước 6 dọn luôn trong ngày 09/11 (cả PVC Grafana cũ), client `harbor` trong Keycloak và patch Talos `harbor-registry.yaml` cũng đã gỡ (`66318b5`). Xong toàn bộ.
 
 ## 1. Vì sao
 
