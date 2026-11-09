@@ -20,10 +20,8 @@ spec:
       labels:
         app.kubernetes.io/name: demo-app
     spec:
-      # Private registries: pull secrets are created from SealedSecrets. harbor-pull is the
-      # Harbor robot talos+demo-pull (current source); ghcr-pull kept for a quick rollback.
+      # Private registry: pull secret created from a SealedSecret (ghcr read token).
       imagePullSecrets:
-        - name: harbor-pull
         - name: ghcr-pull
       # Spread the 2 replicas over different nodes (one per worker).
       topologySpreadConstraints:

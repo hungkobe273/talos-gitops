@@ -14,11 +14,8 @@ resources:
   - analysistemplate-error-rate.yaml
   - analysistemplate-zap-baseline.yaml
   - ghcr-pull-sealed.yaml
-  - harbor-pull-sealed.yaml
   - externalsecret.yaml
 images:
   - name: ghcr.io/hungkobe273/talos-demo-app
-    # Pulled from the in-cluster Harbor copy (pull replication from ghcr every 10 min,
-    # signatures included). Back to ghcr: delete this line.
-    newName: harbor.talos.internal/talos/talos-demo-app
+    # Pulled straight from ghcr (09/11, Harbor removed: docs/ke-hoach-bo-harbor.md).
     newTag: jenkins-sha-2c4da26 # updated by talos-demo-app Jenkins
