@@ -31,7 +31,7 @@ mentor -> github: "đọc docs/" {class: phu}
 github -> gcp: "Jenkins build" {class: luong}
 gcp -> ghcr: "image đã ký" {class: luong}
 github -> he: "Argo CD đồng bộ" {class: luong}
-ghcr -> he: "Harbor replicate" {class: luong}
+ghcr -> he: "node kéo image trực tiếp" {class: luong}
 he -> gcp: "Vault unseal (KMS)" {class: phu}
 he -> supabase: "Keycloak" {class: phu}
 he -> b2: "backup 16:45" {class: phu}

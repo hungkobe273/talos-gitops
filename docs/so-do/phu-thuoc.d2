@@ -19,6 +19,7 @@ am: "Alertmanager" {class: giamsat; icon: ${cncf}/prometheus/icon/color/promethe
 tg: "Telegram" {class: ngoai; icon: ${si}/telegram; label.near: top-center; icon.near: bottom-center; height: 130}
 backup: "Backup trên host2" {class: giamsat; icon: ${si}/linux; label.near: top-center; icon.near: bottom-center; height: 130}
 b2: "Backblaze B2" {class: db; icon: ${si}/backblaze; label.near: top-center; icon.near: bottom-center; height: 130}
+ghcr: "GHCR\nimage demo-app, Keycloak" {class: db; icon: ${si}/github; label.near: top-center; icon.near: bottom-center; height: 130}
 
 app -> eso: "Secret demo-app-env" {class: phu}
 eso -> vault: "đọc secret" {class: phu}
@@ -27,7 +28,9 @@ keycloak -> supabase: "DB (JDBC, TLS)" {class: luong}
 argocd -> github: "đọc trạng thái mong muốn" {class: luong}
 am -> tg: "gửi cảnh báo" {class: luong}
 backup -> b2: "đẩy bundle GPG" {class: luong}
+app -> ghcr: "kéo image khi tạo pod mới" {class: luong}
+keycloak -> ghcr: "kéo image khi tạo pod mới" {class: luong}
 
 note: |md
-  Sáng 28/10 host2 mất Internet: Vault không unseal, Argo CD không đọc được Git, Keycloak không vào DB. Có mạng lại thì tự hồi phục. Cảnh báo VaultNotReady báo nếu Vault không sẵn sàng quá 10 phút.
+  Sáng 28/10 host2 mất Internet: Vault không unseal, Argo CD không đọc được Git, Keycloak không vào DB. Có mạng lại thì tự hồi phục. Cảnh báo VaultNotReady báo nếu Vault không sẵn sàng quá 10 phút. Từ khi bỏ Harbor (10/11), mất Internet thì pod mới của demo-app, Keycloak cũng không kéo được image (như mọi image khác); pod đang chạy và image đã có trên node không ảnh hưởng.
 | {class: chu; near: bottom-center}

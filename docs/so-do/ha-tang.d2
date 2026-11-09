@@ -49,7 +49,7 @@ host2: "kvm-host2 · 192.168.136.38\nUbuntu 24.04 · i7-6700 · 16 GB RAM" {
       dns: "CoreDNS" {class: pod}
     }
 
-    w1: "w1 · 10.10.10.21\nworker · 2 vCPU · 4,5 GB · request RAM 72%" {
+    w1: "w1 · 10.10.10.21\nworker · 2 vCPU · 4,5 GB · request RAM 69%" {
       class: vm
       icon: https://cdn.simpleicons.org/talos
       grid-columns: 2
@@ -58,24 +58,24 @@ host2: "kvm-host2 · 192.168.136.38\nUbuntu 24.04 · i7-6700 · 16 GB RAM" {
       traefik: "Traefik (bản 1)\nnhận :30443" {class: pod; icon: https://cdn.simpleicons.org/traefikproxy}
       certm: "cert-manager" {class: pod; icon: ${cncf}/cert-manager/icon/color/cert-manager-icon-color.svg}
       demo: "demo-app (pod 1)" {class: pod; style.fill: "#e8f3e6"}
+      longhorn: "Longhorn\nmanager · instance-manager" {class: pod; icon: ${cncf}/longhorn/icon/color/longhorn-icon-color.svg}
       pv_kcdb: "PV keycloak-db cũ 5 GiB" {class: pv}
+      lh_disk: "Đĩa Longhorn vdb 20 GiB\nbản sao 1 của volume" {class: pv}
     }
 
-    w2: "w2 · 10.10.10.22\nworker · 2 vCPU · 4,5 GB · request RAM 64%" {
+    w2: "w2 · 10.10.10.22\nworker · 2 vCPU · 4,5 GB · request RAM khoảng 69%" {
       class: vm
       icon: https://cdn.simpleicons.org/talos
       grid-columns: 2
-      harbor: "Harbor\ncore · registry · portal" {class: pod; icon: ${cncf}/harbor/icon/color/harbor-icon-color.svg}
-      harbordb: "PostgreSQL + Redis\ncủa Harbor" {class: pod}
       vault: "Vault" {class: pod; icon: https://cdn.simpleicons.org/vault}
       grafana: "Grafana" {class: pod; icon: https://cdn.simpleicons.org/grafana}
       kyverno: "Kyverno" {class: pod; icon: ${cncf}/kyverno/icon/color/kyverno-icon-color.svg}
       traefik: "Traefik (bản 2)\nnhận :30443" {class: pod; icon: https://cdn.simpleicons.org/traefikproxy}
       eso: "External Secrets" {class: pod}
       demo: "demo-app (pod 2)" {class: pod; style.fill: "#e8f3e6"}
-      pv_harbor: "PV Harbor 10 + 2 + 1 + 1 GiB" {class: pv}
-      pv_vault: "PV Vault 2 GiB + audit 1 GiB" {class: pv}
-      pv_graf: "PV Grafana 1 GiB" {class: pv}
+      longhorn: "Longhorn\nmanager · instance-manager" {class: pod; icon: ${cncf}/longhorn/icon/color/longhorn-icon-color.svg}
+      pv_vault: "PV Vault 2 GiB + audit 1 GiB\nlocal-path, sắp sang Longhorn" {class: pv}
+      lh_disk: "Đĩa Longhorn vdb 20 GiB\nbản sao 2 của volume" {class: pv}
     }
   }
 }
@@ -104,10 +104,16 @@ host2.haproxy -> host2.net: "NodePort 30443 → Traefik trên w1 và w2" {class:
 host2.net -> host2.hdd: "đĩa ảo của 3 VM cùng nằm trên 1 ổ" {style: {stroke: "#a8571b"; stroke-width: 3; font-color: "#a8571b"; font-size: 16}}
 host2.systemd -> host2.hdd: "bản backup" {class: phu}
 host2.net <-> gcp.w3: "KubeSpan (WireGuard) qua Internet" {class: phu}
+host2.net.w1.lh_disk <-> host2.net.w2.lh_disk: "Longhorn đồng bộ 2 bản sao" {class: phu}
+
+ghcr: "GHCR\nimage demo-app, Keycloak + chữ ký" {class: ngoai; icon: https://cdn.simpleicons.org/github}
+host2.net -> ghcr: "node kéo image qua Internet" {class: phu}
 
 note: |md
-  - Volume dùng local-path: dữ liệu nằm trên đĩa của đúng một worker, nên pod có volume bị **ghim** vào node đó (Harbor, Vault, Grafana trên w2; Prometheus, VictoriaLogs trên w3).
-  - w3 không tới được `*.talos.internal` (192.168.136.38): Grafana và pod kéo image Harbor phải ở on-prem.
+  - Volume dùng local-path: dữ liệu nằm trên đĩa của đúng một worker, nên pod có volume bị **ghim** vào node đó (Vault trên w2; Prometheus, VictoriaLogs trên w3).
+  - Volume Longhorn (Grafana; Vault là app tiếp theo) có 2 bản sao trên đĩa riêng của w1 và w2: mất một worker thì pod lên worker kia với đúng dữ liệu. Cả hai vẫn nằm trên cùng ổ HDD của host2.
+  - Không còn Harbor và NFS: image demo-app, Keycloak kéo thẳng từ GHCR như mọi image khác; Kyverno đọc chữ ký trên GHCR.
+  - w3 không tới được `*.talos.internal` (192.168.136.38): Grafana phải ở on-prem.
   - OTel Collector, kube-proxy, Flannel, node-exporter chạy trên cả 4 node. Vị trí pod không ghim đo 02/11, descheduler có thể chuyển giữa w1 và w2.
   - cp2, cp3 (10.10.10.12, .13) đã tắt từ 20/10 để tiết kiệm RAM và IO, giữ đĩa để bật lại khi cần HA.
   - Node chạy Talos Linux: không SSH, quản trị hoàn toàn qua API `talosctl`.

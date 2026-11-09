@@ -31,8 +31,7 @@ jenkins: "Jenkins trên Google Cloud" {
 ghcr: "GHCR\nnhận image đã ký" {class: db; icon: ${si}/github; label.near: top-center; icon.near: bottom-center; height: 130}
 gitops: "talos-gitops\nnewTag mới" {class: ngoai; icon: ${si}/github; label.near: top-center; icon.near: bottom-center; height: 130}
 argocd: "Argo CD\nđồng bộ Rollout" {class: nentang; icon: ${cncf}/argo/icon/color/argo-icon-color.svg; label.near: top-center; icon.near: bottom-center; height: 130}
-harbor: "Harbor nội bộ\nreplicate 10 phút/lần" {class: nentang; icon: ${cncf}/harbor/icon/color/harbor-icon-color.svg; label.near: top-center; icon.near: bottom-center; height: 130}
-kyverno: "Kyverno\nkhông có chữ ký Jenkins = từ chối" {class: baomat; icon: ${cncf}/kyverno/icon/color/kyverno-icon-color.svg; label.near: top-center; icon.near: bottom-center; height: 130}
+kyverno: "Kyverno\nđọc chữ ký trên GHCR\nkhông có chữ ký Jenkins = từ chối" {class: baomat; icon: ${cncf}/kyverno/icon/color/kyverno-icon-color.svg; label.near: top-center; icon.near: bottom-center; height: 130}
 preview: "Bản preview\nsmoke · tỉ lệ lỗi · ZAP (DAST)" {class: ungdung; icon: ${cncf}/argo/icon/color/argo-icon-color.svg; label.near: top-center; icon.near: bottom-center; height: 130}
 zap: "OWASP ZAP\nDAST: quét app đang chạy" {class: baomat}
 active: "Bản active\nnhận traffic; bản cũ giữ 10 phút" {class: ungdung}
@@ -42,13 +41,12 @@ github -> jenkins.ma.gitleaks: "poll 5 phút" {class: luong}
 jenkins.image.sign -> ghcr: {class: luong}
 jenkins.image.sign -> gitops: "sửa tag" {class: luong}
 gitops -> argocd: {class: luong}
-ghcr -> harbor: "kèm chữ ký" {class: luong}
 argocd -> preview: {class: luong}
-harbor -> preview: "kéo image 5–7 s" {class: luong}
+ghcr -> preview: "node kéo image (pull secret ghcr-pull)" {class: luong}
 kyverno -> preview: "kiểm khi tạo pod" {class: kiem}
 zap -> preview: "DAST trên bản preview" {class: kiem}
 preview -> active: "đạt cả 3 kiểm tra" {class: luong}
 
 note: |md
-  Cổng nào lỗi thì pipeline dừng, không có image được ký. Image không ký bị Kyverno từ chối, kể cả khi lấy từ Harbor.
+  Cổng nào lỗi thì pipeline dừng, không có image được ký. Image không ký bị Kyverno từ chối. Từ 10/11 cụm kéo image thẳng từ GHCR, không còn bản sao trên Harbor.
 | {class: chu; near: bottom-center}

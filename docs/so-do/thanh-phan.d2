@@ -19,7 +19,7 @@ ingress: "Lối vào" {
 
 gitops: "Triển khai" {
   class: nentang
-  argocd: "Argo CD\n24 app, self-heal" {icon: ${cncf}/argo/icon/color/argo-icon-color.svg}
+  argocd: "Argo CD\n22 app, self-heal" {icon: ${cncf}/argo/icon/color/argo-icon-color.svg}
   rollouts: "Argo Rollouts\nblue-green + phân tích" {icon: ${cncf}/argo/icon/color/argo-icon-color.svg}
   sealed: "Sealed Secrets\ngiải mã secret trong Git"
 }
@@ -33,9 +33,12 @@ sec: "Bảo mật" {
   eso -> vault: "đọc" {class: phu}
 }
 
-reg: "Registry" {
+ghcr: "GHCR (ngoài cụm)\nimage + chữ ký" {class: db; icon: ${si}/github}
+
+storage: "Lưu trữ" {
   class: nentang
-  harbor: "Harbor\nbản sao image + chữ ký" {icon: ${cncf}/harbor/icon/color/harbor-icon-color.svg}
+  longhorn: "Longhorn\n2 bản sao trên w1 và w2" {icon: ${cncf}/longhorn/icon/color/longhorn-icon-color.svg}
+  localpath: "local-path\nghim vào một node"
 }
 
 app: "Ứng dụng demo-app" {
@@ -86,8 +89,12 @@ ingress.traefik -> idp.oauth2: "Prometheus, Alertmanager" {class: phu}
 git -> gitops.argocd: "trạng thái mong muốn" {class: luong}
 gitops.argocd -> gitops.rollouts: "Rollout" {class: phu}
 gitops.rollouts -> app.preview: "tạo bản mới" {class: luong}
-reg.harbor -> app.preview: "image" {class: luong}
+ghcr -> app.preview: "image" {class: luong}
 sec.kyverno -> app.preview: "kiểm chữ ký" {class: kiem}
+sec.kyverno -> ghcr: "đọc chữ ký" {class: kiem}
+mon.grafana -> storage.longhorn: "PV" {class: phu}
+sec.vault -> storage.localpath: "PV (sắp sang Longhorn)" {class: phu}
+mon.prom -> storage.localpath: "PV trên w3" {class: phu}
 sec.eso -> app.active: ".env" {class: phu}
 mon.prom -> app.active: "thu metric" {class: phu}
 app.active -> logs.otel: "log pod" {class: luong}
@@ -95,5 +102,5 @@ mon.grafana -> logs.vlogs: "dashboard Log tập trung" {class: phu}
 bk.velero -> gcs: "backup hằng ngày" {class: luong}
 
 note: |md
-  Grafana, Argo CD, Headlamp, Vault, Harbor đăng nhập qua Keycloak (SSO); Prometheus và Alertmanager qua oauth2-proxy. Collector thu log của mọi pod, không riêng demo-app.
+  Grafana, Argo CD, Headlamp, Vault đăng nhập qua Keycloak (SSO); Prometheus và Alertmanager qua oauth2-proxy. Collector thu log của mọi pod, không riêng demo-app.
 | {class: chu; near: bottom-center}
