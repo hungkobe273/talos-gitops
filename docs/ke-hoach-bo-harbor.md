@@ -1,6 +1,8 @@
 # Kế hoạch bỏ Harbor, kéo image thẳng từ GHCR, gỡ NFS
 
-Ngày viết: 09/11. Dự kiến làm: T3 10/11 (cả ngày). Người làm: Hưng chạy các bước CHANGE.
+Ngày viết: 09/11. Người làm: Hưng chạy các bước CHANGE.
+
+Tiến độ: bước 1–3 xong sáng 09/11 (`9cdeef9`, `03aaa63`, `f84a995`). Bước 4–5 dự kiến T3 10/11.
 
 ## 1. Vì sao
 
