@@ -10,6 +10,9 @@ kind: Application
 metadata:
   name: harbor
   namespace: argocd
+  # 09/11: deleting this Application also deletes Harbor's resources (Harbor removal, docs/ke-hoach-bo-harbor.md).
+  finalizers:
+    - resources-finalizer.argocd.argoproj.io
   annotations:
     argocd.argoproj.io/sync-wave: "2"
 spec:
