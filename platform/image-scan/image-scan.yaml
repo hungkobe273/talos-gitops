@@ -2,7 +2,7 @@
 # build time, so a CVE published later goes unnoticed). Design: TTS_QTDV/design/de-xuat-quet-image-dinh-ky.md.
 # Trivy runs as a CronJob, no RAM used between runs. Lives in ns demo to reuse Secret ghcr-pull.
 # Prefers w3 (GCP worker): pulls ~44 images there instead of through the on-prem HDD; 12:30 because
-# the cluster is off at night. Images behind harbor.talos.internal (unreachable from w3) are scanned
+# the cluster is off at night. Images behind harbor.talos.internal (Harbor removed 09/11; kept for old pods) are scanned
 # from their ghcr.io source, same digests by replication.
 # Result: one "SCAN image=... result=ok|critical|error" line per image in the log (Log tap trung
 # dashboard, namespace demo). Any CRITICAL makes the Job fail, ImageScanCritical alerts on Telegram.
