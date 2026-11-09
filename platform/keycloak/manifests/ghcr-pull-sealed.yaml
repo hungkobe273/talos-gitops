@@ -1,0 +1,17 @@
+# Copy of demo/ghcr-pull (GHCR read token) so Keycloak pulls ghcr.io/hungkobe273/talos-keycloak directly
+# (09/11, Harbor removed: docs/ke-hoach-bo-harbor.md). Generated from the live Secret, piped straight into
+# kubeseal; re-seal from demo/ghcr-pull when the token is rotated.
+---
+apiVersion: bitnami.com/v1alpha1
+kind: SealedSecret
+metadata:
+  name: ghcr-pull
+  namespace: keycloak
+spec:
+  encryptedData:
+    .dockerconfigjson: AgAQIEb3OtlMoIWpSql63PgNvNociQgE8MABGFqAe6zF0Agjnn0sFh4DVgeSS2Ty3E3nS6J6K1aS6zDdCBvB6o/o7C6+OddEvExyvUkSMTfPhcstFOIAz4G/d+ffknk+ckjbVPN6fl9zUMgiaGB+b+/nvp/aA75btbpl3jansPdWhzxXMtEQqxwuvf2b9ZPF6DaH0pMLEmhqD3VdWTmyzQsj2WwBGJ8Xc9rhFwR93mqrG1aWlmm5OPFAIAxD7g7UfIy8/WMP58wLjK7eU1PqIzb5TdAiV9viuM5J78wMCFNGqDdJ/DCQrnDCt7Ps0ObD1YGoWnm1QPe9R5irwDfatFTIpg6M3LyRvTova8MoB3N1GJC+Cl9LNzVrsC9M9eP78bKQgmKxRz2lYihSmh2gobtBtKTDY+lLrnr6wYaQS+UwQdSO8kwxM6ioTrtbAJ9jhmFcGahWEe2odvYJSQNhsvO8g/65Cl7h1EFYfAyi6Yg8bzQjQyz10qWserfnLcXys+cwToBjO90Dm7K23j/5vE7kDQ6tPfH/XZye70gvT283SdEHnEWOrSl7oM0iD13KDYJwU8s491mSprXJzpMV2ncl7wXJEcRXz0x7CTrRA7A9a3JEGlp/Vcp2PJqvlkIWjyplJnauZclw7hXJF+HABL+qewKjl5QTS3ZNGzF/rv//XZW3M0S+dVjLqY+E4ppN4ZHUW882GXp3CIXjWHE7u90nnmzYB2kWPz8lYC3KqZgLq4oGYjh1zbz6Sr00NBJ57s0xrk2t23SMVE7WygPHWVCSS/zRjlxMJs8ytQOPYEb4zx/OwU4dpMobU3KKXYOozEULbHUEkD2wDMrTEUcZSkuwegBQHLmNDerKSx7uTbbW7KODyJj41QLYXJLRs1Kidx+ua2aE/WrTOEIm4q0fnwZj5fPqFzaBbLycLXqiLNNkO3ubL13nvirH
+  template:
+    metadata:
+      name: ghcr-pull
+      namespace: keycloak
+    type: kubernetes.io/dockerconfigjson
