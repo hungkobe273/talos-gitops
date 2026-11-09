@@ -38,19 +38,6 @@ spec:
                   memory: 176Mi    # 29/10: p95 140Mi, max 185Mi
                 limits:
                   memory: 384Mi
-              # Trust the internal CA (harbor.talos.internal) on top of the image's system CAs.
-              # Not caCertificates.data: that replaces the system bundle and would break ghcr.io.
-              extraEnvVars:
-                - name: SSL_CERT_DIR
-                  value: /etc/ssl/certs:/etc/talos-ca
-            extraVolumes:
-              - name: talos-internal-ca
-                secret:
-                  secretName: talos-internal-ca
-            extraVolumeMounts:
-              - name: talos-internal-ca
-                mountPath: /etc/talos-ca
-                readOnly: true
           backgroundController:
             enabled: false
           cleanupController:
@@ -70,7 +57,6 @@ spec:
           # Registry login used when Kyverno fetches signatures (secret in ns kyverno).
           existingImagePullSecrets:
             - ghcr-pull
-            - harbor-pull
     - repoURL: git@github.com:hungkobe273/talos-gitops.git
       targetRevision: main
       path: platform/kyverno/manifests
