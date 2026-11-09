@@ -8,6 +8,9 @@ kind: Application
 metadata:
   name: csi-driver-nfs
   namespace: argocd
+  # 09/11: deleting this Application also deletes its resources (NFS removal, docs/ke-hoach-bo-harbor.md).
+  finalizers:
+    - resources-finalizer.argocd.argoproj.io
   annotations:
     argocd.argoproj.io/sync-wave: "-1"
 spec:
