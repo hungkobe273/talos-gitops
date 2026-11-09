@@ -4,6 +4,13 @@ Ghi mỗi thay đổi về hạ tầng, cấu hình cụm hoặc ứng dụng: n
 
 Thay đổi nằm ngoài repo này (host2, cấu hình Talos) cũng ghi ở đây, vì repo không chứa file cấu hình Talos (có secret).
 
+## 09/11/2026
+
+| Thay đổi | Lý do | Commit |
+|---|---|---|
+| Cold start sáng, lần đầu sau các thay đổi 06/11 (host2 lên 08:34:21, `libvirtd` 08:35:10 = T0). Node Ready +2:27 tới +3:11; Vault +5:33, Traefik +5:37, argocd-server +6:03, harbor-core +6:25, Kyverno +6:44, Keycloak +7:42; Longhorn instance-manager w1 +7:03; Grafana Ready +10:51 (cùng pod `j4xbp` trên w2, không bị xoá rồi tạo lại: blacklist `apps/ReplicaSet` có tác dụng). Argo CD controller, redis trên w3. Volume Longhorn `attached healthy`, không có app lệch, không có pod lỗi. Watchdog bỏ qua 15 phút đầu sau boot rồi tự xoá `pause-until` (08:51), không gắn taint `out-of-service`. Backup tay chiều 06/11 đủ 6 dòng OK. Chậm hơn đo ngày 06/11 (6–6,5 phút, Grafana khoảng 9 phút) khoảng 1 phút vì lần này tính cả lúc host2 khởi động (cache đĩa còn trống) | Kiểm tra cold start thật sau Longhorn, ưu tiên `talos-core`, Grafana trên Longhorn | không |
+| Viết `docs/ke-hoach-bo-harbor.md`: bỏ Harbor, cụm kéo image thẳng từ GHCR (CI vốn đã đẩy và ký trên GHCR, Harbor chỉ replicate), Kyverno chỉ đọc chữ ký trên GHCR, rồi gỡ NFS. Thu về khoảng 650 Mi request (w2 từ 84% xuống khoảng 69%). Dự kiến làm T3 10/11; sau đó chuyển Vault sang Longhorn | Ý anh 06/11: Harbor để làm quen công cụ, không cần thì chuyển để tối ưu hạ tầng | (commit này) |
+
 ## 06/11/2026
 
 | Thay đổi | Lý do | Commit |
