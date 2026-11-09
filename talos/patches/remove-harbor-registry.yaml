@@ -1,0 +1,14 @@
+# 09/11: undo harbor-registry.yaml after Harbor was removed (cp1, w1, w2). Deletes the RegistryTLSConfig of
+# harbor.talos.internal and the StaticHostConfig 192.168.136.38 (it held keycloak + harbor), so it must be applied
+# together with statichost-keycloak.yaml in the same command, which adds the keycloak name back:
+#   talosctl -n <node> patch mc --patch @talos/patches/remove-harbor-registry.yaml \
+#     --patch @talos/patches/statichost-keycloak.yaml --mode=no-reboot
+apiVersion: v1alpha1
+kind: RegistryTLSConfig
+name: harbor.talos.internal
+$patch: delete
+---
+apiVersion: v1alpha1
+kind: StaticHostConfig
+name: 192.168.136.38
+$patch: delete
