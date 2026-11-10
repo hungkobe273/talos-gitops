@@ -1,7 +1,7 @@
 # Đề xuất: ưu tiên đĩa cho cp1 bằng BFQ trên host2
 
-Người soạn: Hưng. Ngày 10/11/2026. Trạng thái: **đề xuất, chưa làm**. Không đụng Talos, không khởi động lại VM hay
-libvirtd, lùi được ngay.
+Người soạn: Hưng. Ngày 10/11/2026. Trạng thái: **đã thử 10/11 09:19–09:50, KHÔNG đạt, đã lùi** (kết quả ở mục 7). Không đụng Talos, không khởi động lại VM hay
+libvirtd.
 
 ## 1. Vấn đề
 
@@ -105,3 +105,21 @@ chính.
 - Không tắt unattended-upgrades, không đổi lịch apt (máy tắt qua đêm nên lịch nào cũng chạy bù sau boot).
 - Không thêm scrape metrics etcd vào Prometheus đợt này (cần sửa `listen-metrics-urls` của Talos): đo bằng log là đủ.
   Có thể làm sau nếu cần biểu đồ.
+
+## 7. Kết quả thử 10/11
+
+Bật BFQ 09:17, cp1 weight 1000 (`io.bfq.weight` 181), w1/w2 20 lúc 09:19, apt idle. Đếm dòng `took too long` trong log
+etcd cp1 theo 10 phút:
+
+| Khoảng | Scheduler | Dòng chậm |
+|---|---|---|
+| 08:50–08:59 | mq-deadline | khoảng 100 |
+| 09:00–09:09 | mq-deadline | 142 |
+| 09:20–09:29 | BFQ | 120 |
+| 09:30–09:39 | BFQ | 253 (apiserver readiness 500 x16) |
+| 09:40–09:49 | BFQ | 135 |
+
+Chậm nhất: trước 1,42 s, sau 3,54 s; 60 request từ 0,5 s trở lên trong 30 phút sau khi bật. apt không chạy trong lúc đo.
+Không cải thiện, có dấu hiệu xấu hơn → lùi về mq-deadline, weight 100. Phỏng đoán (chưa kiểm): BFQ idling trên HDD
+chờ thêm request của cùng một tiến trình qemu, làm `fsync` của cp1 chờ lâu hơn. Drop-in apt giữ lại (vô hại với
+mq-deadline). Không cài udev rule, modules-load.
