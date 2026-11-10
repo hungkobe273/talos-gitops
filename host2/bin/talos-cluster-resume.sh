@@ -53,7 +53,7 @@ for r in $($K get deploy,sts -A -o jsonpath='{range .items[*]}{.kind}|{.metadata
   IFS='|' read -r kind ns name rep <<<"$r"
   [[ -n $rep ]] || continue
   $K -n "$ns" scale "${kind,,}/$name" --replicas="$rep" >/dev/null \
-    && $K -n "$ns" annotate "${kind,,}/$name" talos-stop-replicas- >/dev/null \
+    && $K -n "$ns" annotate "${kind,,}/$name" talos-stop-replicas- >/dev/null 2>&1 \
     && say "da tra $ns/${kind,,}/$name ve $rep replicas" \
     || say "LOI khi tra replicas $ns/$name"
 done

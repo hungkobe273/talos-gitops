@@ -36,7 +36,7 @@ for w in $WORKLOADS; do
   rep=$($K -n "$ns" get "$obj" -o jsonpath='{.spec.replicas}' 2>/dev/null)
   [[ $rep =~ ^[1-9][0-9]*$ ]] || rep=1
   $K -n argocd annotate application "$app" argocd.argoproj.io/skip-reconcile=true talos-stop="$(date +%s)" --overwrite >/dev/null \
-    && $K -n "$ns" annotate "$obj" talos-stop-replicas="$rep" --overwrite >/dev/null \
+    && $K -n "$ns" annotate "$obj" talos-stop-replicas="$rep" --overwrite >/dev/null 2>&1 \
     && $K -n "$ns" scale "$obj" --replicas=0 >/dev/null \
     && say "da tam dung app $app, $ns/$obj ve 0" \
     || say "LOI khi thu $ns/$obj ve 0 (van tiep tuc tat)"
