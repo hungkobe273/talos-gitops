@@ -1,0 +1,19 @@
+# 10/11: chay 1 lan moi lan host2 boot, tra lai app ma talos-cluster-stop.sh da tam dung (host2/bin/).
+# Cai: sudo install -m 644 host2/systemd/talos-cluster-resume.service /etc/systemd/system/
+#      sudo systemctl daemon-reload && sudo systemctl enable talos-cluster-resume.service
+# Bat VM bang tay khi host dang chay: sudo systemctl start talos-cluster-resume.service
+[Unit]
+Description=Resume Argo CD apps paused by talos-cluster-stop.sh (clean Longhorn detach)
+After=network-online.target libvirtd.service
+Wants=network-online.target
+
+[Service]
+Type=oneshot
+User=ngochung
+Environment=KUBECONFIG=/home/ngochung/talos-kvm/kubeconfig
+Environment=PATH=/home/ngochung/bin:/usr/local/bin:/usr/bin:/bin
+ExecStart=/home/ngochung/bin/talos-cluster-resume.sh
+TimeoutStartSec=4000
+
+[Install]
+WantedBy=multi-user.target

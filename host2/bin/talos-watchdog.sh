@@ -25,7 +25,7 @@
 # File dieu khien trong $STATE_DIRECTORY (user ngochung tu tao/xoa, khong can sudo):
 #   pause-until     so epoch; truoc thoi diem do script bo qua moi kiem tra
 #   force-test      co file -> gui 1 tin thu roi xoa file
-#   simulate-fail   moi dong 1 ten kiem tra (internet, psi_io, vms, srv_disk, api, nodes,
+#   simulate-fail   moi dong 1 ten kiem tra (internet, psi_io, vms, srv_disk, api, nodes, paused,
 #                   prometheus, alertmanager, pipeline) -> coi nhu loi, de thu ma khong dong vao cum
 #
 # Khong bao gio dung `set -x`: token Telegram nam trong bien cuc bo cua tg_send.
@@ -218,6 +218,18 @@ chk_pipeline() {
   echo "Watchdog KHONG co trong Alertmanager (Prometheus -> Alertmanager dut?)"; return 1
 }
 
+# 10/11: talos-cluster-stop.sh tam dung app co volume Longhorn (Vault, Grafana ve 0); talos-cluster-resume.sh tra lai
+# luc boot. Quen resume (bat VM bang tay ma khong chay service) thi Vault nam o 0 pod -> bao.
+chk_paused() {
+  local apps
+  apps=$(kk -n argocd get application -o jsonpath='{range .items[*]}{.metadata.name}={.metadata.annotations.talos-stop}{" "}{end}' 2>&1) \
+    || { echo "khong doc duoc Application: $apps"; return 1; }
+  apps=$(tr ' ' '\n' <<<"$apps" | grep -v -e '=$' -e '^$' | cut -d= -f1 | tr '\n' ' ')
+  [[ -z $apps ]] && { echo "khong co app tam dung"; return 0; }
+  echo "app van tam dung boi talos-cluster-stop.sh: $apps(Vault/Grafana o 0 pod). Chay: sudo systemctl start talos-cluster-resume.service"
+  return 1
+}
+
 # --- Taint out-of-service (06/11) ---------------------------------------------------------
 # Test N-1 06/11: rut dien w1 thi keycloak-0 (StatefulSet) ket tren node chet, Kubernetes khong tu tao
 # ban moi (tranh 2 ban cung chay) nen SSO mat 20 phut. Cach chuan: gan taint
@@ -334,6 +346,7 @@ run_check srv_disk chk_srv_disk || true
 if run_check api chk_api; then
   run_check nodes chk_nodes || true
   oos_reconcile apply || true
+  run_check paused chk_paused || true
   run_check prometheus chk_prometheus || true
   if run_check alertmanager chk_alertmanager; then
     run_check pipeline chk_pipeline || true
