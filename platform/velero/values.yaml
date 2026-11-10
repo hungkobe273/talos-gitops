@@ -23,7 +23,11 @@ snapshotsEnabled: false
 # node-agent DaemonSet: reads pod volumes under /var/lib/kubelet/pods (hostPath, runs as root), so the velero
 # namespace is PSA privileged (argocd-apps/velero.yaml). No tolerations: w1/w2 only, where Longhorn volumes live.
 # Chart has no default requests; kopia needs memory while uploading, the limit keeps it from starving a worker.
-deployNodeAgent: true
+# 10/11: off. No backup uses file-system backup (velero-daily has defaultVolumesToFsBackup false, 0 PodVolumeBackups
+# since 06/11), but the 2 node-agent pods read ~215 MB from the shared HDD at every cold start (talosctl cgroups io).
+# Data of Longhorn volumes is in the daily offsite bundle (Vault snapshot) and Grafana is provisioned from Git.
+# To run a file-system backup again: set true, wait for the DaemonSet, back up, set false.
+deployNodeAgent: false
 nodeAgent:
   # 06/11 test N-1: as a priority-0 pod the node-agent was preempted to make room, then stayed Terminating for up
   # to 1 h (terminationGracePeriodSeconds 3600 is shared with the velero server), and the scheduler will not
