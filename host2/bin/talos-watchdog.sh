@@ -4,7 +4,8 @@
 #
 # 06/11: them taint out-of-service cho worker da tat han (oos_reconcile), de StatefulSet chuyen node.
 # 09/11: bo kiem tra NFS (go NFS cung Harbor); srv_disk nay do dia chua VM.
-# 10/11: eso_kick - annotate ClusterSecretStore khi Vault da len ma store van loi (ESO backoff toi ~16 phut).
+# 10/11: eso_kick - annotate ClusterSecretStore khi Vault da len ma store van loi (ESO backoff toi ~16 phut),
+#        roi annotate force-sync cho ExternalSecret chua Ready khi store da Ready.
 #
 # Kiem tra moi lan chay: Internet cua host2, PSI io, 3 VM running, dung luong dia chua VM
 # (/var/lib/libvirt/images), kube-apiserver /readyz, so node Ready,
@@ -266,6 +267,21 @@ eso_kick() {
     kk annotate clustersecretstore "$s" "watchdog.talos/force-sync=$now" --overwrite >/dev/null \
       && echo "$now" > "$STATE/eso-kick-$s" \
       && log "vault-0 Ready nhung clustersecretstore $s chua Ready: da annotate de ESO reconcile ngay"
+  done
+  # Cold start 10/11 09:51: store tu Valid lai nhung ExternalSecret demo-app-env van SecretSyncedError (lan thu cuoi
+  # truoc khi store Valid 6 s, sau do cung lui theo cap so nhan). Store da Ready het thi annotate ExternalSecret chua Ready
+  # (force-sync la cach ESO huong dan de lam moi ngay).
+  [[ -z $stores ]] || return 0
+  local es ns name key
+  es=$(kk get externalsecret -A -o jsonpath='{range .items[?(@.status.conditions[0].status!="True")]}{.metadata.namespace}/{.metadata.name}{"\n"}{end}' 2>/dev/null) || return 0
+  for s in $es; do
+    ns=${s%%/*}; name=${s#*/}; key="eso-kick-es-$ns-$name"
+    last=$(cat "$STATE/$key" 2>/dev/null || echo 0)
+    (( now - last >= ESO_KICK_SEC )) || continue
+    if [[ $DRY_RUN == 1 ]]; then log "DRY_RUN: se annotate externalsecret $s"; continue; fi
+    kk -n "$ns" annotate externalsecret "$name" "force-sync=$now" --overwrite >/dev/null \
+      && echo "$now" > "$STATE/$key" \
+      && log "clustersecretstore Ready nhung externalsecret $s chua Ready: da annotate force-sync"
   done
 }
 
