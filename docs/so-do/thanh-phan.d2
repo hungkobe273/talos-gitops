@@ -19,7 +19,7 @@ ingress: "Lối vào" {
 
 gitops: "Triển khai" {
   class: nentang
-  argocd: "Argo CD\n22 app, self-heal" {icon: ${cncf}/argo/icon/color/argo-icon-color.svg}
+  argocd: "Argo CD\n23 app, self-heal" {icon: ${cncf}/argo/icon/color/argo-icon-color.svg}
   rollouts: "Argo Rollouts\nblue-green + phân tích" {icon: ${cncf}/argo/icon/color/argo-icon-color.svg}
   sealed: "Sealed Secrets\ngiải mã secret trong Git"
 }
@@ -93,7 +93,7 @@ ghcr -> app.preview: "image" {class: luong}
 sec.kyverno -> app.preview: "kiểm chữ ký" {class: kiem}
 sec.kyverno -> ghcr: "đọc chữ ký" {class: kiem}
 mon.grafana -> storage.longhorn: "PV" {class: phu}
-sec.vault -> storage.localpath: "PV (sắp sang Longhorn)" {class: phu}
+sec.vault -> storage.longhorn: "PV" {class: phu}
 mon.prom -> storage.localpath: "PV trên w3" {class: phu}
 sec.eso -> app.active: ".env" {class: phu}
 mon.prom -> app.active: "thu metric" {class: phu}

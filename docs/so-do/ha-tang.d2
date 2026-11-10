@@ -58,23 +58,22 @@ host2: "kvm-host2 · 192.168.136.38\nUbuntu 24.04 · i7-6700 · 16 GB RAM" {
       traefik: "Traefik (bản 1)\nnhận :30443" {class: pod; icon: https://cdn.simpleicons.org/traefikproxy}
       certm: "cert-manager" {class: pod; icon: ${cncf}/cert-manager/icon/color/cert-manager-icon-color.svg}
       demo: "demo-app (pod 1)" {class: pod; style.fill: "#e8f3e6"}
+      vault: "Vault" {class: pod; icon: https://cdn.simpleicons.org/vault}
       longhorn: "Longhorn\nmanager · instance-manager" {class: pod; icon: ${cncf}/longhorn/icon/color/longhorn-icon-color.svg}
       pv_kcdb: "PV keycloak-db cũ 5 GiB" {class: pv}
       lh_disk: "Đĩa Longhorn vdb 20 GiB\nbản sao 1 của volume" {class: pv}
     }
 
-    w2: "w2 · 10.10.10.22\nworker · 2 vCPU · 4,5 GB · request RAM khoảng 69%" {
+    w2: "w2 · 10.10.10.22\nworker · 2 vCPU · 4,5 GB · request RAM 67%" {
       class: vm
       icon: https://cdn.simpleicons.org/talos
       grid-columns: 2
-      vault: "Vault" {class: pod; icon: https://cdn.simpleicons.org/vault}
       grafana: "Grafana" {class: pod; icon: https://cdn.simpleicons.org/grafana}
       kyverno: "Kyverno" {class: pod; icon: ${cncf}/kyverno/icon/color/kyverno-icon-color.svg}
       traefik: "Traefik (bản 2)\nnhận :30443" {class: pod; icon: https://cdn.simpleicons.org/traefikproxy}
       eso: "External Secrets" {class: pod}
       demo: "demo-app (pod 2)" {class: pod; style.fill: "#e8f3e6"}
       longhorn: "Longhorn\nmanager · instance-manager" {class: pod; icon: ${cncf}/longhorn/icon/color/longhorn-icon-color.svg}
-      pv_vault: "PV Vault 2 GiB + audit 1 GiB\nlocal-path, sắp sang Longhorn" {class: pv}
       lh_disk: "Đĩa Longhorn vdb 20 GiB\nbản sao 2 của volume" {class: pv}
     }
   }
@@ -110,8 +109,8 @@ ghcr: "GHCR\nimage demo-app, Keycloak + chữ ký" {class: ngoai; icon: https://
 host2.net -> ghcr: "node kéo image qua Internet" {class: phu}
 
 note: |md
-  - Volume dùng local-path: dữ liệu nằm trên đĩa của đúng một worker, nên pod có volume bị **ghim** vào node đó (Vault trên w2; Prometheus, VictoriaLogs trên w3).
-  - Volume Longhorn (Grafana; Vault là app tiếp theo) có 2 bản sao trên đĩa riêng của w1 và w2: mất một worker thì pod lên worker kia với đúng dữ liệu. Cả hai vẫn nằm trên cùng ổ HDD của host2.
+  - Volume dùng local-path: dữ liệu nằm trên đĩa của đúng một worker, nên pod có volume bị **ghim** vào node đó (Prometheus, VictoriaLogs trên w3).
+  - Volume Longhorn (Grafana, Vault từ 10/11) có 2 bản sao trên đĩa riêng của w1 và w2: mất một worker thì pod lên worker kia với đúng dữ liệu. Cả hai vẫn nằm trên cùng ổ HDD của host2.
   - Không còn Harbor và NFS: image demo-app, Keycloak kéo thẳng từ GHCR như mọi image khác; Kyverno đọc chữ ký trên GHCR.
   - w3 không tới được `*.talos.internal` (192.168.136.38): Grafana phải ở on-prem.
   - OTel Collector, kube-proxy, Flannel, node-exporter chạy trên cả 4 node. Vị trí pod không ghim đo 02/11, descheduler có thể chuyển giữa w1 và w2.

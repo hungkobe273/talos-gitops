@@ -32,5 +32,5 @@ app -> ghcr: "kéo image khi tạo pod mới" {class: luong}
 keycloak -> ghcr: "kéo image khi tạo pod mới" {class: luong}
 
 note: |md
-  Sáng 28/10 host2 mất Internet: Vault không unseal, Argo CD không đọc được Git, Keycloak không vào DB. Có mạng lại thì tự hồi phục. Cảnh báo VaultNotReady báo nếu Vault không sẵn sàng quá 10 phút. Từ khi bỏ Harbor (10/11), mất Internet thì pod mới của demo-app, Keycloak cũng không kéo được image (như mọi image khác); pod đang chạy và image đã có trên node không ảnh hưởng.
+  Sáng 28/10 host2 mất Internet: Vault không unseal, Argo CD không đọc được Git, Keycloak không vào DB. Có mạng lại thì tự hồi phục. Cảnh báo VaultNotReady báo nếu Vault không sẵn sàng quá 10 phút. Từ khi bỏ Harbor (09/11), mất Internet thì pod mới của demo-app, Keycloak cũng không kéo được image (như mọi image khác); pod đang chạy và image đã có trên node không ảnh hưởng.
 | {class: chu; near: bottom-center}
