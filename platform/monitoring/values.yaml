@@ -210,6 +210,10 @@ grafana:
   # 29/10: every container gets a memory request (ValidatingAdmissionPolicy require-memory-request).
   # Sidecars max 7 days: grafana-sc-dashboard 90Mi, grafana-sc-datasources 86Mi.
   sidecar:
+    # 10/11: pinned 2.14.3 (chart default 2.14.1 had certifi GHSA-6q48-6c7w-9gw2 CRITICAL in image-scan,
+    # TTS_QTDV/design/cve-con-lai-10-11.md). 2.14.3 is a rebuild on Python 3.14.10; check the next image-scan.
+    image:
+      tag: 2.14.3
     resources:
       requests:
         cpu: 5m
