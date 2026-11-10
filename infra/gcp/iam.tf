@@ -77,9 +77,19 @@ resource "google_kms_crypto_key_iam_member" "vault_unseal_viewer" {
   role          = "roles/cloudkms.viewer"
 }
 
-# The scheduler SA may stop w3 and nothing else.
+# The scheduler SA may stop w3, jenkins-1 and gitlab-1 and nothing else (10/11: jenkins-1, gitlab-1 added for
+# the Mon/Wed 10:40 stop; SA and role keep their w3 names, renaming would recreate them).
 resource "google_compute_instance_iam_member" "w3_stopper" {
   instance_name = "${local.p}/zones/${var.zone}/instances/${google_compute_instance.w3.name}"
+  member        = "serviceAccount:${google_service_account.w3_stopper.email}"
+  project       = var.project
+  role          = google_project_iam_custom_role.w3_stopper.id
+  zone          = var.zone
+}
+
+resource "google_compute_instance_iam_member" "cicd_stopper" {
+  for_each      = toset(local.mon_wed_cicd)
+  instance_name = "${local.p}/zones/${var.zone}/instances/${each.key}"
   member        = "serviceAccount:${google_service_account.w3_stopper.email}"
   project       = var.project
   role          = google_project_iam_custom_role.w3_stopper.id
