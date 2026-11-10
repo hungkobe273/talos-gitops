@@ -48,9 +48,13 @@ Tất cả trên host2, Hưng chạy, không khởi động lại gì.
 | Bước | Việc | Lệnh chính |
 |---|---|---|
 | 1 | Nạp BFQ, đổi scheduler `sda` | `modprobe bfq; echo bfq > /sys/block/sda/queue/scheduler` |
-| 2 | cp1 trọng số 1000, w1/w2 giữ 100 | `virsh blkiotune cp1 --weight 1000 --live --config` |
+| 2 | cp1 trọng số 1000, w1/w2 hạ xuống 20 (xem ghi chú dưới bảng) | `virsh blkiotune cp1 --weight 1000 --live --config`, `virsh blkiotune w1 --weight 20 ...` |
 | 3 | apt chạy ở mức ưu tiên đĩa thấp nhất | drop-in `IOSchedulingClass=idle`, `IOWeight=10` cho `apt-daily.service`, `apt-daily-upgrade.service` |
 | 4 | Giữ qua reboot | `/etc/modules-load.d/bfq.conf`, udev rule chọn BFQ cho ổ quay |
+
+Ghi chú bước 2 (gặp khi làm 10/11): trên cgroup v2, libvirt đặt `IOWeight` qua systemd, systemd đổi sang thang BFQ:
+dưới 100 giữ nguyên, trên 100 thì `100 + (w - 100) * 900 / 9900`. `--weight 1000` chỉ ra `io.bfq.weight` **181**,
+gấp 1,8 lần w1/w2 (100). Vì vậy hạ w1, w2 xuống 20: cp1 181 so với 20, gấp khoảng 9 lần.
 
 File đưa vào Git (`host2/`):
 
