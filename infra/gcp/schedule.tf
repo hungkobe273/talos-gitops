@@ -43,16 +43,18 @@ resource "google_compute_resource_policy" "cicd_daily_snap" {
   }
 }
 
-# Mon/Wed the cluster is off from 10:30, so w3 is stopped at 11:30 instead of 17:15.
+# Mon/Wed the cluster is off from 10:30, so w3 is stopped at 10:40 instead of 17:15.
+# 10/11: 11:30 -> 10:40. From 10:30 the API is gone and w3 controllers (argo-rollouts, kube-state-metrics)
+# crash-looped for an hour each Mon/Wed (~270 restarts since 30/10).
 resource "google_cloud_scheduler_job" "w3_stop_mon_wed" {
   attempt_deadline = "180s"
   deletion_policy  = "DELETE"
-  description      = "Stop w3 at 11:30 on Mon/Wed (cluster is off from 10:30)"
+  description      = "Stop w3 at 10:40 on Mon/Wed (cluster is off from 10:30)"
   name             = "w3-stop-mon-wed"
   paused           = false
   project          = var.project
   region           = var.region
-  schedule         = "30 11 * * 1,3"
+  schedule         = "40 10 * * 1,3"
   time_zone        = "Asia/Ho_Chi_Minh"
   http_target {
     headers     = {}
