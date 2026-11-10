@@ -4,6 +4,13 @@ Ghi mỗi thay đổi về hạ tầng, cấu hình cụm hoặc ứng dụng: n
 
 Thay đổi nằm ngoài repo này (host2, cấu hình Talos) cũng ghi ở đây, vì repo không chứa file cấu hình Talos (có secret).
 
+## 10/11/2026
+
+| Thay đổi | Lý do | Commit |
+|---|---|---|
+| Cold start sáng (libvirtd 08:29:25): node Ready +2:18 tới +3:16, demo +4:15, Traefik +4:32, Keycloak +5:54, Vault +5:59 (còn local-path), Kyverno +6:20, Longhorn instance-manager w2 +6:15, Grafana +8:55 (09/11: +10:51), mọi app xanh 08:38:27. Dịch vụ chính vẫn khoảng 6 phút; Grafana chờ Longhorn rồi tự khởi động khoảng 1,5 phút (nạp plugin 24 s, migration DB) trên HDD. Backup B2 vẫn upload (dòng log `B2 uploaded`, không có chữ `OK:`) | Kiểm tra sau khi bỏ Harbor | không |
+| **Vault sang Longhorn** (thiết kế `TTS_QTDV/design/vault-longhorn.md` của Phúc, cách B): snapshot `pre-longhorn-2026-11-10-0842.snap`; commit 1 `storageClass: longhorn`, bỏ ưu tiên w2, `replicas: 0`; `kubectl delete sts vault --cascade=orphan`, Argo CD tạo lại StatefulSet 0 bản, `vault-0` dừng 08:45:00; xoá PVC cũ (PV Retain), gắn 2 PV local-path cũ vào PVC tạm `vault-old-data`/`vault-old-audit`, tạo PVC Longhorn đúng tên `data-vault-0`/`audit-vault-0`; Job `vault-copy` (uid 100, image Vault, chạy trên w2) copy 3 file, md5 khớp; commit 2 `replicas: 1`, `vault-0` lên trên w1 08:49:42. **Gián đoạn 4:42.** Cùng Cluster ID, unseal KMS tự động, Raft index 16285 → 16354, mỗi volume 2 replica w1/w2, snapshot OK, audit ghi tiếp. ClusterSecretStore `vault` kẹt `InvalidProviderConfig` sau khi Vault lên (lỗi đăng nhập Kubernetes auth lúc Vault dừng, controller-runtime lùi thời gian thử lại theo cấp số nhân, tối đa khoảng 16 phút; `refreshInterval: 60` không áp khi đang lỗi): annotate store thì Valid ngay, ExternalSecret sync lại. Giữ PVC `vault-old-*` và 2 PV cũ tới khi cold start sáng 11/11 đạt | w2 chết không còn làm Vault dừng (Vault là app quan trọng cuối cùng trên local-path w2) | `a42afea`, `a6bbeb6` |
+
 ## 09/11/2026
 
 | Thay đổi | Lý do | Commit |

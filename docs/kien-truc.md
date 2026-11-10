@@ -47,7 +47,7 @@ Sơ đồ: mục 1.2.
 |---|---|---|---|---|---|
 | cp1 | 10.10.10.11 | 2 | 3,5 GB | talos-w9b-tsv | control plane duy nhất từ 20/10 |
 | w1 | 10.10.10.21 | 2 | 4,5 GB | talos-hdl-7jo | thường chạy Keycloak, Kyverno, argocd-server (không ghim); đĩa thứ hai `vdb` 20G cho Longhorn |
-| w2 | 10.10.10.22 | 2 | 4,5 GB | talos-iv6-z5m | Vault ghim ở đây bằng PV local-path; đĩa thứ hai `vdb` 20G cho Longhorn |
+| w2 | 10.10.10.22 | 2 | 4,5 GB | talos-iv6-z5m | VictoriaLogs (local-path); đĩa thứ hai `vdb` 20G cho Longhorn |
 | w3 (GCP) | 10.148.0.4 | 2 | 8 GB | w3 | VM GCP e2-standard-2 (asia-southeast1-b), nối cụm bằng KubeSpan (WireGuard) từ 30/10; taint `cloud=gcp:NoSchedule`; ghim Prometheus, VictoriaLogs; ưu tiên (preferred) Alertmanager, argo-rollouts, sealed-secrets, kube-state-metrics, prometheus-operator, Argo CD repo-server, applicationset, application-controller và redis (controller, redis từ 06/11, `helm` rev 11), job ZAP, job image-scan; không đặt thứ cần `*.talos.internal` lên đây; bật 08:15–17:15 T2–T6 |
 | cp2, cp3 | .12, .13 | | | | tắt, giữ đĩa để bật lại khi cần HA |
 
@@ -121,4 +121,4 @@ Talos v1.14.2, Kubernetes v1.37.1, CNI Flannel.
 - Chỉ 1 control plane để tiết kiệm RAM: mất cp1 thì mất API cho tới khi bật lại.
 - Phụ thuộc Internet qua captive portal: mất mạng thì Vault không unseal (cần KMS), Keycloak không vào được DB (Supabase), Argo CD không đọc được Git, w3 rời cụm (mất Prometheus, log). Tunnel tới GCP có `ConnectTimeout` để tự nối lại khi đăng nhập portal muộn.
 - w3 không tới được `*.talos.internal` và host2: thứ cần Keycloak phải chạy on-prem. Pod trên w3 dùng DNS qua TCP vì UDP qua đường hầm mất khoảng 1% gói.
-- Vault và các volume local-path ghim vào một worker: worker đó tắt thì dịch vụ đó ngừng (kế hoạch chuyển Vault sang Longhorn).
+- Volume local-path còn lại (Prometheus, VictoriaLogs trên w3/w2) ghim vào một node: node đó tắt thì dịch vụ đó ngừng. Vault và Grafana đã trên Longhorn (10/11, 06/11).
