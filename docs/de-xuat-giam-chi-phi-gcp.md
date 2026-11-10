@@ -1,6 +1,6 @@
 # Đề xuất giảm chi phí GCP (10/11/2026)
 
-Trạng thái: **chờ anh duyệt**. Chưa thay đổi gì trên GCP.
+Trạng thái: **đã làm A (10/11 14:16, `5870852`)**, không làm B–F. Lý do: trong trial (300 USD credit tới 22/01/2027) cả 3 tháng chỉ tiêu khoảng 200 USD, không mất tiền thật; budget 1,3 triệu chỉ là ngưỡng báo, không chặn gì. Sau A còn khoảng 62 USD/tháng, budget vẫn báo vượt (do thêm w3 từ 30/10: khoảng 17,6 USD/tháng). Cân nhắc lại B trước khi hết trial nếu còn giữ phần GCP.
 
 ## 1. Vấn đề
 
@@ -38,7 +38,7 @@ Trạng thái: **chờ anh duyệt**. Chưa thay đổi gì trên GCP.
 | E | Thu nhỏ đĩa w3 hoặc GitLab (50 GB xuống 20–30 GB) | khoảng 2–3 mỗi đĩa | Không thu nhỏ tại chỗ được, phải dựng lại đĩa. Đĩa w3 chứa PV local-path của Prometheus và VictoriaLogs | Không nên lúc này |
 | F | Xoá Cloud SQL `talos-kc-test` | khoảng 2,2 | Anh đã bảo giữ | Giữ |
 
-## 4. Đề xuất
+## 4. Đề xuất (ban đầu)
 
 Làm **A + B**: còn khoảng **47–48 USD/tháng (khoảng 1,25 triệu VND)**, dưới budget.
 
