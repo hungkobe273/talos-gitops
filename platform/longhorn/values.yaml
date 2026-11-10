@@ -42,11 +42,16 @@ persistence:
 preUpgradeChecker:
   jobEnabled: false
 csi:
-  # Default 3 of each sidecar; 2 = one per worker, so attach/provision still work when one worker is down.
-  attacherReplicaCount: 2
-  provisionerReplicaCount: 2
-  resizerReplicaCount: 2
-  snapshotterReplicaCount: 2
+  # Default 3 of each sidecar. 06/11: 2 = one per worker, so attach/provision still work when one worker is down.
+  # 10/11: 1 each (trial). Cold start 11:35: instance-manager Ready only at +5:49 because ~50 pods start at once on
+  # w1/w2 on the shared HDD (longhorn-manager sandbox 47 s, container 48 s later); 4 fewer pods to start there.
+  # Trade-off: if the worker running a sidecar dies, that sidecar comes back on the other worker only after the pod
+  # is evicted (watchdog out-of-service taint), so moving Vault/Grafana to the other worker waits for it too.
+  # To revert: set back to 2.
+  attacherReplicaCount: 1
+  provisionerReplicaCount: 1
+  resizerReplicaCount: 1
+  snapshotterReplicaCount: 1
 longhornManager:
   log:
     format: json
