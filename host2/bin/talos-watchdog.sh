@@ -4,6 +4,7 @@
 #
 # 06/11: them taint out-of-service cho worker da tat han (oos_reconcile), de StatefulSet chuyen node.
 # 09/11: bo kiem tra NFS (go NFS cung Harbor); srv_disk nay do dia chua VM.
+# 10/11: eso_kick - annotate ClusterSecretStore khi Vault da len ma store van loi (ESO backoff toi ~16 phut).
 #
 # Kiem tra moi lan chay: Internet cua host2, PSI io, 3 VM running, dung luong dia chua VM
 # (/var/lib/libvirt/images), kube-apiserver /readyz, so node Ready,
@@ -248,11 +249,33 @@ oos_reconcile() {
   done
 }
 
+# 10/11: Vault dung vai phut (chuyen Longhorn) thi ClusterSecretStore loi InvalidProviderConfig. ESO v2.14 thu lai
+# theo cap so nhan cua controller-runtime (toi ~16 phut), refreshInterval khong ap khi dang loi, khong co flag de
+# chinh. Annotate store thi ESO reconcile ngay. Chi annotate khi vault-0 da Ready (unsealed) ma store van khong Ready,
+# toi da 1 lan moi ESO_KICK_SEC cho moi store. Chi ghi log, khong bao Telegram (tu sua duoc, cold start cung gap).
+ESO_KICK_SEC="${WATCHDOG_ESO_KICK_SEC:-300}"
+eso_kick() {
+  local vready stores s last
+  vready=$(kk -n vault get pod vault-0 -o jsonpath='{.status.conditions[?(@.type=="Ready")].status}' 2>/dev/null) || return 0
+  [[ $vready == True ]] || return 0
+  stores=$(kk get clustersecretstore -o jsonpath='{range .items[?(@.status.conditions[0].status!="True")]}{.metadata.name}{"\n"}{end}' 2>/dev/null) || return 0
+  for s in $stores; do
+    last=$(cat "$STATE/eso-kick-$s" 2>/dev/null || echo 0)
+    (( now - last >= ESO_KICK_SEC )) || continue
+    if [[ $DRY_RUN == 1 ]]; then log "DRY_RUN: se annotate clustersecretstore $s"; continue; fi
+    kk annotate clustersecretstore "$s" "watchdog.talos/force-sync=$now" --overwrite >/dev/null \
+      && echo "$now" > "$STATE/eso-kick-$s" \
+      && log "vault-0 Ready nhung clustersecretstore $s chua Ready: da annotate de ESO reconcile ngay"
+  done
+}
+
 # --- Chay ---------------------------------------------------------------------------------
 mkdir -p "$STATE/kube-cache"
 
 # Go taint truoc moi dieu kien bo qua (boot grace, pause): VM da chay lai thi node phai nhan pod binh thuong.
 oos_reconcile remove || true
+# Cung chay truoc boot grace/pause: chi annotate, khong hai, giup cold start va luc Vault restart.
+eso_kick || true
 
 uptime_s=$(cut -d. -f1 /proc/uptime)
 if (( uptime_s < BOOT_GRACE )); then
