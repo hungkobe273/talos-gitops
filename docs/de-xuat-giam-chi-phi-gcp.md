@@ -46,7 +46,7 @@ Làm **A + B**: còn khoảng **47–48 USD/tháng (khoảng 1,25 triệu VND)**
 - B: bỏ `gitlab-1` khỏi resource policy `jenkins-office-hours` (Terraform), ghi vào runbook cách bật và tắt GitLab khi cần.
 - Nếu chỉ được làm A thì còn khoảng 62 USD, vẫn vượt budget khoảng 12 USD.
 
-## 5. Cần anh xác nhận
+## 5. Kết quả
 
-1. Chiều T2/T4 có ai cần Jenkins hoặc GitLab không (A)?
-2. GitLab có thể chuyển sang chỉ bật khi cần không (B)?
+- A đã apply 10/11 14:16 (4 tài nguyên mới, không sửa hay xoá gì). Lần chạy thật đầu tiên: T4 12/11 10:40.
+- B–F không làm trong trial. Xem lại trước 22/01/2027.
