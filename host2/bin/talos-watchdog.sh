@@ -4,7 +4,7 @@
 #
 # 06/11: them taint out-of-service cho worker da tat han (oos_reconcile), de StatefulSet chuyen node.
 # 09/11: bo kiem tra NFS (go NFS cung Harbor); srv_disk nay do dia chua VM.
-# 10/11: eso_kick - annotate ClusterSecretStore khi Vault da len ma store van loi (ESO backoff toi ~16 phut),
+# 10/11: eso_kick (moi 120 s) - annotate ClusterSecretStore khi Vault da len ma store van loi (ESO backoff toi ~16 phut),
 #        roi annotate force-sync cho ExternalSecret chua Ready khi store da Ready.
 #
 # Kiem tra moi lan chay: Internet cua host2, PSI io, 3 VM running, dung luong dia chua VM
@@ -266,7 +266,10 @@ oos_reconcile() {
 # theo cap so nhan cua controller-runtime (toi ~16 phut), refreshInterval khong ap khi dang loi, khong co flag de
 # chinh. Annotate store thi ESO reconcile ngay. Chi annotate khi vault-0 da Ready (unsealed) ma store van khong Ready,
 # toi da 1 lan moi ESO_KICK_SEC cho moi store. Chi ghi log, khong bao Telegram (tu sua duoc, cold start cung gap).
-ESO_KICK_SEC="${WATCHDOG_ESO_KICK_SEC:-300}"
+# Cold start 10/11 11:06: lan kick 11:15:02 (vault-0 Ready tu 11:13:48) van "connection refused" toi vault-active
+# (ESO chay tren w3, kube-proxy w3 chua cap nhat endpoint sau khi API chap chon), 300 s sau moi kick lai -> store
+# Valid 11:21. Ha xuong 120 s = moi lan watchdog chay (3 phut); moi lan kick chi la 1 lan login Vault.
+ESO_KICK_SEC="${WATCHDOG_ESO_KICK_SEC:-120}"
 eso_kick() {
   local vready stores s last
   vready=$(kk -n vault get pod vault-0 -o jsonpath='{.status.conditions[?(@.type=="Ready")].status}' 2>/dev/null) || return 0

@@ -6,7 +6,8 @@
 # Grafana cho them ~1-2 phut).
 # Cach lam: tam dung Argo CD cho app co volume Longhorn (annotation skip-reconcile + dau talos-stop), thu workload
 # ve 0 de Longhorn tach volume sach, roi moi tat cp1, sau do w1 w2 (talosctl shutdown --force, nhu runbook 2.2).
-# Sang hom sau talos-cluster-resume.sh (service luc boot) go annotation, Argo CD tra replicas ve theo Git.
+# Sang hom sau talos-cluster-resume.sh (service luc boot) tra replicas da ghi o annotation talos-stop-replicas roi go
+# skip-reconcile.
 #
 # Chay tren host2, user ngochung:  talos-cluster-stop.sh        (tat ca cum)
 #                                  talos-cluster-stop.sh --drain-only   (chi thu workload ve 0, khong tat VM)
@@ -31,7 +32,11 @@ done
 # 1. Tam dung Argo CD, thu ve 0
 for w in $WORKLOADS; do
   IFS='|' read -r app ns obj <<<"$w"
+  # ghi so replicas hien tai vao workload (annotation talos-stop-replicas) de resume tra lai thang, khong cho Argo CD
+  rep=$($K -n "$ns" get "$obj" -o jsonpath='{.spec.replicas}' 2>/dev/null)
+  [[ $rep =~ ^[1-9][0-9]*$ ]] || rep=1
   $K -n argocd annotate application "$app" argocd.argoproj.io/skip-reconcile=true talos-stop="$(date +%s)" --overwrite >/dev/null \
+    && $K -n "$ns" annotate "$obj" talos-stop-replicas="$rep" --overwrite >/dev/null \
     && $K -n "$ns" scale "$obj" --replicas=0 >/dev/null \
     && say "da tam dung app $app, $ns/$obj ve 0" \
     || say "LOI khi thu $ns/$obj ve 0 (van tiep tuc tat)"

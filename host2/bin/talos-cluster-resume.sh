@@ -3,8 +3,11 @@
 # Chay boi talos-cluster-resume.service luc host2 boot; chay tay duoc khi bat VM bang tay (runbook 2.3):
 #   sudo systemctl start talos-cluster-resume.service   (hoac chay thang script nay)
 # Cho API song va instance-manager Longhorn tren w1, w2 Ready SAU lan bat VM gan nhat (trang thai cu trong API
-# khong tinh), roi go annotation skip-reconcile tren app co dau talos-stop; Argo CD tra replicas theo Git, pod
-# gan volume Longhorn sach (khong faulted, khong rebuild). Khong co app nao bi tam dung thi thoat ngay.
+# khong tinh), roi tra replicas cho workload co annotation talos-stop-replicas (scale thang) va go skip-reconcile
+# tren app co dau talos-stop; pod gan volume Longhorn sach (khong faulted, khong rebuild). Khong co app nao bi tam
+# dung thi thoat ngay.
+# Cold start 10/11 11:06 ban dau chi go skip-reconcile de Argo CD tra replicas: app monitoring (kube-prometheus-stack)
+# sync mat 7 phut, toi luot Grafana da 4 phut sau -> Grafana Ready +11:31. Nen scale thang truoc.
 set -uo pipefail
 export KUBECONFIG="${KUBECONFIG:-$HOME/talos-kvm/kubeconfig}"
 K="kubectl --request-timeout=10s"
@@ -45,9 +48,19 @@ for pair in $WORKERS; do
   done
 done
 
+# Tra replicas truoc (pod tao ngay) roi go annotation tren workload; Git cung so replicas nen Argo CD van Synced
+for r in $($K get deploy,sts -A -o jsonpath='{range .items[*]}{.kind}|{.metadata.namespace}|{.metadata.name}|{.metadata.annotations.talos-stop-replicas}{" "}{end}' 2>/dev/null); do
+  IFS='|' read -r kind ns name rep <<<"$r"
+  [[ -n $rep ]] || continue
+  $K -n "$ns" scale "${kind,,}/$name" --replicas="$rep" >/dev/null \
+    && $K -n "$ns" annotate "${kind,,}/$name" talos-stop-replicas- >/dev/null \
+    && say "da tra $ns/${kind,,}/$name ve $rep replicas" \
+    || say "LOI khi tra replicas $ns/$name"
+done
+
 for app in $paused; do
   $K -n argocd annotate application "$app" argocd.argoproj.io/skip-reconcile- talos-stop- >/dev/null \
     && $K -n argocd annotate application "$app" argocd.argoproj.io/refresh=normal --overwrite >/dev/null \
-    && say "da tra lai app $app (Argo CD dong bo replicas theo Git)" \
+    && say "da tra lai app $app cho Argo CD" \
     || say "LOI khi go annotation app $app"
 done
