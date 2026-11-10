@@ -52,6 +52,6 @@ Sealed Secrets và cert-manager lên trước để các app sau giải mã đư
 
 ## Dựng lại từ đầu
 
-1. Cài Argo CD: `helm install argocd argo-cd --repo https://argoproj.github.io/argo-helm --version 10.10.1 -n argocd --create-namespace -f bootstrap/argocd-values.yaml`
+1. Cài Argo CD: `helm install argocd argo-cd --repo https://argoproj.github.io/argo-helm --version 10.11.7 -n argocd --create-namespace -f bootstrap/argocd-values.yaml`
 2. `kubectl apply -f bootstrap/argocd-oidc-keycloak-sealed.yaml -f bootstrap/root.yaml`
 3. Khoá giải mã Sealed Secrets phải được khôi phục từ backup trước khi các SealedSecret trong repo dùng được. Vault cần khoá init và quyền KMS; Keycloak cần dữ liệu DB từ backup. Chi tiết trong runbook (ngoài repo).
