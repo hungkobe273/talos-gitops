@@ -65,8 +65,8 @@ server:
 
   ha:
     enabled: true
-    # 10/11: 0 while the data is copied to the Longhorn PVCs (design/vault-longhorn.md step 2-4), back to 1 after.
-    replicas: 0
+    # 10/11: was 0 while the data was copied to the Longhorn PVCs (design/vault-longhorn.md).
+    replicas: 1
     raft:
       enabled: true
       setNodeId: true
