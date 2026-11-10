@@ -15,8 +15,9 @@ ui:
   enabled: true
 
 server:
-  # local-path PV pins Vault to w2 (30/10: talos-pinned). 06/11: talos-core, above pinned (priority-core.yaml).
-  # updateStrategy OnDelete: takes effect at the next restart of vault-0.
+  # 06/11: talos-core, above pinned (priority-core.yaml). updateStrategy OnDelete: takes effect at the next restart.
+  # 10/11: data + audit on Longhorn (2 replicas, w1 and w2), Vault no longer pinned to w2.
+  # Design: TTS_QTDV/design/vault-longhorn.md.
   priorityClassName: talos-core
   # Request ~ expected usage, memory limit as a runaway cap (cluster has little spare RAM).
   resources:
@@ -26,27 +27,17 @@ server:
     limits:
       memory: 512Mi
 
-  # Prefer w2 (most free memory); not required, so Vault still starts if w2 is down
-  # before the PVC exists. Once the PVC is bound, the PV's node affinity pins it.
-  affinity: |
-    nodeAffinity:
-      preferredDuringSchedulingIgnoredDuringExecution:
-        - weight: 100
-          preference:
-            matchExpressions:
-              - key: kubernetes.io/hostname
-                operator: In
-                values: ["talos-iv6-z5m"]
+  # No node preference since 10/11 (Longhorn attaches on w1 or w2); chart default pod anti-affinity applies.
 
   dataStorage:
     enabled: true
     size: 2Gi
-    storageClass: local-path-retain
+    storageClass: longhorn
 
   auditStorage:
     enabled: true
     size: 1Gi
-    storageClass: local-path-retain
+    storageClass: longhorn
 
   # LAN access for the UI (login with Keycloak, platform/vault/oidc.sh): HAProxy on kvm-host2 -> Traefik
   # -> Service vault-active. TLS from the internal CA ends at Traefik; Traefik -> Vault is plain HTTP
@@ -74,7 +65,8 @@ server:
 
   ha:
     enabled: true
-    replicas: 1
+    # 10/11: 0 while the data is copied to the Longhorn PVCs (design/vault-longhorn.md step 2-4), back to 1 after.
+    replicas: 0
     raft:
       enabled: true
       setNodeId: true
