@@ -21,7 +21,11 @@ defaultSettings:
   # Longhorn is up there. Trade-off: if an engine crashes, delete the Deployment pod by hand. StatefulSets unchanged.
   # Longhorn matches the pod's direct owner: a Deployment pod is owned by a ReplicaSet (apps/Deployment alone had no
   # effect, cold start 16:00 06/11).
-  blacklistForAutoDeletePodWhenVolumeDetachedUnexpectedly: apps/ReplicaSet;apps/Deployment
+  # 10/11: apps/StatefulSet too (Vault moved to Longhorn). Cold start 09:51: the 3 volumes went 'faulted' at +4:48
+  # and Longhorn deleted vault-0 although the new pod came back on the same node: Vault +6:52, ~1 min later than on
+  # local-path. Only StatefulSet with a Longhorn PVC is vault (Keycloak's DB is on Supabase). Node-down handling
+  # (nodeDownPodDeletionPolicy above) is a separate setting and still deletes the pod when a worker dies.
+  blacklistForAutoDeletePodWhenVolumeDetachedUnexpectedly: apps/ReplicaSet;apps/Deployment;apps/StatefulSet
   # Default 12% of 2 vCPU (240m) per instance manager; the workers are small and mostly idle.
   guaranteedInstanceManagerCPU: '{"v1":"5","v2":"5"}'
   # Uninstall guard: set to true in Git only when Longhorn is really to be removed.
