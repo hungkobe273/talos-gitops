@@ -4,6 +4,15 @@ Ghi mỗi thay đổi về hạ tầng, cấu hình cụm hoặc ứng dụng: n
 
 Thay đổi nằm ngoài repo này (host2, cấu hình Talos) cũng ghi ở đây, vì repo không chứa file cấu hình Talos (có secret).
 
+## 12/11/2026
+
+| Thay đổi | Lý do | Commit |
+|---|---|---|
+| `host2/bin/talos-cluster-stop.sh`: thêm **bước -1 kiểm backup trong ngày**. Nếu hôm nay chưa có lần `talos-etcd-backup.service` thành công thì script tự chạy backup (`sudo -n`), backup lỗi thì dừng, không tắt cụm. Thêm cờ `--skip-backup-check` (chỉ khi chấp nhận mất backup ngày), đọc cờ theo vòng lặp (`--drain-only` vẫn như cũ). Chưa cài vào `~/bin` (Hưng chạy) | Tối 10/11 cụm tắt trước 16:42 mà chưa backup tay: timer 16:45 lỗi, host2 tắt 16:45:09, cả ngày 10/11 (Vault sang Longhorn, Argo CD 3.5.7) không có trong snapshot etcd hay bundle offsite nào. Trước đây chỉ dựa vào ghi nhớ (comment trong script, runbook 2.2) | commit này |
+| **Backup tay bù** 08:32 (Hưng chạy): snapshot etcd 64,9 MB, pg_dump Keycloak (Supabase), snapshot Vault, bundle `talos-offsite-20261112-0832` 19 MB lên B2 và GCS, `Finished` 08:33:16 | Bản etcd và offsite mới nhất trước đó là 09/11 10:24 | |
+| **Cold start 12/11** (host2 bật 08:21, mốc libvirtd 08:21:36, CSI 1 bản): Keycloak +6:37, Vault +7:14, store +7:43, Grafana +7:57; 3 volume Longhorn `healthy`, không `faulted`. Đoạn từ lúc resume scale về 1 tới Vault Ready: 66 s (10/11 13:20 CSI 1: 55 s; 11:35 CSI 2: 56 s). Chậm hơn 10/11 ở bước trước đó: instance-manager w2 Ready +6:05 (khởi động nguội sau 40 giờ tắt; 10/11 là reboot giữa ngày). **Giữ CSI sidecar 1 bản** | Đoạn mà số bản CSI ảnh hưởng (gắn volume sau khi scale) không khác giữa 1 và 2 bản, 1 bản đỡ RAM. Lưu ý: PDB của CSI 1 bản chặn drain w2, trước đợt nâng Talos phải đặt lại 2 (`platform/longhorn/values.yaml`) | |
+| GCP: job Cloud Scheduler tắt jenkins-1, gitlab-1, w3 lúc 10:40 chạy thật lần đầu T4 11/11, cả 3 VM tắt 10:40:17–10:40:52 (SA `w3-stopper`), sáng 12/11 bật lại 08:15 | Kiểm kết quả của thay đổi 10/11 (`infra/gcp/schedule.tf`) | |
+
 ## 10/11/2026
 
 | Thay đổi | Lý do | Commit |

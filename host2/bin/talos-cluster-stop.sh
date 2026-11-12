@@ -11,7 +11,9 @@
 #
 # Chay tren host2, user ngochung:  talos-cluster-stop.sh        (tat ca cum)
 #                                  talos-cluster-stop.sh --drain-only   (chi thu workload ve 0, khong tat VM)
-# T2/T4 tat som: chay backup tay TRUOC (Vault ve 0 thi snapshot Vault loi).
+#                                  them --skip-backup-check de bo buoc kiem backup (chi khi chap nhan mat backup ngay)
+# Buoc -1 (12/11): neu hom nay chua co lan talos-etcd-backup.service thanh cong thi script tu chay backup (sudo -n),
+# backup loi thi KHONG tat. Ly do: toi 10/11 cum tat truoc 16:45 ma chua backup tay, timer 16:45 loi, mat backup ca ngay.
 set -uo pipefail
 export KUBECONFIG="${KUBECONFIG:-$HOME/talos-kvm/kubeconfig}"
 export TALOSCONFIG="${TALOSCONFIG:-$HOME/talos-kvm/talosconfig}"
@@ -22,6 +24,34 @@ WORKLOADS="monitoring|monitoring|deploy/kps-grafana vault|vault|sts/vault"
 DETACH_TIMEOUT=180
 ts() { date +%T; }
 say() { echo "$(ts) $*"; }
+DRAIN_ONLY=0; SKIP_BACKUP=0
+for a in "$@"; do
+  case $a in
+    --drain-only) DRAIN_ONLY=1 ;;
+    --skip-backup-check) SKIP_BACKUP=1 ;;
+    *) say "tham so la: $a (dung: [--drain-only] [--skip-backup-check])"; exit 2 ;;
+  esac
+done
+
+# -1. Backup trong ngay (phai lam TRUOC khi thu Vault ve 0, vi snapshot Vault can Vault dang chay)
+backup_ok_today() {
+  journalctl -u talos-etcd-backup.service --since today --no-pager -o cat 2>/dev/null | grep -q '^Finished talos-etcd-backup.service'
+}
+if (( SKIP_BACKUP )); then
+  say "CANH BAO: --skip-backup-check, bo qua kiem backup hom nay"
+elif backup_ok_today; then
+  say "backup hom nay: OK ($(ls -t "$HOME"/talos-kvm/offsite/*.gpg 2>/dev/null | head -1 | xargs -r basename))"
+else
+  say "hom nay chua co backup thanh cong -> chay talos-etcd-backup.service (1-2 phut)"
+  sudo -n systemctl start talos-etcd-backup.service
+  journalctl -u talos-etcd-backup.service --since "-10 min" --no-pager -o cat 2>/dev/null | grep -E '^OK|LOI|uploaded' | sed "s/^/$(ts)   /"
+  if backup_ok_today; then
+    say "backup hom nay: OK"
+  else
+    say "LOI: backup that bai, KHONG tat cum. Xem: journalctl -u talos-etcd-backup.service --since today. Sua xong chay lai script (hoac --skip-backup-check neu chap nhan mat backup)"
+    exit 1
+  fi
+fi
 
 # 0. Kiem: moi PVC longhorn deu thuoc mot workload trong danh sach (them app moi co Longhorn thi phai them vao day)
 known="monitoring/grafana-longhorn vault/data-vault-0 vault/audit-vault-0"
@@ -52,7 +82,7 @@ while :; do
   sleep 5
 done
 
-[[ ${1:-} == --drain-only ]] && { say "--drain-only: khong tat VM. Tra lai: talos-cluster-resume.sh"; exit 0; }
+(( DRAIN_ONLY )) && { say "--drain-only: khong tat VM. Tra lai: talos-cluster-resume.sh"; exit 0; }
 
 # 3. Tat cp1 truoc, roi worker (runbook 2.2: pod giu nguyen node; worker phai co -e chinh no vi cp1 da tat)
 wait_off() {  # vm... : cho toi khi shut off, toi da 200 s
