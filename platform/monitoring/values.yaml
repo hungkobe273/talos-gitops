@@ -209,7 +209,17 @@ grafana:
       memory: 1536Mi
   # 29/10: every container gets a memory request (ValidatingAdmissionPolicy require-memory-request).
   # Sidecars max 7 days: grafana-sc-dashboard 90Mi, grafana-sc-datasources 86Mi.
+  # 12/11 (audit sec2): the chart ClusterRole always grants configmaps+secrets cluster-wide when a sidecar is on,
+  # whatever sidecar.*.resource says, so the Grafana SA could read every Secret. Chart RBAC off; a configmaps-only
+  # ClusterRole with a new name is in manifests/grafana-sidecar-rbac.yaml (new name: roleRef is immutable).
+  # No Secret carries grafana_dashboard/grafana_datasource labels (checked 12/11), so nothing is lost.
+  rbac:
+    create: false
   sidecar:
+    dashboards:
+      resource: configmap
+    datasources:
+      resource: configmap
     # 10/11: pinned 2.14.3 (chart default 2.14.1 had certifi GHSA-6q48-6c7w-9gw2 CRITICAL in image-scan,
     # TTS_QTDV/design/cve-con-lai-10-11.md). 2.14.3 is a rebuild on Python 3.14.10; check the next image-scan.
     image:

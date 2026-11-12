@@ -1,0 +1,24 @@
+# 12/11 (audit sec2): Grafana sidecars (dashboards, datasources) only need to watch ConfigMaps in all namespaces
+# (26 dashboards in monitoring, 1 in keycloak, 2 datasources). Replaces the chart ClusterRole kps-grafana-clusterrole,
+# which also granted secrets (grafana.rbac.create=false in values.yaml). Roll back: git revert.
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: grafana-sidecar-configmaps
+rules:
+  - apiGroups: [""]
+    resources: ["configmaps"]
+    verbs: ["get", "list", "watch"]
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  name: grafana-sidecar-configmaps
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: grafana-sidecar-configmaps
+subjects:
+  - kind: ServiceAccount
+    name: kps-grafana
+    namespace: monitoring
