@@ -1,16 +1,18 @@
 # Báo cáo hiện trạng cụm talos-kvm
 
-Người thực hiện: Hưng, Phúc. Cập nhật: 03/11/2026.
+Người thực hiện: Hưng, Phúc. Cập nhật: 12/11/2026 (bản trước: 03/11).
 
 File này là báo cáo tổng hợp, cập nhật mỗi khi có thay đổi lớn. Chi tiết từng thay đổi theo ngày ở [nhat-ky-thay-doi.md](nhat-ky-thay-doi.md); sơ đồ và thành phần ở [kien-truc.md](kien-truc.md); cách vào các giao diện ở [truy-cap.md](truy-cap.md).
 
 ## Tóm tắt
 
-- Cụm Talos 1 control plane + 2 worker trên một máy KVM (kvm-host2 `192.168.136.38`), API qua VIP `10.10.10.100:6443`, thêm worker w3 trên Google Cloud nối bằng KubeSpan từ 30/10 (chạy Prometheus, VictoriaLogs và các bộ điều khiển). cp2, cp3 đã tắt từ 20/10 để tiết kiệm RAM và IO.
-- GitOps bằng Argo CD (24 app). Jenkins trên Google Cloud là deployer: quét bảo mật, build, ký image, rồi sửa tag trong repo này. Argo Rollouts triển khai blue-green có smoke test, phân tích tỉ lệ lỗi và quét ZAP.
-- Cụm kéo image từ Harbor nội bộ; Kyverno chỉ cho chạy image có chữ ký của Jenkins. Secret của ứng dụng nằm ở Vault. Đăng nhập tập trung bằng Keycloak cho 10 công cụ.
-- Giám sát và cảnh báo về Telegram, log tập trung (OpenTelemetry, VictoriaLogs), quét CVE image đang chạy mỗi ngày làm việc, watchdog ngoài cụm. Backup hằng ngày mã hóa lên Backblaze B2 và Google Cloud Storage; từ 03/11 thêm Velero backup object Kubernetes.
-- Nút thắt lớn nhất vẫn là ổ HDD duy nhất: sáng 03/11 lúc khởi động lạnh, CPU của VM on-prem chờ đĩa 43–64% thời gian (w3 trên GCP 0%). Sau các bản sửa ngày 03/11, khởi động lạnh còn khoảng 6 phút (trước đó 11 phút), không cần can thiệp tay.
+- Cụm Talos 1 control plane + 2 worker trên một máy KVM (kvm-host2), API qua VIP `10.10.10.100:6443`, thêm worker w3 trên Google Cloud nối bằng KubeSpan (chạy Prometheus, VictoriaLogs và các bộ điều khiển).
+- GitOps bằng Argo CD. Jenkins trên Google Cloud là deployer: quét bảo mật, build, ký image, rồi sửa tag trong repo này. Argo Rollouts triển khai blue-green có smoke test, phân tích tỉ lệ lỗi và quét ZAP.
+- **Từ 09/11 bỏ Harbor**: cụm kéo image thẳng từ GHCR, Kyverno chỉ cho chạy image có chữ ký của Jenkins. Secret của ứng dụng nằm ở Vault. Đăng nhập tập trung bằng Keycloak.
+- **Từ 06/11 có lưu trữ chung Longhorn** (2 bản sao trên w1, w2): Grafana (06/11) và Vault (10/11) chạy trên Longhorn, nên mất một worker thì Vault và Keycloak tự lên lại ở worker kia sau khoảng 3,5 phút, không thao tác tay.
+- Backup hằng ngày mã hoá lên Backblaze B2 và Google Cloud Storage. Từ 12/11 script tắt cụm không cho tắt khi chưa có backup thành công trong 30 phút gần nhất, và watchdog báo Telegram khi backup cũ hơn 26 giờ.
+- 10–12/11 audit toàn hệ thống (chỉ đọc): còn mở 29 mục, 2 high, 13 medium; đã sửa 5 mục ngay trong lúc audit. Báo cáo: `TTS_QTDV/design/audit-10-11.md`.
+- Nút thắt lớn nhất vẫn là ổ HDD duy nhất. Khởi động lạnh hiện khoảng 8 phút từ lúc libvirtd lên tới khi Grafana xanh (12/11: Vault +7:14, Grafana +7:57).
 
 ## 1. Mục tiêu
 
@@ -24,114 +26,105 @@ Dựng và vận hành một cụm Kubernetes theo cách làm của môi trườ
 
 Sơ đồ tổng thể, hạ tầng, luồng deploy và bảng thành phần: [kien-truc.md](kien-truc.md).
 
-Tóm tắt: Talos v1.14.2, Kubernetes v1.37.1, Flannel, KubePrism, VIP Layer 2. cp1 2 vCPU/3,5 GB, w1 và w2 2 vCPU/4,5 GB, mạng NAT `10.10.10.0/24` trên kvm-host2 (i7-6700, 16 GB, 1 HDD); w3 là VM GCP e2-standard-2 8 GB ở asia-southeast1, bật 08:15–17:15 T2–T6. Truy cập từ LAN qua HAProxy :443 trên host2, tên miền `*.talos.internal`, chứng chỉ từ CA nội bộ.
+Tóm tắt: Talos v1.14.2, Kubernetes v1.37.1, Flannel, KubePrism, VIP Layer 2, Longhorn 1.13.0. **Từ 12/11 cp1 2 vCPU/4 GB, w1 2 vCPU/4 GB** (chuyển 512 MiB từ w1 sang cp1, [de-xuat-ram-cp1.md](de-xuat-ram-cp1.md)), w2 2 vCPU/4,5 GB, mạng NAT `10.10.10.0/24` trên kvm-host2 (i7-6700, 16 GB, 1 HDD); w3 là VM GCP e2-standard-2 8 GB ở asia-southeast1, bật 08:15–17:15 (T2/T4 tắt 10:40). Truy cập từ LAN qua HAProxy :443 trên host2, tên miền `*.talos.internal`, chứng chỉ từ CA nội bộ.
 
-Luồng đưa code lên production: push → Jenkins (gitleaks, test, govulncheck, gosec, SonarQube, build amd64 + arm64, Trivy, SBOM, cosign) → sửa `newTag` trong repo này → Argo CD → Harbor replicate từ GHCR → blue-green có kiểm tra. Đo ngày 28/10: khoảng 12 phút từ push tới khi bản mới nhận traffic.
+Luồng đưa code lên production: push → Jenkins (gitleaks, test, govulncheck, gosec, SonarQube, build amd64 + arm64, Trivy, SBOM, cosign) → sửa `newTag` trong repo này → Argo CD → blue-green có kiểm tra. Từ khi bỏ Harbor không còn bước chờ replicate.
 
 ## 3. Bảo mật
 
 **Chuỗi cung ứng**
 
 - Pipeline Jenkins: gitleaks quét toàn bộ lịch sử Git, govulncheck, gosec (từ mức medium), quality gate SonarQube có coverage, Trivy quét đúng digest đã đẩy (cả amd64 và arm64), SBOM CycloneDX, ký cosign. Mỗi cổng đã thử chặn bằng commit hoặc image lỗi cố ý.
-- Kyverno (ImageValidatingPolicy) chỉ nhận image demo-app ký bằng khoá Jenkins, cả từ GHCR lẫn Harbor. Webhook chỉ ở namespace `demo` nên Kyverno lỗi không chặn được phần còn lại của cụm.
+- Kyverno 1.19.2 (từ 12/11, bản vá lỗi bỏ qua kiểm chữ ký) chỉ nhận image demo-app ký bằng khoá Jenkins trên GHCR. Đã thử sau khi nâng: ảnh ký qua, ảnh không ký bị chặn.
 - ZAP baseline quét bản preview trước khi chuyển traffic.
 
 **Secret**
 
-- Secret hạ tầng trong Git chỉ ở dạng SealedSecret; khoá giải mã của Sealed Secrets đã được backup.
+- Secret hạ tầng trong Git chỉ ở dạng SealedSecret; khoá giải mã của Sealed Secrets đã được backup (bản xuất cần làm mới trước 16/11, xem mục 7).
 - Biến môi trường của ứng dụng nằm ở Vault (KV v2), External Secrets đưa vào pod. Vault tự unseal bằng GCP KMS, có audit log.
-- File nhạy cảm của cụm (secret Talos, talosconfig, kubeconfig, snapshot etcd, khoá init Vault) chỉ nằm trên host2 trong thư mục quyền 700, không commit, không in ra màn hình hay chat.
+- File nhạy cảm của cụm chỉ nằm trên host2 trong thư mục quyền 700, không commit, không in ra màn hình hay chat.
+- 12/11: service account của Grafana không còn đọc được Secret (trước đó chart cấp quyền đọc mọi Secret trong cụm); deploy key ghi cũ của GitHub Actions đã xoá, chỉ còn key chỉ đọc của Argo CD và key ghi của Jenkins.
 
 **Đăng nhập và phân quyền**
 
-- Keycloak (realm `talos`) cho Grafana, Argo CD, Headlamp, Vault, Harbor (OIDC), Jenkins, GitLab, SonarQube (SAML), Prometheus và Alertmanager (qua oauth2-proxy). Nhóm `talos-admins` có quyền quản trị, `talos-viewers` chỉ xem. Mỗi công cụ giữ một tài khoản dự phòng khi Keycloak hỏng.
+- Keycloak (realm `talos`) cho Grafana, Argo CD, Headlamp, Vault (OIDC), Jenkins, GitLab, SonarQube (SAML), Prometheus, Alertmanager và vmui VictoriaLogs (qua oauth2-proxy). Nhóm `talos-admins` có quyền quản trị, `talos-viewers` chỉ xem. Mỗi công cụ giữ một tài khoản dự phòng khi Keycloak hỏng.
 - HAProxy chỉ nhận kết nối từ các IP được phép trong LAN. Pod Security Admission mức restricted cho `demo`, `headlamp`, `kyverno`.
-- Argo CD đọc repo bằng deploy key chỉ đọc; Jenkins dùng deploy key riêng có quyền ghi để sửa tag. Cụm kéo image Harbor bằng robot chỉ có quyền pull.
+- Còn hở (từ audit, đang sửa): host2 cho đăng nhập SSH bằng mật khẩu và pod/node tới thẳng được cổng 22; NetworkPolicy chưa có hiệu lực vì Flannel chưa bật bộ thực thi.
 
 ## 4. Vận hành hằng ngày và backup
 
-Host2 bị tắt cuối ngày (T2/T4 lúc 10:30, các ngày khác khoảng 17:00), nên cụm được bật/tắt có kiểm soát theo runbook.
+Host2 bị tắt cuối ngày (T2/T4 lúc 10:30, các ngày khác khoảng 17:00), nên cụm được bật/tắt có kiểm soát.
 
-**Buổi sáng**: đăng nhập captive portal trên host2 → bật host2 (VM tự bật) → kiểm tra node, Argo CD, Vault đã unseal, ExternalSecret, demo-app. Khởi động lạnh đo sáng 02/11: khoảng 11 phút 20 từ lúc host2 boot tới khi mọi app Healthy, không can thiệp tay (chi tiết mục 7).
+**Buổi sáng**: bật host2, VM tự bật, `talos-cluster-resume.service` trả các app về số bản cũ. Kiểm tra node, Argo CD, Vault đã unseal, ExternalSecret, demo-app. Watchdog tự kích External Secrets khi Vault lên muộn.
 
-**Cuối ngày**: backup (tự động 16:45, hoặc chạy tay nếu tắt sớm) → tạm dừng watchdog và healthchecks nếu tắt sớm → tắt cp1 → tắt 2 worker. Từ 03/11 tắt bằng `talosctl shutdown --force` (không drain) và tắt control plane trước, để pod giữ nguyên node và sáng hôm sau khởi động lại tại chỗ.
+**Cuối ngày**: `~/bin/talos-cluster-stop.sh` (từ 10/11):
+1. Backup nếu 30 phút gần nhất chưa có lần thành công; backup lỗi thì dừng, không tắt (từ 12/11).
+2. Tạm dừng Argo CD cho app có volume Longhorn, thu Grafana và Vault về 0 để Longhorn tách volume sạch.
+3. Tắt cp1 trước, rồi w1, w2.
+
+Sáng hôm sau Longhorn không phải dựng lại bản sao.
 
 **Backup**
 
 | Hạng mục | Chi tiết | Trạng thái |
 |---|---|---|
-| Lịch | systemd 16:45 trên host2 (ngoài cụm); tắt sớm thì chạy tay | Chạy hằng ngày, lần gần nhất 02/11 10:18 đủ 7 bước |
-| Nội dung | snapshot etcd, dump DB Keycloak (Supabase), dump DB Harbor, snapshot Vault | OK |
-| Ngoài máy | gói mã hóa GPG đẩy lên Backblaze B2 và Google Cloud Storage (tài khoản chỉ thêm được, không xoá được) | OK, đã thử giải mã |
-| Object Kubernetes | Velero 09:30 T2–T6 lên bucket GCS riêng, giữ 30 ngày, không gồm dữ liệu PV | Cài 03/11; diễn tập khôi phục toàn cụm lên GCP dự kiến 05/11 |
-| Cảnh báo lỗi | Telegram kèm log khi một bước lỗi | Đã thử |
-| Khôi phục etcd từ snapshot | `talosctl bootstrap --recover-from` | Chưa diễn tập |
-| Khôi phục Vault từ snapshot | `vault operator raft snapshot restore -force` vào Vault mới cùng KMS key; nơi khôi phục cần `/vault/audit` ghi được | Đã diễn tập 29/10: Vault tạm ở ns riêng, tự unseal, đọc được `kv/demo/demo-app`, khoảng 2,5 phút |
+| Lịch | systemd 16:45 trên host2, và stop script khi tắt cụm. Từ 12/11 timer 16:45 tự bỏ qua khi cụm đã tắt, không báo lỗi giả | Lần gần nhất 12/11 15:13 đủ các bước |
+| Nội dung | snapshot etcd, dump DB Keycloak (Supabase), snapshot Vault | OK (Harbor đã bỏ 09/11) |
+| Ngoài máy | gói mã hoá GPG đẩy lên Backblaze B2 và Google Cloud Storage | OK |
+| Object Kubernetes | Velero 09:30 T2–T6 lên bucket GCS riêng, giữ 30 ngày | Diễn tập khôi phục toàn cụm lên GCP 05/11: RTO khoảng 51–54 phút, RPO 6–7 phút |
+| Cảnh báo | Telegram khi một bước lỗi; từ 12/11 watchdog báo khi backup thành công gần nhất cũ hơn 26 giờ | Đã thử |
+| Khôi phục Vault | snapshot vào Vault mới cùng KMS key | Diễn tập 29/10 và 10/11 (trên Longhorn): 59 giây từ snapshot tới đọc được secret |
+| Khôi phục etcd | `talosctl bootstrap --recover-from` | Chưa diễn tập |
 
-**Giám sát**: Prometheus, Alertmanager, Grafana; cảnh báo về Telegram cho demo-app, Argo CD, Keycloak, ExternalSecret, Vault (`VaultNotReady`), image có CVE CRITICAL (`ImageScanCritical`). Log mọi pod về VictoriaLogs, xem trên Grafana. Watchdog trên host2 và healthchecks.io báo khi cả cụm chết.
+**Giám sát**: Prometheus, Alertmanager, Grafana; cảnh báo về Telegram cho demo-app, Argo CD, Keycloak, ExternalSecret, Vault (`VaultSealed`, `VaultDown`, `VaultNotReady`), Longhorn (volume faulted/degraded), image có CVE CRITICAL. Log mọi pod về VictoriaLogs. Watchdog trên host2 (3 phút/lần) kiểm từ ngoài cụm: Internet, IO, VM, API, node, Prometheus, Alertmanager, và từ 12/11 thêm tuổi backup và quyền xem dashboard Grafana.
 
-**Diễn tập đã làm**: tắt có kế hoạch 1 worker (22/10); lùi DB Keycloak về PostgreSQL trong cụm rồi tiến lại Supabase (27/10, SSO gián đoạn 3 phút 23 giây khi lùi).
+**Diễn tập đã làm**:
+- Tắt có kế hoạch 1 worker (22/10).
+- Lùi DB Keycloak (27/10).
+- Khôi phục toàn cụm lên GCP (05/11).
+- Rút điện w1 nhiều lần (06/11, 10/11). Lần 10/11, khi Vault đã ở trên Longhorn: watchdog gắn taint `out-of-service` sau 1:55, Vault Ready +3:34, Keycloak Ready +3:46, demo-app luôn còn pod chạy; bật lại w1 thì 3 volume `healthy` sau 4:26.
 
 ## 5. Sự cố đã gặp và bài học
 
 | Thời điểm | Sự cố | Xử lý và bài học |
 |---|---|---|
-| 14/10 | Lệnh dry-run ở maintenance mode in config kèm secret | Reset cụm, tạo secret mới. Cấm lệnh này; xem Secret chỉ theo tên khóa. |
-| 15/10 | Host thiếu RAM, swap; Grafana thrash page cache, IO 30%, cả 3 apiserver unready | Giảm RAM CP, swappiness 10, nới timeout etcd, nâng limit Grafana. Gốc là HDD. |
-| 16/10 sáng | Portal hết hạn, Talos chờ đồng bộ giờ, etcd không chạy | Cụm lấy giờ từ host2 qua KVM PTP, `bootTimeout` 2 phút. |
-| 16/10 10:34 | Grafana chạm limit, đọc đĩa liên tục, API gián đoạn 11 phút | Grafana request 384Mi / limit 1Gi, sau đó DB Grafana lên PVC. |
+| 14/10 | Lệnh dry-run ở maintenance mode in config kèm secret | Reset cụm, tạo secret mới. Cấm lệnh này; xem Secret chỉ theo tên khoá. |
+| 15–16/10 | Thiếu RAM, Grafana thrash page cache, API gián đoạn | Giảm RAM CP, nâng limit Grafana, DB Grafana lên PVC. Gốc là HDD. |
 | 20/10 | RAM và IO không đủ cho 3 control plane | Tắt cp2, cp3, còn 1 control plane; nhận rủi ro mất API khi cp1 lỗi. |
-| 27/10 | Khi tiến lại Supabase, StatefulSet Keycloak kẹt vì pod cũ unready (`OrderedReady`) | Xóa pod để revision mới lên. Lần sau tách 2 commit: đổi app trước, tắt DB cũ sau. |
-| 28/10 sáng | Host2 mất Internet: Vault không gọi được KMS nên không unseal, Argo CD không đọc được Git | Đăng nhập lại portal thì tự hồi phục. Thêm cảnh báo `VaultNotReady`. |
-| 28/10 | Harbor trả 500 khi cấp token: khoá ký ở dạng PKCS#8 | Chuyển sang PKCS#1, sửa script sinh khoá. Bài học: thử thành phần mới qua đúng đường mà nơi dùng nó sẽ đi. |
-| 29/10 08:37 | Khởi động lạnh: Keycloak build lại cấu hình, Vault, DB Harbor cùng đọc ghi đĩa; PSI io full khoảng 33%, etcd chậm, API mất khoảng 1 phút, controller-manager và scheduler restart | Tự hồi phục. Cùng gốc HDD; xem mục 6, 7. |
-| 29/10 08:47–09:11 | w2 lên trước nên nhận gần hết pod (request RAM 88% nhưng limit 261%); Talos OOM-kill 2 lần, Grafana restart liên tục; Keycloak bị startup probe kill sau 20 phút build | Xoá pod Keycloak để sang w1, cụm sạch lúc 09:11 (khởi động lạnh khoảng 50 phút). Bài học: request thấp hơn mức dùng thật làm scheduler xếp quá tải một node; sửa bằng request sát thực tế và Keycloak image optimized. |
-| 30/10 sáng | Khởi động lạnh khoảng 25 phút: w2 đầy request, Harbor Pending, Kyverno trả 503 nên demo-app 0 pod | Xoá tay 2 pod. Sửa gốc: PriorityClass `talos-pinned` cho các pod bị ghim w2, chuyển Prometheus, VictoriaLogs và bộ điều khiển lên w3. |
-| 02/11 09:23 | Deploy dừng giữa chừng: Jenkins ghi tag mới trước khi Harbor kịp replicate (10 phút/lần), Kyverno từ chối, Argo CD thử lại 6 phút rồi bỏ | Bấm Sync tay; Argo CD thử lại khoảng 16 phút. Web không gián đoạn. |
-| 03/11 sáng | Jenkins, GitLab, SonarQube trả 502: tunnel SSH nối trước khi có Internet, treo mà service vẫn `active` | Thêm `ConnectTimeout` cho tunnel để tự thử lại. |
-| 03/11 sáng | Khởi động lạnh chậm hơn hôm trước (w2 96% request) | Gốc ở lúc tắt: drain dồn pod sang một node, kubelet đánh dấu pod `Failed` nên sáng hôm sau phải tạo lại và chờ Kyverno. Đổi cách tắt: không drain, tắt control plane trước. |
+| 28/10 sáng | Host2 mất Internet: Vault không unseal, Argo CD không đọc được Git | Đăng nhập lại portal thì tự hồi phục. Thêm cảnh báo `VaultNotReady`. |
+| 29–30/10 | Khởi động lạnh 25–50 phút: một worker nhận gần hết pod, OOM-kill, Keycloak bị kill | Request RAM theo p95 thực tế, PriorityClass, chuyển Prometheus và bộ điều khiển lên w3. |
+| 03/11 sáng | Tunnel SSH tới Jenkins/GitLab treo; khởi động lạnh chậm do drain dồn pod | `ConnectTimeout` cho tunnel; tắt không drain, control plane trước. |
+| 06/11, 10/11, 12/11 | kube-apiserver trên cp1 bị kubelet kill (etcd chậm vì IO), API mất 15 giây tới khoảng 1 phút, controller-manager và scheduler restart theo. Lần 12/11 xảy ra lúc Argo CD áp cert-manager | Không có cảnh báo nào bắn. Đã chuyển RAM sang cp1 (12/11) để có thêm page cache; sẽ thêm rule cảnh báo restart control plane. Gốc vẫn là HDD dùng chung. |
+| 06/11 | Rút điện w1: Keycloak chờ 20 phút vì pod velero node-agent kẹt Terminating chiếm chỗ | Watchdog gắn taint `out-of-service` cho worker chết; bỏ node-agent của Velero (10/11). |
+| 10/11 | Cả ngày không có backup: cụm tắt trước 16:45 mà không backup tay, timer 16:45 lỗi vì cụm đã tắt | Stop script tự backup trước khi tắt, timer bỏ qua khi cụm tắt, watchdog báo tuổi backup (12/11). |
+| 12/11 | Sau khi Grafana khởi động lại, 1 dashboard mất quyền Viewer (provisioning bị huỷ giữa chừng; đã gặp 06/11) | Gán lại quyền trên UI; watchdog báo khi số dashboard người xem thấy lệch với số khai báo. |
 
 ## 6. Giới hạn hiện tại
 
-- **Một ổ HDD cho cả cụm.** PSI io lúc bình thường 10–25%, khi khởi động lạnh hoặc sự cố vượt 30%. Đây là giới hạn chính về độ ổn định.
+- **Một ổ HDD cho cả cụm.** Lúc bình thường cp1 chờ đĩa khoảng 20% thời gian; khi khởi động lạnh hoặc rollout lớn thì etcd chậm và apiserver có thể bị kill. Đây là giới hạn chính về độ ổn định.
 - **Một control plane.** Mất cp1 là mất API cho tới khi bật lại; etcd chỉ có 1 member.
-- **Một máy vật lý.** Không chống được lỗi host hay ổ đĩa; backup đã có bản ngoài máy (B2).
+- **Một máy vật lý.** Không chống được lỗi host hay ổ đĩa (ổ đã chạy khoảng 59.500 giờ); backup đã có bản ngoài máy.
 - **Phụ thuộc Internet qua captive portal.** Mất mạng thì Vault không unseal, Keycloak không vào DB (Supabase), Argo CD không đọc Git, không gửi được Telegram.
-- **Thành phần có trạng thái ghim một worker.** Harbor, Grafana, Vault trên w2; Prometheus, VictoriaLogs trên w3; DB keycloak-db cũ trên w1. Worker đó tắt thì dịch vụ đó ngừng.
-- **w3 phụ thuộc Internet công ty.** KubeSpan qua 2 lớp NAT, mất gói khoảng 1% (đo 30/10, là của đường Internet). w3 không tới được `*.talos.internal`, nên thứ cần Keycloak hoặc Harbor phải ở on-prem.
-- **sudo không mật khẩu** trên host2 (từ 16/10) cho tiện thao tác lab; cần thu hồi khi kết thúc giai đoạn dựng.
-- **Token có hạn**: PAT của Jenkins và GitLab đã gia hạn 02/11, hết hạn khoảng cuối tháng 1/2027.
-- **11 image đang chạy còn CVE CRITICAL** (quét 02/11): 7 image Harbor (có bản sửa trong chart 1.19.4), argocd, k8s-sidecar, flannel chờ upstream, postgres dính CVE ở `gosu` mà pod không dùng.
+- **Prometheus và VictoriaLogs ghim w3** (dữ liệu trên đĩa GCP): w3 tắt thì không có metric, log và cảnh báo trong cụm; watchdog ngoài cụm vẫn chạy.
+- **Log dịch vụ Talos (etcd, kubelet) chỉ nằm trong RAM của node**, giữ khoảng 45 phút; audit log apiserver giữ khoảng 1 ngày.
+- **sudo không mật khẩu** trên host2; thu hẹp sau, cần anh duyệt.
+- **Token có hạn**: PAT Jenkins phải gia hạn trước 22/11. GCP Free Trial (gồm khoá KMS của Vault) hết 22/01/2027.
 
 ## 7. Việc tiếp theo và đề xuất
 
-**Số đo khởi động lạnh** (tới khi mọi app Healthy, không can thiệp tay trừ khi ghi):
+Thứ tự đầy đủ ở `TTS_QTDV/design/audit-10-11.md` mục 7. Việc gần nhất:
 
-| | 29/10 sáng | 29/10 10:16 | 02/11 | 03/11 sáng | 03/11 10:12 (sau sửa) | 03/11 10:51 | 03/11 13:16 (prefetch) | 04/11 sáng (bật thật) |
-|---|---|---|---|---|---|---|---|---|
-| Tổng (từ lúc bật VM) | khoảng 50 phút, xoá pod tay | 12:46 | khoảng 10:14 | 11:30 | 6:53 | 6:14 | **5:59** | 6:22 |
-| demo-app 2 pod | | | +8:32 | +9:07 | +4:17 | +4:34 | | |
-| Keycloak Ready | bị startup probe kill | khoảng 11 phút | khoảng 7:51 | +10:14 (JVM 280 giây) | +6:45 (JVM 98 giây) | +6:14 (JVM 111 giây) | +5:48 (JVM 29 giây) | **+5:16** |
-| Request RAM w1 / w2 lúc lên | 19% / 88% | 93% / 81% | 72% / 64% | 50% / 96% | 64% / 73% | | | |
-| CPU chờ đĩa (iowait) | | | khoảng 30% | 43–64% | 30–41% | | | |
-
-Ba cột cuối đều là lần thử 03/11 có khởi động lại host2 (cache lạnh), sau 3 bản sửa: limit RAM của webhook external-secrets (trước đó đọc 10,7 GB từ đĩa trong 8 phút), tắt cụm không drain và tắt control plane trước, external-secrets kiểm tra chứng chỉ 30 giây. Cột 13:16 thêm sidecar `prefetch` cho Keycloak (đọc tuần tự 381 MB jar trước khi JVM chạy) và tắt 16 plugin Grafana không dùng. Chênh 6:53 và 6:14 là do thứ tự khởi động: Keycloak phải chờ DNS 8–40 giây vì EndpointSlice kube-dns còn trỏ IP CoreDNS cũ cho tới khi CoreDNS mới Ready. Lần 13:16, Keycloak, harbor-jobservice và Grafana về đích cách nhau 11 giây; cả cụm đọc khoảng 5,5 GB từ một ổ HDD, nên khoảng 6 phút là mức sàn nếu không đổi phần cứng. Cột 04/11 là lần bật máy thật buổi sáng đầu tiên sau các bản sửa (host2 tắt qua đêm): Keycloak nhanh hơn 13:16, tổng chậm hơn 23 giây vì harbor-jobservice khởi động trước harbor-core, CrashLoop một vòng, và Grafana về cuối.
-
-Những gì đã sửa từ 29/10: request RAM theo p95 thực tế, Keycloak image optimized, PriorityClass cho pod bị ghim, chuyển Prometheus và bộ điều khiển lên w3, oauth2-proxy không còn phụ thuộc Keycloak lúc khởi động, external-secrets kiểm tra chứng chỉ 30 giây thay vì 5 phút, đổi cách tắt cụm, Keycloak đọc trước jar, Grafana tắt plugin không dùng. Đã thử và lùi AppCDS cho Keycloak (JVM sập khi nạp archive). Phần còn lại là giới hạn phần cứng, cần anh duyệt:
+| Khi | Việc | Cần anh |
+|---|---|---|
+| 13/11 sáng | Đo lại RAM và IO của cp1 sau khi đổi RAM; chặn SSH từ dải pod/node, tắt rpcbind | Không |
+| Trước 16/11 | Sửa gói backup để có khoá Sealed Secrets hiện hành (khoá tự xoay khoảng 14/11) | Duyệt, vì đụng chuỗi backup |
+| Khi máy Phúc có khoá | Tắt đăng nhập SSH bằng mật khẩu trên host2, đổi mật khẩu | Không |
+| Tuần này | Rule cảnh báo restart control plane; bảng hạn credential, gia hạn PAT Jenkins | Không |
+| 17/11 sáng | Nâng Traefik, sau đó Keycloak 26.8.2, Vault 2.2.1 | Không |
+| Sau | Bật NetworkPolicy (Flannel), gửi log Talos ra VictoriaLogs, metrics etcd | Duyệt từng bước |
 
 | Ưu tiên | Đề xuất (cần anh duyệt) | Căn cứ |
 |---|---|---|
-| Cao | **SSD cho đĩa VM** | Đo 03/11: 10 phút đầu khởi động lạnh, CPU của cp1, w1, w2 chờ đĩa 43%, 61%, 50% thời gian; w3 trên GCP 0%. Sau các bản sửa phần mềm còn khoảng 6 phút; lần 13:16 ba pod cuối về đích cách nhau 11 giây, cả cụm đọc khoảng 5,5 GB từ một ổ HDD. Sửa từng app không còn lợi đáng kể. |
-| Trung bình | **Thêm RAM cho worker on-prem** | Từ khi có w3, request on-prem còn khoảng 64–73%; vẫn chật khi một worker tắt. Ưu tiên thấp hơn SSD. |
-| Trung bình | **IaC cho tầng VM và Talos** (Terraform provider libvirt hoặc Ansible; cấu hình máy Talos trong Git) | Tầng Kubernetes đã là GitOps; tầng dưới (tạo VM, patch Talos, HAProxy, script backup trên host2) còn làm tay theo runbook. Chi tiết và thứ tự làm: [de-xuat-iac.md](de-xuat-iac.md). |
-
-| Ưu tiên | Việc nhóm tự làm | Lý do |
-|---|---|---|
-| Xong 05/11 | Tra log theo trường: log JSON tách trường lúc thu (demo, argocd), vmui `logs.talos.internal` sau Keycloak | Góp ý anh 04/11; anh duyệt vmui 05/11. Còn: JSON cho Keycloak, Vault, Traefik access log |
-| Đang làm | Lưu trữ chung cho PV: NFS trên host2 + csi-driver-nfs, StorageClass `nfs-host2` | Anh: lưu trữ phải ở ngoài cụm. Test T1–T8 đạt 05/11 (pod chuyển w2 sang w1 giữ dữ liệu, sập giữa lúc ghi tự phục hồi, mất NFS 60 s chỉ treo không lỗi). fsync trên NFS chậm gấp 4 (51 ms so với 12,7 ms) nên DB (Harbor postgres, Vault) giữ local-path. Harbor registry đã chuyển sang NFS 05/11 (847 file, 550 MB, kéo image thử đạt). Việc tiếp: thêm `/srv/nfs/k8s` vào backup 16:45, cảnh báo NFS, sau 7 ngày xoá PVC registry cũ |
-| Xong 05/11 | Diễn tập khôi phục toàn cụm lên GCP bằng Velero và gói backup | RTO chính 50:52, RTO đầy đủ 54:06, RPO 6–7 phút; cụm thật không bị ảnh hưởng. Chi tiết trong nhật ký 05/11. |
-| Xong 05/11 | Nâng Harbor lên chart 1.19.4 (Harbor 2.15.4) | Backup tay trước; chỉ đổi tag image. |
-| Xong 05/11 | Policy `require-memory-request` từ Warn sang Deny | 3 chỗ thiếu request đã sửa 03/11; 0 vi phạm trong 2 ngày. |
-| Trung bình | Diễn tập khôi phục etcd từ snapshot (cần anh có mặt) | Vault đã diễn tập 29/10; etcd chưa. |
-| Xong 05/11 | Gỡ `keycloak-db` sau diễn tập | Manifest giữ lại cho diễn tập. |
-| Thấp | Thu hồi sudo NOPASSWD trên host2 | Đưa cấu hình về gần production. |
+| Cao | **SSD cho đĩa VM** | Mọi sự cố control plane gần đây đều do IO của HDD dùng chung; sửa phần mềm không còn lợi đáng kể. |
+| Cao | **Laptop bật BitLocker, repo ghi chú TTS_QTDV có remote private** | 2 mục high của audit: laptop giữ khoá SSH, token GCP, khoá init Vault dạng rõ; ghi chú DR chỉ có trên một máy. |
+| Cần anh quyết | Quyền write của Phúc trên talos-gitops; tài khoản GCP break-glass thứ hai | Audit #12, #9. |
