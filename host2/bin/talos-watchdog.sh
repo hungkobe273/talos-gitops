@@ -25,7 +25,7 @@
 # File dieu khien trong $STATE_DIRECTORY (user ngochung tu tao/xoa, khong can sudo):
 #   pause-until     so epoch; truoc thoi diem do script bo qua moi kiem tra
 #   force-test      co file -> gui 1 tin thu roi xoa file
-#   simulate-fail   moi dong 1 ten kiem tra (internet, psi_io, vms, srv_disk, api, nodes, paused,
+#   simulate-fail   moi dong 1 ten kiem tra (internet, psi_io, vms, srv_disk, backup_age, api, nodes, paused,
 #                   prometheus, alertmanager, pipeline) -> coi nhu loi, de thu ma khong dong vao cum
 #
 # Khong bao gio dung `set -x`: token Telegram nam trong bien cuc bo cua tg_send.
@@ -49,6 +49,10 @@ SRV_DISK_MAX="${WATCHDOG_SRV_DISK_MAX:-85}" # % dung cua filesystem chua DISK_DI
 # Worker VM -> ten node, cho taint out-of-service (06/11, xem oos_reconcile)
 OOS_MAP="${WATCHDOG_OOS_MAP:-w1=talos-hdl-7jo w2=talos-iv6-z5m}"
 OOS_TAINT=node.kubernetes.io/out-of-service
+# Tuoi backup (12/11, audit obs0): mtime dau do drop-in 40-stamp.conf cham khi talos-etcd-backup.service thanh cong
+BACKUP_STAMP="${WATCHDOG_BACKUP_STAMP:-/home/ngochung/talos-kvm/.backup-last-ok}"
+BACKUP_MAX_H="${WATCHDOG_BACKUP_MAX_H:-26}"         # T3-T7: hom qua phai co backup (tat cum ~16:50 hoac 10:30)
+BACKUP_MAX_H_MON="${WATCHDOG_BACKUP_MAX_H_MON:-74}" # T2: ban thu 6 van hop le
 
 NS=monitoring
 PROM_SVC=kps-kube-prometheus-stack-prometheus:9090
@@ -177,6 +181,22 @@ chk_srv_disk() {
   [[ -n $p ]] || { echo "khong doc duoc df $DISK_DIR"; return 1; }
   if (( p < SRV_DISK_MAX )); then echo "$DISK_DIR dung ${p}%"; return 0; fi
   echo "$DISK_DIR dung ${p}% (nguong ${SRV_DISK_MAX}%): dia qcow2 cua VM sap day"; return 1
+}
+
+# Chi kiem khi cp1 dang chay (cum tat thi khong co gi moi de backup). Sau ngay nghi (cum khong bat) se bao 1 lan
+# luc sang, dung y: lan backup cuoi da cu; muon im thi cham tay: touch <BACKUP_STAMP>.
+chk_backup_age() {
+  [[ $(virsh -c qemu:///system domstate cp1 2>/dev/null) == running ]] || { echo "cp1 khong chay, bo qua"; return 0; }
+  [[ -f $BACKUP_STAMP ]] || { echo "chua co dau $BACKUP_STAMP (cho lan backup thanh cong dau tien)"; return 0; }
+  local mt max age_h
+  mt=$(stat -c %Y "$BACKUP_STAMP")
+  max=$BACKUP_MAX_H; [[ $(date +%u) == 1 ]] && max=$BACKUP_MAX_H_MON
+  age_h=$(( (now - mt) / 3600 ))
+  if (( age_h >= max )); then
+    echo "backup thanh cong cuoi luc $(date -d "@$mt" '+%H:%M %d/%m') (${age_h} gio truoc, nguong ${max} gio). Chay backup tay (runbook 2.1) hoac kiem journalctl -u talos-etcd-backup"
+    return 1
+  fi
+  echo "backup cuoi $(date -d "@$mt" '+%H:%M %d/%m') (${age_h} gio)"
 }
 
 chk_api() {
@@ -344,6 +364,7 @@ fi
 run_check psi_io chk_psi_io || true
 run_check vms chk_vms || true
 run_check srv_disk chk_srv_disk || true
+run_check backup_age chk_backup_age || true
 
 # Moi kiem tra Kubernetes phu thuoc apiserver: API chet thi chi bao 1 tin, cac muc sau giu nguyen trang thai
 if run_check api chk_api; then
