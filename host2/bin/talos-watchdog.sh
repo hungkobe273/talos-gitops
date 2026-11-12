@@ -26,7 +26,7 @@
 #   pause-until     so epoch; truoc thoi diem do script bo qua moi kiem tra
 #   force-test      co file -> gui 1 tin thu roi xoa file
 #   simulate-fail   moi dong 1 ten kiem tra (internet, psi_io, vms, srv_disk, backup_age, api, nodes, paused,
-#                   prometheus, alertmanager, pipeline) -> coi nhu loi, de thu ma khong dong vao cum
+#                   prometheus, grafana_dash, alertmanager, pipeline) -> coi nhu loi, de thu ma khong dong vao cum
 #
 # Khong bao gio dung `set -x`: token Telegram nam trong bien cuc bo cua tg_send.
 set -euo pipefail
@@ -56,6 +56,8 @@ BACKUP_MAX_H_MON="${WATCHDOG_BACKUP_MAX_H_MON:-74}" # T2: ban thu 6 van hop le
 
 NS=monitoring
 PROM_SVC=kps-kube-prometheus-stack-prometheus:9090
+GRAFANA_SVC=kps-grafana:80
+GRAFANA_SETTLE="${WATCHDOG_GRAFANA_SETTLE:-600}"  # Grafana Ready chua du 10 phut thi chua so (dang provisioning)
 AM_SVC=kps-kube-prometheus-stack-alertmanager:9093
 
 now=$(date +%s)
@@ -222,6 +224,37 @@ chk_prometheus() {
   echo "$out"
 }
 
+# 12/11: Grafana khoi dong lai co the bo do provisioning ("Could not set default permissions ... context canceled",
+# 06/11 va 12/11): dashboard van co nhung Viewer/anonymous bi 403. So so dashboard anonymous thay voi so muc trong
+# ConfigMap nhan grafana_dashboard. Lech thi bao, kem ten dashboard thieu; sua: UI dashboard > Settings > Permissions,
+# them Role Viewer=View, Editor=Edit (URL ...?editview=permissions).
+chk_grafana_dash() {
+  local ready_since cms seen
+  ready_since=$(kk -n "$NS" get pod -l app.kubernetes.io/name=grafana     -o jsonpath='{.items[0].status.conditions[?(@.type=="Ready")].lastTransitionTime}' 2>/dev/null)
+  [[ -n $ready_since ]] || { echo "chua co pod Grafana Ready, bo qua"; return 0; }
+  if (( now - $(date -d "$ready_since" +%s) < GRAFANA_SETTLE )); then echo "Grafana moi Ready luc $ready_since, cho provisioning xong"; return 0; fi
+  cms=$(kk get cm -A -l grafana_dashboard -o json 2>&1) || { echo "khong doc duoc ConfigMap dashboard: $(one_line <<<"$cms")"; return 1; }
+  seen=$(kk get --raw "/api/v1/namespaces/$NS/services/$GRAFANA_SVC/proxy/api/search?type=dash-db&limit=5000" 2>&1)     || { echo "khong goi duoc Grafana /api/search: $(one_line <<<"$seen")"; return 1; }
+  # ConfigMap dashboard co the vai MB (qua gioi han 128 KB cua 1 bien moi truong) -> dua qua stdin
+  SEEN=$seen python3 -c '
+import json, os, sys
+seen = {d.get("uid") for d in json.loads(os.environ["SEEN"])}
+want = {}
+for cm in json.load(sys.stdin)["items"]:
+    for v in (cm.get("data") or {}).values():
+        try:
+            j = json.loads(v)
+        except ValueError:
+            continue
+        want[j.get("uid")] = j.get("title", "?")
+miss = sorted(t for u, t in want.items() if u not in seen)
+if miss:
+    print("anonymous thay %d/%d dashboard, thieu quyen Viewer: %s" % (len(want) - len(miss), len(want), "; ".join(miss)))
+    sys.exit(1)
+print("anonymous thay du %d dashboard" % len(want))
+' <<<"$cms"
+}
+
 chk_alertmanager() {
   local out
   out=$(kk get --raw "/api/v1/namespaces/$NS/services/$AM_SVC/proxy/-/ready" 2>&1) \
@@ -372,6 +405,7 @@ if run_check api chk_api; then
   oos_reconcile apply || true
   run_check paused chk_paused || true
   run_check prometheus chk_prometheus || true
+  run_check grafana_dash chk_grafana_dash || true
   if run_check alertmanager chk_alertmanager; then
     run_check pipeline chk_pipeline || true
   fi
