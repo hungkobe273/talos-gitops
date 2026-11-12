@@ -23,7 +23,9 @@ spec:
   sources:
     - repoURL: https://kyverno.github.io/kyverno
       chart: kyverno
-      targetRevision: 3.9.1
+      # 12/11: 3.9.1 -> 3.9.2 (Kyverno v1.19.2, image verification fixes). Render diff: only images
+      # and an optional CRD field filter. Rollback = revert this commit.
+      targetRevision: 3.9.2
       helm:
         releaseName: kyverno
         valuesObject:
