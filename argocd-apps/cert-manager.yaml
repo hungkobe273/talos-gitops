@@ -10,7 +10,9 @@ spec:
   sources:
     - repoURL: https://charts.jetstack.io
       chart: cert-manager
-      targetRevision: v1.21.2
+      # 12/11: v1.21.2 -> v1.21.3 (Go 1.26.10 CVE fixes, next-private-key Secret ownership fix).
+      # Render diff: images + one optional CRD status field. Rollback = revert this commit.
+      targetRevision: v1.21.3
       helm:
         releaseName: cert-manager
         valueFiles:
