@@ -50,9 +50,11 @@ elif backup_ok_recent; then
   say "backup trong ${BACKUP_FRESH_MIN} phut gan nhat: OK ($(latest_bundle))"
 else
   say "chua co backup thanh cong trong ${BACKUP_FRESH_MIN} phut gan nhat -> chay talos-etcd-backup.service (1-2 phut)"
-  sudo -n systemctl start talos-etcd-backup.service
+  # systemctl start cho unit oneshot chay xong roi moi tra ve; rc=0 la thanh cong. Khong doc lai journal de quyet,
+  # vi dong "Finished" co the chua kip ghi (12/11 15:13: backup thanh cong nhung script bao LOI).
+  sudo -n systemctl start talos-etcd-backup.service; rc=$?
   journalctl -u talos-etcd-backup.service --since "-10 min" --no-pager -o cat 2>/dev/null | grep -E '^OK|LOI|uploaded' | sed "s/^/$(ts)   /"
-  if backup_ok_recent; then
+  if (( rc == 0 )) && [[ $(systemctl show talos-etcd-backup.service -p Result --value) == success ]]; then
     say "backup truoc khi tat: OK ($(latest_bundle))"
   else
     say "LOI: backup that bai, KHONG tat cum. Xem: journalctl -u talos-etcd-backup.service --since today. Sua xong chay lai script (hoac --skip-backup-check neu chap nhan mat backup)"
