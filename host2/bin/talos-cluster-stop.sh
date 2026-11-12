@@ -33,20 +33,27 @@ for a in "$@"; do
   esac
 done
 
-# -1. Backup trong ngay (phai lam TRUOC khi thu Vault ve 0, vi snapshot Vault can Vault dang chay)
-backup_ok_today() {
-  journalctl -u talos-etcd-backup.service --since today --no-pager -o cat 2>/dev/null | grep -q '^Finished talos-etcd-backup.service'
+# -1. Backup ngay truoc khi tat (phai lam TRUOC khi thu Vault ve 0, vi snapshot Vault can Vault dang chay)
+# 12/11: truoc day chi can "hom nay co backup" -> ban backup tay buoi sang du qua cong, chieu tat cum khong backup
+# lai, moi thay doi trong ngay chi con tren HDD host2. Nay: phai co lan backup thanh cong trong BACKUP_FRESH_MIN
+# phut gan nhat (vd timer 16:45 roi tat 16:50 thi khong chay lai), khong co thi chay ngay.
+BACKUP_FRESH_MIN=${BACKUP_FRESH_MIN:-30}
+backup_ok_recent() {  # doc journal vao bien roi moi grep (grep -q trong pipe co the lam journalctl nhan SIGPIPE)
+  local out
+  out=$(journalctl -u talos-etcd-backup.service --since "-${BACKUP_FRESH_MIN} min" --no-pager -o cat 2>/dev/null)
+  grep -q '^Finished talos-etcd-backup.service' <<<"$out"
 }
+latest_bundle() { ls -t "$HOME"/talos-kvm/offsite/*.gpg 2>/dev/null | head -1 | xargs -r basename; }
 if (( SKIP_BACKUP )); then
-  say "CANH BAO: --skip-backup-check, bo qua kiem backup hom nay"
-elif backup_ok_today; then
-  say "backup hom nay: OK ($(ls -t "$HOME"/talos-kvm/offsite/*.gpg 2>/dev/null | head -1 | xargs -r basename))"
+  say "CANH BAO: --skip-backup-check, bo qua backup truoc khi tat"
+elif backup_ok_recent; then
+  say "backup trong ${BACKUP_FRESH_MIN} phut gan nhat: OK ($(latest_bundle))"
 else
-  say "hom nay chua co backup thanh cong -> chay talos-etcd-backup.service (1-2 phut)"
+  say "chua co backup thanh cong trong ${BACKUP_FRESH_MIN} phut gan nhat -> chay talos-etcd-backup.service (1-2 phut)"
   sudo -n systemctl start talos-etcd-backup.service
   journalctl -u talos-etcd-backup.service --since "-10 min" --no-pager -o cat 2>/dev/null | grep -E '^OK|LOI|uploaded' | sed "s/^/$(ts)   /"
-  if backup_ok_today; then
-    say "backup hom nay: OK"
+  if backup_ok_recent; then
+    say "backup truoc khi tat: OK ($(latest_bundle))"
   else
     say "LOI: backup that bai, KHONG tat cum. Xem: journalctl -u talos-etcd-backup.service --since today. Sua xong chay lai script (hoac --skip-backup-check neu chap nhan mat backup)"
     exit 1
