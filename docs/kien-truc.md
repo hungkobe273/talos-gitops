@@ -83,7 +83,7 @@ GitHub Actions và GitLab CE vẫn build cùng app để so sánh, nhưng chỉ 
 | | argo-rollouts | 2.43.8 | blue-green và phân tích |
 | | admission-policies | | PriorityClass `talos-core` (2000, từ 06/11: Traefik, Keycloak, Kyverno, cert-manager, External Secrets, Vault) và `talos-pinned` (1000, pod bị ghim); ValidatingAdmissionPolicy `require-memory-request` (Deny + Audit từ 05/11) |
 | | gcp-tools | | pod nginx `tunnel-proxy` và Ingress cho Jenkins, GitLab, SonarQube trên GCP (qua tunnel SSH của host2) |
-| Bảo mật | kyverno | 3.9.1 (Kyverno 1.19) | ImageValidatingPolicy: chỉ nhận image ký bằng khoá Jenkins, webhook chỉ ở ns demo |
+| Bảo mật | kyverno | 3.9.2 (Kyverno 1.19.2, từ 12/11) | ImageValidatingPolicy: chỉ nhận image ký bằng khoá Jenkins, webhook chỉ ở ns demo |
 | | vault | 0.34.1 (Vault 2.0) | secret của ứng dụng, tự unseal bằng GCP KMS, audit log |
 | | external-secrets | 2.14.0 | đưa secret từ Vault vào Secret của pod |
 | | image-scan | | CronJob Trivy 12:30 T2–T6 quét mọi image đang chạy, alert `ImageScanCritical` khi có CVE CRITICAL |
