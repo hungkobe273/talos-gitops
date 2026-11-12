@@ -1,6 +1,6 @@
 # Đề xuất: thêm RAM cho cp1, lấy từ w1
 
-Người soạn: Hưng. Ngày 12/11/2026. Trạng thái: **chờ anh duyệt**. Chưa đổi gì trên host2 hay cụm.
+Người soạn: Hưng. Ngày 12/11/2026. Trạng thái: **sẽ làm chiều 12/11** sau khi tắt cụm (không chờ duyệt, báo anh sau). Kết quả ghi thêm ở mục 7.
 
 ## 1. Vấn đề
 
@@ -91,6 +91,6 @@ virsh -c qemu:///system setmem    w1 4718592 --config
 
 File XML gốc có sẵn trong `host2/libvirt/` (giá trị hiện tại), dùng được để `virsh define` lại nếu cần.
 
-## 6. Việc nhỏ kèm theo (duyệt riêng)
+## 6. Việc nhỏ kèm theo (làm sau khi đổi RAM)
 
-etcd DB 65 MB nhưng chỉ dùng 25 MB (39 %). Có thể chạy `talosctl -n 10.10.10.11 etcd defrag` một lần lúc cụm rảnh để bớt dung lượng đọc. Lệnh này khoá etcd vài giây, nên chỉ làm khi anh đồng ý và không có rollout nào đang chạy.
+etcd DB 65 MB nhưng chỉ dùng 25 MB (39 %). Có thể chạy `talosctl -n 10.10.10.11 etcd defrag` một lần lúc cụm rảnh để bớt dung lượng đọc. Lệnh này khoá etcd vài giây, nên chỉ làm khi không có rollout nào đang chạy, sau khi cp1 đã có 4 GiB.
