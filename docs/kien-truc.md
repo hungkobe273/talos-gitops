@@ -45,8 +45,8 @@ Sơ đồ: mục 1.2.
 
 | VM | IP | vCPU | RAM | Tên node | Ghi chú |
 |---|---|---|---|---|---|
-| cp1 | 10.10.10.11 | 2 | 3,5 GB | talos-w9b-tsv | control plane duy nhất từ 20/10 |
-| w1 | 10.10.10.21 | 2 | 4,5 GB | talos-hdl-7jo | thường chạy Keycloak, Vault, Kyverno, argocd-server (không ghim); đĩa thứ hai `vdb` 20G cho Longhorn |
+| cp1 | 10.10.10.11 | 2 | 4 GB (3,5 GB tới 12/11) | talos-w9b-tsv | control plane duy nhất từ 20/10 |
+| w1 | 10.10.10.21 | 2 | 4 GB (4,5 GB tới 12/11) | talos-hdl-7jo | thường chạy Keycloak, Vault, Kyverno, argocd-server (không ghim); đĩa thứ hai `vdb` 20G cho Longhorn |
 | w2 | 10.10.10.22 | 2 | 4,5 GB | talos-iv6-z5m | thường chạy Grafana (Longhorn, không ghim); đĩa thứ hai `vdb` 20G cho Longhorn |
 | w3 (GCP) | 10.148.0.4 | 2 | 8 GB | w3 | VM GCP e2-standard-2 (asia-southeast1-b), nối cụm bằng KubeSpan (WireGuard) từ 30/10; taint `cloud=gcp:NoSchedule`; ghim Prometheus, VictoriaLogs; ưu tiên (preferred) Alertmanager, argo-rollouts, sealed-secrets, kube-state-metrics, prometheus-operator, Argo CD repo-server, applicationset, application-controller và redis (controller, redis từ 06/11, `helm` rev 11), job ZAP, job image-scan; không đặt thứ cần `*.talos.internal` lên đây; bật 08:15–17:15 T2–T6, T2/T4 tắt lúc 10:40 (job `w3-stop-mon-wed`, 11:30 tới 10/11) |
 | cp2, cp3 | .12, .13 | | | | tắt, giữ đĩa để bật lại khi cần HA |

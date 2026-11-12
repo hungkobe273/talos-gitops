@@ -1,6 +1,6 @@
 # Đề xuất: thêm RAM cho cp1, lấy từ w1
 
-Người soạn: Hưng. Ngày 12/11/2026. Trạng thái: **sẽ làm chiều 12/11** sau khi tắt cụm (không chờ duyệt, báo anh sau). Kết quả ghi thêm ở mục 7.
+Người soạn: Hưng. Ngày 12/11/2026. Trạng thái: **ĐÃ ĐỔI 12/11 15:16** lúc cụm tắt (cp1 và w1 cùng 4194304 KiB, w2 giữ nguyên). Đo lại sau cold start 13/11 và sau 1 tuần (mục 7).
 
 ## 1. Vấn đề
 
@@ -94,3 +94,8 @@ File XML gốc có sẵn trong `host2/libvirt/` (giá trị hiện tại), dùng
 ## 6. Việc nhỏ kèm theo (làm sau khi đổi RAM)
 
 etcd DB 65 MB nhưng chỉ dùng 25 MB (39 %). Có thể chạy `talosctl -n 10.10.10.11 etcd defrag` một lần lúc cụm rảnh để bớt dung lượng đọc. Lệnh này khoá etcd vài giây, nên chỉ làm khi không có rollout nào đang chạy, sau khi cp1 đã có 4 GiB.
+
+## 7. Kết quả
+
+- 12/11 15:11: lưu log etcd mốc (`~/talos-kvm/etcd-log-20261112.txt`, 2476 dòng). 15:13 backup đủ (etcd, Keycloak, Vault, bundle B2 + GCS). 15:16:22 cụm tắt bằng stop script, 15:16:39 đổi RAM: cp1, w1 4194304 KiB; w2 4718592 KiB.
+- Cần đo: `talosctl memory`, PSI io cp1, số restart kube-apiserver sau cold start 13/11 và sau 1 tuần, so với bảng mục 2.
