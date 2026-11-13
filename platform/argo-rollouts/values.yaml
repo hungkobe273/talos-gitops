@@ -22,6 +22,12 @@ controller:
       memory: 144Mi        # 29/10: p95 116Mi
     limits:
       memory: 256Mi
+  # 13/11: lease 15s/retry 2s = ~30 etcd writes/min for one replica; 42/598 slow applies on cp1 (etcd log).
+  # 60/45/15 -> ~4 writes/min; failover up to 60s is fine (1 replica, deploys are rare).
+  extraArgs:
+    - --leader-election-lease-duration=60s
+    - --leader-election-renew-deadline=45s
+    - --leader-election-retry-period=15s
   metrics:
     enabled: false
 dashboard:
