@@ -42,6 +42,7 @@ Mỗi node dùng đúng schematic đang có, nếu không sẽ mất extension (
 Thứ tự: **w2 → w1 → w3 → cp1** (cp1 cuối, là control plane duy nhất). Mỗi node:
 
 1. Longhorn: mọi volume `healthy`, không volume nào chỉ còn 1 replica trên node sắp nâng.
+   **Trước khi nâng w1/w2:** xoá tay pod `csi-attacher` và `csi-provisioner` nếu chúng nằm trên node sắp nâng. Longhorn tự tạo PDB `minAvailable: 1` cho hai deployment này, mà từ 10/11 mỗi cái chỉ có 1 replica (`platform/longhorn/values.yaml`, để cold start nhẹ), nên drain không evict được (13/11 w2: `error when evicting ... would exceed context deadline`, node bị cordon, upgrade dừng trước khi tải installer). `kubectl delete pod` không bị PDB chặn; pod mới lên ở worker còn lại.
 2. `talosctl -e 10.10.10.11 -n <ip> upgrade --image <installer> --wait`. Talos tự cordon và drain node.
 3. Chờ node `Ready`, `talosctl version` ra v1.14.6, extension đủ như bảng; Longhorn rebuild xong mới sang node kế.
 
