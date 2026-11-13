@@ -1,0 +1,31 @@
+# 13/11: canh bao truoc khi container bi OOMKilled. Sau su co hook argocd-redis-secret-init (limit 64Mi, binary
+# 3.6.1 khong vua, ket 40 phut) va lan ra limit RAM cung ngay (docs/nhat-ky-thay-doi.md 13/11).
+#
+# Dung RSS chu khong dung working set: working set gom ca page cache ma kernel thu hoi duoc (vd external-secrets-webhook
+# working set 237/256Mi nhung RSS 34Mi), nen working set gan limit chua chac la sap OOM.
+# Han che: job/hook chay duoi 10 phut (nhu hook argocd) khong kip ban; rule nay danh cho pod chay lau.
+#
+# Thu tren 7 ngay (06/11-13/11, step 1m): nguong 0.9 khong series nao vuot; nguong 0.8 co 1 series vuot nhung duoi
+# 10 phut. Hai pod sat nhat: argocd-application-controller dinh 1059/1280Mi (p95 772), prometheus 853/1024Mi (p95 799).
+# Prometheus chay tren w3, nen rule chi co hieu luc trong khung 08:15-17:15.
+apiVersion: monitoring.coreos.com/v1
+kind: PrometheusRule
+metadata:
+  name: container-memory
+  namespace: monitoring
+spec:
+  groups:
+    - name: container-memory
+      rules:
+        - alert: ContainerMemoryNearLimit
+          expr: |
+            max by (namespace, pod, container) (container_memory_rss{container!="", container!="POD"})
+              / on (namespace, pod, container)
+            max by (namespace, pod, container) (kube_pod_container_resource_limits{resource="memory"})
+              > 0.9
+          for: 10m
+          labels:
+            severity: warning
+          annotations:
+            summary: "{{ $labels.namespace }}/{{ $labels.pod }} ({{ $labels.container }}) dung {{ $value | humanizePercentage }} limit RAM"
+            description: "RSS (khong tinh page cache) tren 90% limit trong 10 phut, sap bi OOMKilled. Xem RAM pod tren Grafana; neu tang deu thi nang limit trong values cua chart (ghi ly do + so do), neu dot bien thi xem log pod."
