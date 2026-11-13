@@ -1,0 +1,75 @@
+# NHAP (13/11, audit obs1). File nay CHUA duoc Argo sync: app monitoring chi doc platform/monitoring/manifests va
+# platform/monitoring/secrets. Ap = git mv file nay vao manifests/ sau khi Hung duyet, roi push.
+#
+# Van de: kube-apiserver tren cp1 bi kubelet kill (06/11 09:48, 10/11 11:13, 12/11 09:06), KCM/scheduler mat lease
+# theo, ca cum mat API 15 s toi ~1 phut. KubeAPIDown cua kps can for 15m nen khong ban; khong co job scrape
+# etcd/KCM/scheduler. Cac rule duoi day chi dung metric da co: kube-state-metrics (restartCount cua static pod),
+# up{job="apiserver"}, etcd_request_duration_seconds (do apiserver xuat) va PSI cua node-exporter.
+#
+# Gioi han: Prometheus chay tren w3 (GCP) nen rule chi co hieu luc khi w3 bat (khung 08:15-17:15). up{job="apiserver"}
+# do tu w3 qua KubeSpan, nen KubeSpan dut cung lam KubeAPIShortOutage ban.
+#
+# Thu tren 7 ngay du lieu (06/11-13/11, step 1m, "for" tinh xap xi bang do dai khoang lien tuc):
+#   KubeApiserverRestarted: 06/11 09:40, 10/11 11:18, 12/11 09:08. Khong ban luc cold start.
+#   ControlPlaneRestarting: 3 lan tren + 06/11 14:15, 10/11 11:09, 10/11 14:02. Khong ban luc cold start.
+#   KubeAPIShortOutage:     8 lan, gom 3 su co tren, cac lan tat/bat cum co chu dich 06/11 (12:55, 14:14, 15:30)
+#                           va 09/11 08:57 (API mat 6 phut, khong co restart: nghi KubeSpan/w3, chua ro).
+#   EtcdRequestsSlow:       06/11 09:43, 11:34, 15:59 (15:59 trung cold start do lai). Khong bat duoc 10/11, 12/11
+#                           (dot ngan hon 10 phut). Muc nen p99 ~0,9 s do histogram khong co nhan verb.
+#   ControlPlaneIOPressure: 06/11 (7 khoang, ngay dien tap), 10/11 09:57, 11:13, 14:01. Khong ban luc cold start
+#                           (max sang 13/11 0,65 nhung chi 2 phut). Khong bat duoc 12/11 09:06 (dot ngan).
+apiVersion: monitoring.coreos.com/v1
+kind: PrometheusRule
+metadata:
+  name: control-plane
+  namespace: monitoring
+spec:
+  groups:
+    - name: control-plane
+      rules:
+        # increase() theo tung series chi ra ~1.0 cho 1 lan restart (ngoai suy), nen nguong 0.5 la "co it nhat 1 lan".
+        # Static pod giu restartCount qua cold start, nen khong ban luc bat cum.
+        - alert: KubeApiserverRestarted
+          expr: sum by (namespace) (increase(kube_pod_container_status_restarts_total{namespace="kube-system",container="kube-apiserver"}[30m])) > 0.5
+          for: 1m
+          labels:
+            severity: warning
+          annotations:
+            summary: "kube-apiserver tren cp1 restart trong 30 phut qua"
+            description: "Thuong la kubelet kill vi probe het han khi HDD host2 nghen. Xem: talosctl -n 10.10.10.11 logs kubelet | grep -i apiserver; talosctl -n 10.10.10.11 dmesg | grep -i oom; PSI io cp1 tren Grafana."
+        - alert: ControlPlaneRestarting
+          expr: sum(increase(kube_pod_container_status_restarts_total{namespace="kube-system",container=~"kube-apiserver|kube-controller-manager|kube-scheduler"}[30m])) > 2.5
+          for: 1m
+          labels:
+            severity: warning
+          annotations:
+            summary: "apiserver/controller-manager/scheduler restart tong cong {{ $value | humanize }} lan trong 30 phut"
+            description: "KCM va scheduler restart khi mat lease (apiserver hoac etcd cham). kubectl -n kube-system get pod -o wide | grep -E 'apiserver|controller|scheduler'"
+        # KubeAPIDown cua kps can 15 phut; su co that chi 15 s - 1 phut. min_over_time 5m giu tin hieu du lau de
+        # for 2m ban, nhung 1 scrape hong le (30 s) khong du vi can ca 5 phut co it nhat 1 mau 0.
+        - alert: KubeAPIShortOutage
+          expr: min_over_time(up{job="apiserver"}[5m]) == 0
+          for: 2m
+          labels:
+            severity: critical
+          annotations:
+            summary: "Prometheus (w3) khong scrape duoc kube-apiserver trong 5 phut qua"
+            description: "Co the apiserver restart, hoac KubeSpan w3 - on-prem dut. So voi KubeApiserverRestarted; neu khong co restart: talosctl -n 10.10.10.11 get kubespanpeerstatuses."
+        # p99 tren moi verb (histogram khong co nhan verb). Muc nen ~0,9 s; >2 s trong 10 phut chi gap luc su co.
+        - alert: EtcdRequestsSlow
+          expr: histogram_quantile(0.99, sum by (le) (rate(etcd_request_duration_seconds_bucket{job="apiserver"}[5m]))) > 2
+          for: 10m
+          labels:
+            severity: warning
+          annotations:
+            summary: "p99 request apiserver -> etcd {{ $value | humanizeDuration }} trong 10 phut"
+            description: "etcd tren cp1 cham (fsync tren HDD dung chung). Xem: talosctl -n 10.10.10.11 logs etcd | grep -c 'took too long'; iowait host2."
+        # PSI io "some" cua cp1, trung binh 15 phut. Ngay thuong p50 ~0,22; >0,35 trong 10 phut di kem cac su co.
+        - alert: ControlPlaneIOPressure
+          expr: max by (instance) (rate(node_pressure_io_waiting_seconds_total{instance="10.10.10.11:9100"}[15m])) > 0.35
+          for: 10m
+          labels:
+            severity: warning
+          annotations:
+            summary: "cp1 cho IO {{ $value | humanizePercentage }} thoi gian (15 phut)"
+            description: "HDD host2 nghen; apiserver co the bi kill tiep. Tranh rollout lon luc nay; xem iowait host2 va node nao doc/ghi nhieu (Grafana Node Exporter)."
