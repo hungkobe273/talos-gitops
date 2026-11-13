@@ -1,6 +1,6 @@
 # Đề xuất: nâng Argo CD v3.5.7 lên v3.6.1
 
-Người soạn: Hưng. Ngày 13/11/2026. Trạng thái: **Hưng làm 13/11 chiều**. Phải xong trước 30/11/2026, ngày hết hạn mục bỏ qua CVE-2025-68121 trong `platform/image-scan/image-scan.yaml`.
+Người soạn: Hưng. Ngày 13/11/2026. Trạng thái: **ĐÃ NÂNG 13/11 13:07** (helm rev 14; rev 13 lỗi, xem mục 8). Phải xong trước 30/11/2026, ngày hết hạn mục bỏ qua CVE-2025-68121 trong `platform/image-scan/image-scan.yaml`.
 
 Đã kiểm 13/11 12:20: values đang chạy (`helm get values`) khớp `bootstrap/argocd-values.yaml`. Render 10.11.7 và 10.12.1 với cùng values: cùng danh sách tài nguyên. Ngoài CRD (thêm trường `disableExtensionFilter`, sửa mô tả), chỉ khác nhãn version và tag image.
 
@@ -55,3 +55,11 @@ Dry-run không ghi etcd, nên không làm nặng thêm phần ghi đĩa của cp
 
 - Lần đầu lên minor kể từ khi dựng cụm. Khi controller khởi động lại, cả 23 app được refresh cùng lúc, apiserver trên cp1 sẽ có một đợt tải ngắn. Làm lúc không có rollout nào và cụm đã chạy ổn trên 30 phút.
 - 24 HIGH còn lại ở 3.6.1 không chặn (job chỉ chặn CRITICAL).
+
+## 8. Kết quả 13/11
+
+- 12:21 rev 13 **failed**: hook `argocd-redis-secret-init` (limit 64Mi trong values) không chứa nổi binary 3.6.1, đọc lại binary từ đĩa liên tục (`D (disk sleep)`, 33k major fault), sau 10 phút `--wait` hết hạn. Hook chạy trước upgrade nên chưa pod nào bị đổi, Argo CD vẫn 3.5.7.
+- Sửa: `redisSecretInit` request 64Mi, limit 256Mi. Xoá job kẹt, upgrade lại 13:07:28: rev 14 `deployed`, xong 13:08:37.
+- Kiểm 13:10: mọi pod `argocd:v3.6.1`, 0 restart; 23/23 app `Synced Healthy`, không app nào có condition (6 app SSA không `ComparisonError`); controller 5 phút không log error; `/api/version` v3.6.1; `/auth/login` 303 sang Keycloak.
+- Bỏ CVE-2025-68121 khỏi `trivyignore.yaml`.
+- Bài học: trước khi nâng, so cả `resources.limits` tự đặt trong values với bản mới, không chỉ so manifest render.

@@ -70,9 +70,6 @@ data:
       - id: CVE-2026-111497
         statement: "brotli-libs in siderolabs/flannel 0.28.9, shipped with Talos v1.14.2. Fixed by the next Talos upgrade (needs mentor approval)."
         expired_at: 2026-11-30
-      - id: CVE-2025-68121
-        statement: "Go stdlib in argocd v3.5.7 (latest 3.5.x). Fix needs Argo CD 3.6.x, proposal pending mentor approval."
-        expired_at: 2026-11-30
   scan.sh: |
     #!/bin/sh
     # One failed pull must not hide the other results: only CRITICAL (exit 10) fails the Job.
