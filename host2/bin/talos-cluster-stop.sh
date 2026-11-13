@@ -104,6 +104,19 @@ wait_off() {  # vm... : cho toi khi shut off, toi da 200 s
   done
   return 1
 }
+# 2b (13/11). Tat w3 (GCP) TRUOC cp1: talosctl toi w3 di qua cp1 (-e 10.10.10.11). Talos tat may -> GCE chuyen
+# instance sang TERMINATED, lich jenkins-office-hours bat lai 08:15 ngay lam viec ke tiep.
+# Ly do: truoc day w3 chay toi 17:15 (T2/T4 10:40) sau khi cum on-prem da tat; pod tren w3 (kube-state-metrics,
+# argo-rollouts, Prometheus...) mat API va crashloop (kube-state-metrics 378 restart trong 14 ngay).
+# Bat lai trong ngay (vd tat cum giua gio roi bat lai): tu laptop  gcloud compute instances start w3 --zone asia-southeast1-b
+if [[ $(date +%H%M) < 1715 ]] && timeout 20 talosctl -e 10.10.10.11 -n 10.148.0.4 version --short >/dev/null 2>&1; then
+  timeout 30 talosctl -e 10.10.10.11 -n 10.148.0.4 shutdown --force --wait=false >/dev/null 2>&1 \
+    && say "da gui lenh tat w3 (GCP); bat lai trong ngay: gcloud compute instances start w3 --zone asia-southeast1-b" \
+    || say "CANH BAO: khong tat duoc w3, w3 se chay toi lich 17:15 (T2/T4 10:40)"
+else
+  say "w3 khong tra loi hoac da qua 17:15, bo qua"
+fi
+
 say "tat cp1"
 talosctl -n 10.10.10.11 shutdown --force --wait=false >/dev/null 2>&1
 wait_off cp1 && say "cp1 shut off" || say "CANH BAO: cp1 chua shut off sau 200 s"
