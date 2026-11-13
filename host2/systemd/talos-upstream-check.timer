@@ -1,0 +1,12 @@
+# /etc/systemd/system/talos-upstream-check.timer  (13/11)
+[Unit]
+Description=Kiem ban moi upstream luc 09:00 T2-T6
+
+[Timer]
+OnCalendar=Mon..Fri 09:00
+RandomizedDelaySec=5min
+# host2 co the bat muon: chay bu 1 lan khi bat
+Persistent=true
+
+[Install]
+WantedBy=timers.target

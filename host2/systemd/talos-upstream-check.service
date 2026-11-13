@@ -1,0 +1,22 @@
+# /etc/systemd/system/talos-upstream-check.service  (13/11)
+# Bao Telegram khi Longhorn/Talos co ban moi (xem host2/bin/talos-upstream-check.sh). Chay 1 lan roi thoat.
+[Unit]
+Description=Kiem ban moi upstream (Longhorn, Talos) cho CVE dang bo qua co han
+Wants=network-online.target
+After=network-online.target
+
+[Service]
+Type=oneshot
+# Khong can kubeconfig hay virsh: dung user tam cua systemd.
+DynamicUser=yes
+ExecStart=/home/ngochung/bin/talos-upstream-check.sh
+Environment=TG_CHAT_ID=<chat-id, cai bang lenh trong nhat ky, lay tu talos-watchdog.service>
+LoadCredential=telegram-bot-token:/etc/talos-etcd-backup/telegram-bot-token
+StateDirectory=talos-upstream-check
+TimeoutStartSec=120
+Nice=10
+IOSchedulingClass=idle
+NoNewPrivileges=yes
+PrivateTmp=yes
+ProtectSystem=strict
+ProtectHome=read-only

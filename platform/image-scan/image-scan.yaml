@@ -68,7 +68,7 @@ data:
         statement: "uv in longhorn-instance-manager v1.13.0. Same as above."
         expired_at: 2026-11-30
       - id: CVE-2026-111497
-        statement: "brotli-libs in siderolabs/flannel 0.28.9, shipped with Talos v1.14.2. Fixed by the next Talos upgrade (needs mentor approval)."
+        statement: "brotli-libs in siderolabs/flannel 0.28.9, shipped with Talos v1.14.2. Talos v1.14.6 (flannel v0.28.10) still has it (Trivy 13/11); host2 talos-upstream-check.timer reports newer releases."
         expired_at: 2026-11-30
   scan.sh: |
     #!/bin/sh
