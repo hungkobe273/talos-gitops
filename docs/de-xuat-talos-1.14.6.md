@@ -1,6 +1,6 @@
 # Đề xuất: nâng Talos v1.14.2 lên v1.14.6
 
-Người soạn: Hưng. Ngày 13/11/2026. Trạng thái: **w2, w1 đã nâng 13/11 (14:07–14:20); còn w3, cp1**. Kubernetes giữ nguyên 1.37.1.
+Người soạn: Hưng. Ngày 13/11/2026. Trạng thái: **w2, w1, w3 đã nâng 13/11 (14:07–15:42); còn cp1**. Kubernetes giữ nguyên 1.37.1.
 
 ## 1. Tóm tắt
 
@@ -67,3 +67,4 @@ Sau cùng: nâng `talosctl` trên host2 lên v1.14.6, sửa phiên bản trong `
 - w2: lần 1 13:51 drain lỗi (PDB CSI, xem mục 3). Lần 2 14:07–14:10. w1 14:15–14:20, sau khi Longhorn healthy. Đủ extension, tự uncordon, apiserver 0 restart.
 - **demo-app sập khoảng 17 phút (14:18–14:35)** lúc nâng w1: 2 pod cùng ở w1; Kyverno admission (1 bản) cũng ở w1; policy kiểm chữ ký image failurePolicy Fail nên không tạo được pod mới; ReplicaSet chờ backoff. Trước khi nâng w3, cp1 hoặc lần sau: rải pod demo-app theo node (`topologySpreadConstraints`) và cho Kyverno admission 2 bản; tạm thời có thể kiểm `kubectl get pod -o wide` và xoá bớt một pod demo-app để nó lên node khác trước khi drain.
 - 15:25, sau khi thêm PDB demo-app và Kyverno 2 bản: `kubectl drain --dry-run=server` w1, w2 và bảng PDB. demo-app và Kyverno mỗi cái 1 pod/worker, `allowed=1`: drain worker nào cũng qua. Còn chặn: `csi-attacher`, `csi-provisioner` (`allowed=0`, 1 replica, xoá tay như mục 3) và PDB instance-manager của Longhorn. PDB instance-manager chỉ được Longhorn gỡ khi node bị cordon thật, nên dry-run luôn báo chặn; drain thật w1, w2 hôm nay đã qua. w3, cp1 không có pod nào thuộc PDB.
+- w3 15:38–15:43 bằng `talos-upgrade-node.sh --yes`: không lỗi, 23/23 app Healthy sau đó.
