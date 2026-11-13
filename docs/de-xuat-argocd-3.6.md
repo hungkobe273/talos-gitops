@@ -63,3 +63,14 @@ Dry-run không ghi etcd, nên không làm nặng thêm phần ghi đĩa của cp
 - Kiểm 13:10: mọi pod `argocd:v3.6.1`, 0 restart; 23/23 app `Synced Healthy`, không app nào có condition (6 app SSA không `ComparisonError`); controller 5 phút không log error; `/api/version` v3.6.1; `/auth/login` 303 sang Keycloak.
 - Bỏ CVE-2025-68121 khỏi `trivyignore.yaml`.
 - Bài học: trước khi nâng, so cả `resources.limits` tự đặt trong values với bản mới, không chỉ so manifest render.
+
+## 9. Đo sau khi nâng (13/11 15:35, Prometheus, cửa sổ 13:08–15:30 so với cùng giờ 12/11 lúc còn 3.5.7)
+
+| argocd-application-controller | 3.5.7 (12/11) | 3.6.1 (13/11) |
+|---|---|---|
+| RSS trung bình | 603 MiB | **527 MiB** |
+| RSS đỉnh | 994 MiB | 853 MiB (đỉnh 13:29 sau lần khởi động; từ 14:00, lúc nâng Talos w1/w2, tối đa 763) |
+| CPU trung bình | 64 millicore | 74 millicore (+15 %) |
+| Request dry-run lên apiserver | 0,03/s | **0,52/s** (Server-Side Diff của 6 app SSA) |
+
+RAM không tăng, limit 1280Mi còn dư. Server-Side Diff thêm khoảng 0,5 request/s dry-run lên apiserver cp1. Dry-run không ghi etcd. Tổng request apiserver 11,8/s so với 7,6/s hôm qua, nhưng chiều nay còn có nâng Talos 2 worker và Kyverno, descheduler chạy tay, nên chưa tách được phần của Argo CD. Đo lại tổng request lúc cụm yên, thứ 2 16/11.
