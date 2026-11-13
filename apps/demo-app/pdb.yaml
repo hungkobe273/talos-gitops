@@ -1,0 +1,18 @@
+# 13/11: drain evicts at most 1 demo-app pod at a time and waits until the replacement is Ready elsewhere.
+# Why: Talos upgrade w1 13/11 14:15. Both pods were on w1 (they had moved there while w2 was cordoned; the
+# topologySpreadConstraints in deployment.yaml only act at scheduling time, the descheduler runs every 30 min),
+# so drain evicted both at once and demo-app was down 14:18-14:35 (Kyverno, also on w1, blocked new pods).
+# With this PDB the same drain would have evicted one pod, waited for its replacement on w2, then the other.
+# Side effect: if no replacement can start (e.g. Kyverno admission down), the drain waits instead of taking
+# demo-app down; talosctl upgrade then times out and leaves the node cordoned (kubectl uncordon to undo).
+# During blue-green there are 4 pods (old + new); the PDB counts all of them, which only makes drain easier.
+apiVersion: policy/v1
+kind: PodDisruptionBudget
+metadata:
+  name: demo-app
+  namespace: demo
+spec:
+  maxUnavailable: 1
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: demo-app

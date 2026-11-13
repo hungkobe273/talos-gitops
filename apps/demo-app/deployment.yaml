@@ -23,7 +23,8 @@ spec:
       # Private registry: pull secret created from a SealedSecret (ghcr read token).
       imagePullSecrets:
         - name: ghcr-pull
-      # Spread the 2 replicas over different nodes (one per worker).
+      # Spread the 2 replicas over different nodes (one per worker). Only applies at scheduling time:
+      # pods that piled up on one node (e.g. while the other was cordoned) stay there; pdb.yaml covers drains.
       topologySpreadConstraints:
         - maxSkew: 1
           topologyKey: kubernetes.io/hostname
