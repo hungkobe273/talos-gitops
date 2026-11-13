@@ -56,6 +56,23 @@ data:
     images = sorted({re.sub(r"^harbor\.talos\.internal/talos/", "ghcr.io/hungkobe273/", i) for i in images})
     open("/shared/images.txt", "w").write("\n".join(images) + "\n")
     print(f"{len(images)} images")
+  # Known CRITICALs with a fix upstream but none we can take yet. Each entry expires: after
+  # expired_at Trivy reports it again and the Job fails, so a forgotten entry cannot hide it.
+  # Add/extend only with a reason and a date; log it in docs/nhat-ky-thay-doi.md.
+  trivyignore.yaml: |
+    vulnerabilities:
+      - id: SUSE-SU-2026:4619-1
+        statement: "libexpat1 in Longhorn v1.13.0 images (5). No Longhorn 1.13.1 yet (checked 13/11); upgrade when released."
+        expired_at: 2026-11-30
+      - id: GHSA-hq85-5cpj-mr62
+        statement: "uv in longhorn-instance-manager v1.13.0. Same as above."
+        expired_at: 2026-11-30
+      - id: CVE-2026-111497
+        statement: "brotli-libs in siderolabs/flannel 0.28.9, shipped with Talos v1.14.2. Fixed by the next Talos upgrade (needs mentor approval)."
+        expired_at: 2026-11-30
+      - id: CVE-2025-68121
+        statement: "Go stdlib in argocd v3.5.7 (latest 3.5.x). Fix needs Argo CD 3.6.x, proposal pending mentor approval."
+        expired_at: 2026-11-30
   scan.sh: |
     #!/bin/sh
     # One failed pull must not hide the other results: only CRITICAL (exit 10) fails the Job.
@@ -63,7 +80,8 @@ data:
     critical=0
     while read -r img; do
       trivy image --skip-db-update --no-progress --quiet --cache-dir /cache --platform linux/amd64 \
-        --scanners vuln --severity CRITICAL --ignore-unfixed --exit-code 10 --timeout 10m "$img"
+        --scanners vuln --severity CRITICAL --ignore-unfixed --exit-code 10 --timeout 10m \
+        --ignorefile /scripts/trivyignore.yaml --show-suppressed "$img"
       rc=$?
       case $rc in
         0) r=ok ;;
