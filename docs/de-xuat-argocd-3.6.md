@@ -1,6 +1,8 @@
 # Đề xuất: nâng Argo CD v3.5.7 lên v3.6.1
 
-Người soạn: Hưng. Ngày 13/11/2026. Trạng thái: **chờ anh duyệt**. Hạn mong muốn: trước 30/11/2026, ngày hết hạn mục bỏ qua CVE-2025-68121 trong `platform/image-scan/image-scan.yaml`.
+Người soạn: Hưng. Ngày 13/11/2026. Trạng thái: **Hưng làm 13/11 chiều**. Phải xong trước 30/11/2026, ngày hết hạn mục bỏ qua CVE-2025-68121 trong `platform/image-scan/image-scan.yaml`.
+
+Đã kiểm 13/11 12:20: values đang chạy (`helm get values`) khớp `bootstrap/argocd-values.yaml`. Render 10.11.7 và 10.12.1 với cùng values: cùng danh sách tài nguyên. Ngoài CRD (thêm trường `disableExtensionFilter`, sửa mô tả), chỉ khác nhãn version và tag image.
 
 ## 1. Vấn đề
 
@@ -31,7 +33,7 @@ Theo tài liệu upgrading 3.5-3.6 của Argo CD:
 
 Dry-run không ghi etcd, nên không làm nặng thêm phần ghi đĩa của cp1 (`de-xuat-ram-cp1.md`). apiserver sẽ tốn thêm CPU và RAM một chút. Nếu thấy nặng, gắn annotation `argocd.argoproj.io/compare-options: ServerSideDiff=false` cho app đó để quay về cách diff cũ.
 
-## 5. Cách làm (Hưng chạy trên host2, giờ làm việc, sau khi anh duyệt)
+## 5. Cách làm (Hưng chạy trên host2, giờ làm việc)
 
 1. Kiểm values đang chạy khớp repo: `helm get values argocd -n argocd` so với `bootstrap/argocd-values.yaml`.
 2. Render 2 chart cùng values (`helm template` 10.11.7 và 10.12.1), đọc `diff`. Chỉ mong thấy đổi tag image, nhãn version và phần liên quan 3.6. Thấy gì lạ thì dừng.
