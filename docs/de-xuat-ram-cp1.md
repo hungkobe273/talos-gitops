@@ -98,4 +98,18 @@ etcd DB 65 MB nhưng chỉ dùng 25 MB (39 %). Có thể chạy `talosctl -n 10.
 ## 7. Kết quả
 
 - 12/11 15:11: lưu log etcd mốc (`~/talos-kvm/etcd-log-20261112.txt`, 2476 dòng). 15:13 backup đủ (etcd, Keycloak, Vault, bundle B2 + GCS). 15:16:22 cụm tắt bằng stop script, 15:16:39 đổi RAM: cp1, w1 4194304 KiB; w2 4718592 KiB.
-- Cần đo: `talosctl memory`, PSI io cp1, số restart kube-apiserver sau cold start 13/11 và sau 1 tuần, so với bảng mục 2.
+- 13/11 09:14 (cụm bật 08:39, chạy 35 phút; mốc 12/11 đo lúc cụm chạy 1 giờ):
+
+  | | 12/11 09:29 | 13/11 09:14 |
+  |---|---|---|
+  | cp1 kernel thấy (MiB) | 3394 | 3898 |
+  | cp1 page cache (MiB) | 1011 | 1376 |
+  | cp1 còn dùng được (MiB) | 916 | **1443** |
+  | cp1 PSI io `some` avg300 | 21.65 % | **21.84 %** |
+  | cp1 PSI memory `some` avg300 | 0.02 % | 0 % |
+  | w1 còn dùng được (MiB) | 2399 | 1985 |
+  | Pod Pending | 0 | 0 |
+
+  kube-apiserver 0 restart; scheduler và controller-manager mỗi cái 3 restart, cùng lúc 08:41:05 (2 phút sau khi bật cp1, lúc apiserver chưa sẵn sàng nên mất lease), là kiểu restart lúc khởi động, không phải loại 12/11.
+- Đọc: RAM đạt mục tiêu (cp1 thêm khoảng 530 MiB dùng được, page cache thêm 365 MiB, w1 vẫn dư gần 2 GiB). **PSI io không đổi**, nên chỗ chờ đĩa của cp1 không do đọc lại vì thiếu cache mà chủ yếu do ghi (fsync của etcd) trên HDD dùng chung. Hướng tiếp nếu còn restart: đo `etcd_disk_wal_fsync_duration_seconds`, cân nhắc `etcd defrag` (mục 6) hoặc đặt đĩa cp1 riêng.
+- Cần đo tiếp: sau 1 tuần (20/11) đếm restart kube-apiserver và PSI io lúc cụm chạy ổn định.

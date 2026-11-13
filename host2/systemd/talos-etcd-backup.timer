@@ -1,0 +1,10 @@
+[Unit]
+Description=Snapshot etcd talos-kvm hang ngay 16:45
+
+[Timer]
+OnCalendar=*-*-* 16:45:00
+AccuracySec=1min
+Persistent=false
+
+[Install]
+WantedBy=timers.target

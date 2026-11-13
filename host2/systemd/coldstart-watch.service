@@ -1,0 +1,16 @@
+# Cold start recorder (03/11), runs once per boot for 20 minutes. Log: ~/talos-kvm/coldstart-logs/.
+# 10/11: re-enabled for the w2 sandbox delay, Vault on Longhorn and BFQ questions. Disable when answered:
+#   sudo systemctl disable coldstart-watch.service
+[Unit]
+Description=Record kube-dns endpoints, CoreDNS and Keycloak during cold start
+After=network-online.target libvirtd.service
+Wants=network-online.target
+
+[Service]
+Type=simple
+User=ngochung
+Environment=KUBECONFIG=/home/ngochung/.kube/config
+ExecStart=/bin/bash /home/ngochung/talos-kvm/coldstart-watch.sh
+
+[Install]
+WantedBy=multi-user.target

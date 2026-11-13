@@ -1,0 +1,13 @@
+# /etc/systemd/system/talos-watchdog.timer  (BAN NHAP - Phuc 23/10)
+[Unit]
+Description=Chay talos-watchdog moi 3 phut
+
+[Timer]
+# Phut 0,3,6,... Lan dau sau boot van chay, nhung script tu bo qua 15 phut dau (khoi dong lanh).
+OnCalendar=*:0/3
+AccuracySec=20s
+# Khong chay bu cac lan lo khi host tat (host2 tat 17:00 moi ngay)
+Persistent=false
+
+[Install]
+WantedBy=timers.target

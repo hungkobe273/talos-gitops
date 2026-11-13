@@ -1,0 +1,10 @@
+[Unit]
+Description=Gui canh bao Telegram khi %i loi
+
+[Service]
+Type=oneshot
+DynamicUser=yes
+SupplementaryGroups=systemd-journal
+LoadCredential=bot-token:/etc/talos-etcd-backup/telegram-bot-token
+ExecStart=/usr/local/bin/talos-etcd-backup-notify %i
+TimeoutStartSec=2min

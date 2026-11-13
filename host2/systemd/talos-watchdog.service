@@ -1,0 +1,47 @@
+# /etc/systemd/system/talos-watchdog.service  (BAN NHAP - Phuc 23/10, Hung duyet truoc khi cai)
+# Giam sat cum talos-kvm tu ngoai cum. Chay 1 lan roi thoat (timer goi moi 3 phut).
+[Unit]
+Description=talos-kvm watchdog ngoai cum (Internet, PSI, VM, API, node, Prometheus, Alertmanager)
+Wants=network-online.target
+After=network-online.target libvirtd.service
+# Script hong (loi bash, thieu lenh) -> dung lai unit bao loi Telegram co san cua backup.
+# CAN KIEM TRA noi dung tin cua talos-etcd-backup-notify@.service truoc (systemctl cat ...);
+# neu tin ghi cung "backup etcd" thi bo dong nay hoac tao notify rieng.
+OnFailure=talos-etcd-backup-notify@%n.service
+
+[Service]
+Type=oneshot
+# Can doc ~/talos-kvm/kubeconfig (chmod 700 cua ngochung) va goi virsh qemu:///system (nhom libvirt)
+# -> khong dung DynamicUser duoc, chay bang user ngochung.
+User=ngochung
+Group=ngochung
+ExecStart=/home/ngochung/bin/talos-watchdog.sh
+
+Environment=KUBECONFIG=/home/ngochung/talos-kvm/kubeconfig
+Environment=TG_CHAT_ID=<chat-id, xem may host2>
+# CAN KIEM TRA: `command -v kubectl virsh curl` tren host2 roi sua PATH cho khop
+Environment=PATH=/home/ngochung/bin:/usr/local/bin:/usr/bin:/bin
+
+# Token doc bang quyen root luc khoi dong unit, cap cho user cua unit qua $CREDENTIALS_DIRECTORY
+# (ramfs, chi user cua unit + root doc duoc). Dung chung file voi backup etcd.
+LoadCredential=telegram-bot-token:/etc/talos-etcd-backup/telegram-bot-token
+
+# /var/lib/talos-watchdog, chu so huu ngochung (do User=), giu qua reboot
+StateDirectory=talos-watchdog
+StateDirectoryMode=0700
+
+TimeoutStartSec=150
+# Nhuong IO/CPU cho VM: host chi co 1 HDD
+Nice=10
+IOSchedulingClass=idle
+
+# Lam cung: chi ghi duoc StateDirectory
+NoNewPrivileges=yes
+PrivateTmp=yes
+ProtectSystem=strict
+ProtectHome=read-only
+ProtectKernelTunables=yes
+ProtectControlGroups=yes
+RestrictSUIDSGID=yes
+# CAN KIEM TRA: virsh ket noi socket /run/libvirt/libvirt-sock duoi ProtectSystem=strict.
+# Neu `vms` bao loi ket noi, them: ReadWritePaths=/run/libvirt
