@@ -27,6 +27,9 @@ until paused=$($K -n argocd get application -o jsonpath='{range .items[*]}{.meta
   sleep 5
 done
 paused=$(tr ' ' '\n' <<<"$paused" | grep -v '=$' | grep -v '^$' | cut -d= -f1 | tr '\n' ' ')
+# 13/11: stop script tat ca w3; bat cum lai trong ngay thi w3 chi len lai luc 08:15 hom sau.
+w3_ready=$($K get node w3 -o jsonpath='{.status.conditions[?(@.type=="Ready")].status}' 2>/dev/null)
+[[ $w3_ready == True ]] || say "LUU Y: w3 (GCP) chua Ready. Neu ngoai 08:15-17:15 hoac vua tat cum giua gio: tu laptop gcloud compute instances start w3 --zone asia-southeast1-b"
 [[ -z $paused ]] && { say "khong co app nao bi tam dung, thoat"; exit 0; }
 say "app dang tam dung: $paused"
 
