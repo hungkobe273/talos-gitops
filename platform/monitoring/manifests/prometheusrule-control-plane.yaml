@@ -1,5 +1,5 @@
-# NHAP (13/11, audit obs1). File nay CHUA duoc Argo sync: app monitoring chi doc platform/monitoring/manifests va
-# platform/monitoring/secrets. Ap = git mv file nay vao manifests/ sau khi Hung duyet, roi push.
+# AP 13/11 (audit obs1): Hung duyet, chuyen vao manifests/ de Argo sync (app monitoring).
+# Lui: git mv file nay ra khoi manifests/ roi push.
 #
 # Van de: kube-apiserver tren cp1 bi kubelet kill (06/11 09:48, 10/11 11:13, 12/11 09:06), KCM/scheduler mat lease
 # theo, ca cum mat API 15 s toi ~1 phut. KubeAPIDown cua kps can for 15m nen khong ban; khong co job scrape
