@@ -30,7 +30,14 @@ spec:
         releaseName: kyverno
         valuesObject:
           admissionController:
-            replicas: 1
+            # 13/11: 1 -> 2. Talos upgrade of w1: the only replica was on w1, the image-signature policy is
+            # failurePolicy Fail, so no demo-app pod could be created for ~6 min (demo-app down 14:18-14:35).
+            # The chart's default preferred anti-affinity puts one replica per worker; the PDB keeps one
+            # running during a drain. Cost: +176Mi request on the other worker (w1 60%, w2 77% on 13/11).
+            replicas: 2
+            podDisruptionBudget:
+              enabled: true
+              minAvailable: 1
             # 06/11: talos-core, must run on the surviving worker (platform/admission-policies/priority-core.yaml).
             priorityClassName: talos-core
             container:
