@@ -104,6 +104,7 @@ Talos v1.14.2, Kubernetes v1.37.1, CNI Flannel.
 - **Secret**: hạ tầng dùng Sealed Secrets. Biến môi trường của ứng dụng nằm ở Vault (`kv/demo/demo-app`), External Secrets đưa vào pod; đổi giá trị không cần commit.
 - **Đăng nhập**: Keycloak SSO cho Grafana, Argo CD, Headlamp, Vault, Jenkins, GitLab, SonarQube, và Prometheus, Alertmanager, vmui của VictoriaLogs qua oauth2-proxy. Quyền theo nhóm `talos-admins`, `talos-viewers`. Mỗi công cụ giữ một tài khoản dự phòng khi Keycloak hỏng.
 - **Mạng**: dịch vụ chỉ mở trong LAN qua HAProxy. w3 nối cụm bằng WireGuard (KubeSpan); firewall GCP chỉ mở UDP 51820 và API Talos cho IP công ty.
+- **SSH vào host2** (từ 13/11, `host2/ssh/`): cấm root, tắt keyboard-interactive; từ mạng VM `10.10.10.0/24` và mạng pod `10.244.0.0/16` không ai đăng nhập được (`DenyUsers *`), nên pod bị chiếm không SSH ngược lên host2. Mật khẩu vẫn mở cho tới khi mọi máy cần vào đã có khoá (giai đoạn B, `20-no-password.conf`). rpcbind (cổng 111) đã `mask`, host2 không dùng NFS.
 
 ## 6. Vận hành
 

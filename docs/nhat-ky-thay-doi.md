@@ -4,6 +4,14 @@ Ghi mỗi thay đổi về hạ tầng, cấu hình cụm hoặc ứng dụng: n
 
 Thay đổi nằm ngoài repo này (host2, cấu hình Talos) cũng ghi ở đây, vì repo không chứa file cấu hình Talos (có secret).
 
+## 13/11/2026
+
+| Thay đổi | Lý do | Commit |
+|---|---|---|
+| **SSH host2, giai đoạn A** (08:51): cài `host2/ssh/10-hardening.conf` (`PermitRootLogin no`, `KbdInteractiveAuthentication no`) và `90-deny-lab-subnets.conf` (`Match Address 10.10.10.0/24,10.244.0.0/16` → `DenyUsers *`) vào `/etc/ssh/sshd_config.d/`, reload ssh. Kiểm bằng `sshd -t` và `sshd -T -C`: hai dải lab ra `denyusers *`, IP laptop không; phiên mới vào được, 2 tunnel GCP vẫn active. Chưa tắt mật khẩu | Audit 10–12/11 sec3 + C1: pod hoặc node bị chiếm tới thẳng cổng 22 của host2; mật khẩu đang dùng chung | (commit này) |
+| **Mask rpcbind** (`rpcbind.socket`, `rpcbind.service`, `mask --now`): cổng 111 đóng | Audit sec3: dịch vụ không dùng (host2 không mount NFS) nhưng mở trên mọi địa chỉ; chỉ `disable` thì nfs-common kéo lên lại. Lùi: `systemctl unmask` rồi `start` | (commit này) |
+| Bật cụm bằng tay 08:39 (`virsh start`), chạy `talos-cluster-resume.sh` tay 08:40–08:44 | Tối 12/11 host2 không tắt máy nên VM không tự bật khi boot và resume service không chạy. Backup 16:45 ngày 12/11 được bỏ qua đúng thiết kế (`05-skip-if-cluster-off`, không báo lỗi) | – |
+
 ## 12/11/2026
 
 | Thay đổi | Lý do | Commit |
