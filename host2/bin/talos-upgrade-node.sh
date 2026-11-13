@@ -74,7 +74,9 @@ say "bat dau upgrade"
 T upgrade --image "$IMAGE" --wait --timeout 20m 2>&1 | grep -vE '^\s*$' | tail -8 || true
 NEW=$(T version 2>/dev/null | awk '/Server:/{s=1} s&&/Tag:/{print $2; exit}')
 EXT_AFTER=$(T get extensions 2>/dev/null | awk 'NR>1{print $6}' | sort | tr '\n' ' ')
-UNS=$(kubectl get node "$NAME" -o jsonpath='{.spec.unschedulable}')
+# cp1: apiserver co the chua tra loi ngay sau khi node len; thu lai toi 5 phut.
+for _ in $(seq 1 30); do UNS=$(kubectl get node "$NAME" -o jsonpath='{.spec.unschedulable}' 2>/dev/null) && break; UNS=ERR; sleep 10; done
+[[ $UNS != ERR ]] || die "apiserver khong tra loi sau 5 phut (talosctl -e $EP -n $EP service; logs kubelet)"
 say "sau upgrade: tag=$NEW extension=$EXT_AFTER unschedulable=${UNS:-false}"
 [[ $NEW == "$VER" ]] || die "node khong len $VER (lui: talosctl -e $EP -n $NODE rollback; neu con cordon: kubectl uncordon $NAME)"
 [[ $EXT_AFTER == "$EXT_BEFORE" ]] || die "extension khac truoc! truoc: $EXT_BEFORE sau: $EXT_AFTER"
@@ -84,9 +86,9 @@ say "sau upgrade: tag=$NEW extension=$EXT_AFTER unschedulable=${UNS:-false}"
 STUCK='Pending|ContainerCreating|PodInitializing|Init:|CrashLoopBackOff|ImagePull|ErrImage|Terminating|0/[0-9]+ +Running'
 say "cho Longhorn healthy va pod on dinh (toi da 30 phut)"
 for _ in $(seq 1 60); do
-  R=$(kubectl -n longhorn-system get volumes.longhorn.io -o jsonpath='{range .items[*]}{.status.robustness} {end}')
+  R=$(kubectl -n longhorn-system get volumes.longhorn.io -o jsonpath='{range .items[*]}{.status.robustness} {end}' 2>/dev/null || echo "api-loi ")
   # Chi dem pod dang ket (khong dem pod Error/Completed cu cua Job, vd image-scan hom truoc).
-  P=$(kubectl get pod -A --no-headers | grep -cE "$STUCK" || true)
+  P=$(kubectl get pod -A --no-headers 2>/dev/null | grep -cE "$STUCK" || true)
   if ! echo "$R" | grep -qvE '^(healthy )+$' && [[ $P -eq 0 ]]; then say "on dinh: Longhorn $R, pod treo 0"; exit 0; fi
   sleep 30
 done
