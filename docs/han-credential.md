@@ -11,7 +11,7 @@ Cách kiểm lại cột "Hết hạn":
 
 | Credential | Dùng ở | Loại | Hết hạn | Gãy gì khi hết | Gia hạn |
 |---|---|---|---|---|---|
-| Jenkins `github-read` | Jenkins job `demo-app-gce`, checkout `talos-demo-app` | PAT fine-grained, Contents read, 30 ngày | **khoảng 22/11/2026** (Hưng kiểm lại trên GitHub) | Build không checkout được | Mục 2 |
+| Jenkins `github-read` | Jenkins job `demo-app-gce`, checkout `talos-demo-app` | PAT fine-grained `jenkins-gce-read-demo-app`, Contents read | **31/01/2027** (regenerate 13/11) | Build không checkout được | Mục 2 |
 | Jenkins `ghcr` | Jenkins push image lên GHCR | PAT classic `write:packages`, 90 ngày | Hưng điền (runbook ghi "2 PAT hết hạn khoảng 22/11") | Build không push image | Mục 2 |
 | Jenkins `sonarqube-token` | Jenkins phân tích SonarQube | Token SonarQube, 90 ngày | Hưng điền (xem trong SonarQube, My Account, Security) | Bước SonarQube lỗi | Tạo token mới trong SonarQube, cập nhật credential |
 | Secret `ghcr-pull` (ns `demo`, `keycloak`, SealedSecret trong Git) | Cụm kéo image từ GHCR, Kyverno đọc chữ ký, `image-scan` | PAT classic `read:packages` | Chưa ghi ở đâu (tạo 15/10). Hưng điền | Pod mới không kéo được image, Kyverno từ chối pod | Tạo PAT mới, seal lại bằng `kubeseal`, commit |
