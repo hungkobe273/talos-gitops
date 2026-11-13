@@ -1,7 +1,10 @@
 # Rebalance pods after a cold start: the first worker to become Ready
 # takes every Pending pod (incident 20/10: 21 pods on w2, 1 on w1).
 kind: CronJob
-schedule: "*/10 * * * *"
+# 13/11: */10 -> */30. Each run (Job + pod + events) lands on cp1 etcd with slow applies at :00/:10/:20
+# (etcd log 13/11 08:47-09:16), while normal runs evict 0 pods. 30 min still rebalances within the
+# first hour after a cold start.
+schedule: "*/30 * * * *"
 startingDeadlineSeconds: 300
 successfulJobsHistoryLimit: 1
 failedJobsHistoryLimit: 1
