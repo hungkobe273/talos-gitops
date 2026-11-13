@@ -39,6 +39,15 @@ deschedulerPolicy:
               extraEnabled:
                 - "PodsWithPVC"
         - name: RemoveDuplicates
+        # 13/11: pods with topologySpreadConstraints that piled up on one worker (demo-app: both pods moved to
+        # w1 while w2 was cordoned for the Talos upgrade) are only re-spread by an eviction; the scheduler alone
+        # never moves running pods. Default only checks DoNotSchedule (traefik); demo-app uses ScheduleAnyway.
+        # On 13/11 both workloads were already 1 pod per worker, so enabling it evicts nothing.
+        - name: RemovePodsViolatingTopologySpreadConstraint
+          args:
+            constraints:
+              - DoNotSchedule
+              - ScheduleAnyway
         - name: LowNodeUtilization
           args:
             # % of allocatable, by requests. A node is underutilized only when ALL
@@ -57,4 +66,5 @@ deschedulerPolicy:
         balance:
           enabled:
             - RemoveDuplicates
+            - RemovePodsViolatingTopologySpreadConstraint
             - LowNodeUtilization
