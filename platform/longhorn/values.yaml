@@ -25,7 +25,11 @@ defaultSettings:
   # and Longhorn deleted vault-0 although the new pod came back on the same node: Vault +6:52, ~1 min later than on
   # local-path. Only StatefulSet with a Longhorn PVC is vault (Keycloak's DB is on Supabase). Node-down handling
   # (nodeDownPodDeletionPolicy above) is a separate setting and still deletes the pod when a worker dies.
-  blacklistForAutoDeletePodWhenVolumeDetachedUnexpectedly: apps/ReplicaSet;apps/Deployment;apps/StatefulSet
+  # 13/11: apps/StatefulSet removed again. During the Talos upgrade of cp1 the instance-manager on w2 was recreated
+  # (15:53), the Vault engines died, ext4 in vault-0 shut down (I/O error) and Vault hung 18 min until vault-0 was
+  # deleted by hand. With StatefulSet off the list Longhorn deletes vault-0 itself; the cost is ~1 min slower Vault
+  # at cold start (10/11), cheaper than a Vault outage nobody notices.
+  blacklistForAutoDeletePodWhenVolumeDetachedUnexpectedly: apps/ReplicaSet;apps/Deployment
   # Default 12% of 2 vCPU (240m) per instance manager; the workers are small and mostly idle.
   guaranteedInstanceManagerCPU: '{"v1":"5","v2":"5"}'
   # Uninstall guard: set to true in Git only when Longhorn is really to be removed.
