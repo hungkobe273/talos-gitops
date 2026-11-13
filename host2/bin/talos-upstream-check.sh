@@ -3,7 +3,7 @@
 # 13/11: trivyignore.yaml (platform/image-scan) bo qua co han 30/11 CVE cua Longhorn v1.13.0 va flannel (theo Talos
 # v1.14.2). Script nay bao ngay khi co ban moi de nang, thay vi nho tay vao GitHub.
 #
-# Chay boi talos-upstream-check.timer (09:00 T2-T6). Moi ban moi chi bao 1 lan (nho trong StateDirectory).
+# Cai vao /usr/local/bin (unit dung DynamicUser). Chay boi talos-upstream-check.timer (09:00 T2-T6). Moi ban moi chi bao 1 lan (nho trong StateDirectory).
 # Dau vao (tu unit):
 #   CREDENTIALS_DIRECTORY  co file telegram-bot-token (LoadCredential=)
 #   TG_CHAT_ID             chat id Telegram

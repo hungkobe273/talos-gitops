@@ -9,7 +9,8 @@ After=network-online.target
 Type=oneshot
 # Khong can kubeconfig hay virsh: dung user tam cua systemd.
 DynamicUser=yes
-ExecStart=/home/ngochung/bin/talos-upstream-check.sh
+# /home/ngochung la 750, user tam khong vao duoc: cai script vao /usr/local/bin.
+ExecStart=/usr/local/bin/talos-upstream-check.sh
 Environment=TG_CHAT_ID=<chat-id, cai bang lenh trong nhat ky, lay tu talos-watchdog.service>
 LoadCredential=telegram-bot-token:/etc/talos-etcd-backup/telegram-bot-token
 StateDirectory=talos-upstream-check
