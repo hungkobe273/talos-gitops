@@ -172,12 +172,14 @@ applicationSet:
 # 03/11: the redis-secret-init hook Job (runs at helm install/upgrade only) had no memory request;
 # require-memory-request in Deny would reject it and block the next helm upgrade argocd.
 redisSecretInit:
+  # 13/11: 64Mi was enough for v3.5.7, but the v3.6.1 binary did not fit: the hook kept re-reading
+  # its own binary from disk (D state, 33k major faults), hung 40 min, helm upgrade rev 13 failed.
   resources:
     requests:
       cpu: 10m
-      memory: 32Mi
-    limits:
       memory: 64Mi
+    limits:
+      memory: 256Mi
 
 redis:
   # 06/11: prefers w3 like repoServer (frees ~850 Mi on w1/w2 so a lost worker's core pods fit on the other one,
