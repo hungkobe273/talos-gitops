@@ -18,4 +18,4 @@ resources:
 images:
   - name: ghcr.io/hungkobe273/talos-demo-app
     # Pulled straight from ghcr (09/11, Harbor removed: docs/ke-hoach-bo-harbor.md).
-    newTag: jenkins-sha-2c4da26 # updated by talos-demo-app Jenkins
+    newTag: jenkins-sha-3327e2f # updated by talos-demo-app Jenkins
