@@ -39,6 +39,8 @@ Mỗi node dùng đúng schematic đang có, nếu không sẽ mất extension (
 | w3 (GCP) | `37656798...` | `factory.talos.dev/gcp-installer/376567988ad370138ad8b2698212367b8edcb69b5fd68c80be1f2ec7d603b4ba:v1.14.6` |
 | cp1 | `ce4c9805...` (qemu-guest-agent) | `factory.talos.dev/metal-installer/ce4c980550dd2ab1b17bbf2b08801c7eb59418eafe8f279833297925d67c7515:v1.14.6` |
 
+Từ 13/11 15:30 dùng `~/bin/talos-upgrade-node.sh <ip> v1.14.6` (in kế hoạch, kiểm trước) rồi thêm `--yes` để nâng; script gom các bước dưới đây (`host2/bin/talos-upgrade-node.sh`).
+
 Thứ tự: **w2 → w1 → w3 → cp1** (cp1 cuối, là control plane duy nhất). Mỗi node:
 
 1. Longhorn: mọi volume `healthy`, không volume nào chỉ còn 1 replica trên node sắp nâng.
