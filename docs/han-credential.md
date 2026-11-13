@@ -12,14 +12,17 @@ Cách kiểm lại cột "Hết hạn":
 | Credential | Dùng ở | Loại | Hết hạn | Gãy gì khi hết | Gia hạn |
 |---|---|---|---|---|---|
 | Jenkins `github-read` | Jenkins job `demo-app-gce`, checkout `talos-demo-app` | PAT fine-grained `jenkins-gce-read-demo-app`, Contents read | **31/01/2027** (regenerate 13/11) | Build không checkout được | Mục 2 |
-| Jenkins `ghcr` | Jenkins push image lên GHCR | PAT classic `write:packages`, 90 ngày | Hưng điền (runbook ghi "2 PAT hết hạn khoảng 22/11") | Build không push image | Mục 2 |
+| Jenkins `ghcr` | Jenkins push image lên GHCR | PAT classic `jenkins-gce-ghcr`, scope `repo`, `write:packages` | 31/01/2027 | Build không push image | Mục 2 |
+| GitLab CI (biến GHCR) | GitLab runner push image lên GHCR | PAT classic `gitlab-gce-ghcr`, scope `repo`, `write:packages` | 31/01/2027 | Pipeline GitLab không push image | Như mục 2, cập nhật biến CI trong GitLab |
 | Jenkins `sonarqube-token` | Jenkins phân tích SonarQube | Token SonarQube, 90 ngày | Hưng điền (xem trong SonarQube, My Account, Security) | Bước SonarQube lỗi | Tạo token mới trong SonarQube, cập nhật credential |
-| Secret `ghcr-pull` (ns `demo`, `keycloak`, SealedSecret trong Git) | Cụm kéo image từ GHCR, Kyverno đọc chữ ký, `image-scan` | PAT classic `read:packages` | Chưa ghi ở đâu (tạo 15/10). Hưng điền | Pod mới không kéo được image, Kyverno từ chối pod | Tạo PAT mới, seal lại bằng `kubeseal`, commit |
+| Secret `ghcr-pull` (ns `demo`, `keycloak`, SealedSecret trong Git) | Cụm kéo image từ GHCR, Kyverno đọc chữ ký, `image-scan` | PAT classic `talos-kvm ghcr-pull (read only)`, `read:packages` | **13/01/2027** (sớm nhất trong bảng) | Pod mới không kéo được image, Kyverno từ chối pod | Tạo PAT mới, seal lại bằng `kubeseal`, commit |
 | `kubeconfig` (admin) | host2, laptop | Chứng chỉ client Talos | 14/10/2027 | Mất `kubectl` | `talosctl kubeconfig` sinh lại |
 | `talosconfig` (os:admin) | host2 | Chứng chỉ client Talos | 14/10/2027 | Mất `talosctl` | `talosctl config new` từ `secrets.yaml` |
 | Chứng chỉ Ingress (`*-tls`, cert-manager) | Mọi dịch vụ `*.talos.internal` | Ký bởi `talos-internal-ca` | 14/01–27/01/2027 | Không, cert-manager tự gia hạn trước hạn | Tự động; kiểm cột EXP thỉnh thoảng |
 | `talos-internal-ca` | CA nội bộ | CA tự ký | 13/10/2036 | – | – |
 | GCP free trial | w3, Jenkins, GitLab, GCS, KMS | Tài khoản | 22/01/2027 | Mọi thứ trên GCP dừng | Quyết định trước 01/2027 (xem `de-xuat-giam-chi-phi-gcp.md`) |
+
+Ghi chú 13/11: hai PAT push (`jenkins-gce-ghcr`, `gitlab-gce-ghcr`) có scope `repo`, tức đọc ghi được mọi repo của tài khoản, kể cả `talos-gitops` mà Argo CD tự sync. Push GHCR chỉ cần `write:packages`. Lần gia hạn tới nên tạo token mới chỉ `write:packages` thay vì Regenerate.
 
 ## 2. Gia hạn PAT Jenkins (Hưng làm, trên web)
 
