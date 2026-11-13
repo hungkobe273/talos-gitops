@@ -1,6 +1,6 @@
 # Đề xuất: nâng Talos v1.14.2 lên v1.14.6
 
-Người soạn: Hưng. Ngày 13/11/2026. Trạng thái: **đã đọc changelog, chưa nâng**. Kubernetes giữ nguyên 1.37.1.
+Người soạn: Hưng. Ngày 13/11/2026. Trạng thái: **w2, w1 đã nâng 13/11 (14:07–14:20); còn w3, cp1**. Kubernetes giữ nguyên 1.37.1.
 
 ## 1. Tóm tắt
 
@@ -59,3 +59,8 @@ Sau cùng: nâng `talosctl` trên host2 lên v1.14.6, sửa phiên bản trong `
 - HDD host2: mỗi node khởi động lại kéo theo Longhorn rebuild, đĩa nặng 10–20 phút. Làm từng node, không gộp.
 - cp1: lần khởi động lại có chủ đích của control plane duy nhất. Làm lúc không có rollout, sau khi có snapshot etcd.
 - w3: nâng qua KubeSpan; nếu đứt giữa chừng thì node tự quay về bản cũ (A/B), cụm vẫn chạy với w1, w2.
+
+## 6. Kết quả 13/11
+
+- w2: lần 1 13:51 drain lỗi (PDB CSI, xem mục 3). Lần 2 14:07–14:10. w1 14:15–14:20, sau khi Longhorn healthy. Đủ extension, tự uncordon, apiserver 0 restart.
+- **demo-app sập khoảng 17 phút (14:18–14:35)** lúc nâng w1: 2 pod cùng ở w1; Kyverno admission (1 bản) cũng ở w1; policy kiểm chữ ký image failurePolicy Fail nên không tạo được pod mới; ReplicaSet chờ backoff. Trước khi nâng w3, cp1 hoặc lần sau: rải pod demo-app theo node (`topologySpreadConstraints`) và cho Kyverno admission 2 bản; tạm thời có thể kiểm `kubectl get pod -o wide` và xoá bớt một pod demo-app để nó lên node khác trước khi drain.
