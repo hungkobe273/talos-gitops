@@ -112,4 +112,12 @@ etcd DB 65 MB nhưng chỉ dùng 25 MB (39 %). Có thể chạy `talosctl -n 10.
 
   kube-apiserver 0 restart; scheduler và controller-manager mỗi cái 3 restart, cùng lúc 08:41:05 (2 phút sau khi bật cp1, lúc apiserver chưa sẵn sàng nên mất lease), là kiểu restart lúc khởi động, không phải loại 12/11.
 - Đọc: RAM đạt mục tiêu (cp1 thêm khoảng 530 MiB dùng được, page cache thêm 365 MiB, w1 vẫn dư gần 2 GiB). **PSI io không đổi**, nên chỗ chờ đĩa của cp1 không do đọc lại vì thiếu cache mà chủ yếu do ghi (fsync của etcd) trên HDD dùng chung. Hướng tiếp nếu còn restart: đo `etcd_disk_wal_fsync_duration_seconds`, cân nhắc `etcd defrag` (mục 6) hoặc đặt đĩa cp1 riêng.
+- 13/11 09:16, đo ghi của etcd. Prometheus không scrape etcd (không có job etcd), nên đếm cảnh báo trong `talosctl logs etcd`:
+
+  | Cửa sổ log | Dài | `slow fdatasync` (>1 s) | `apply request took too long` (>100 ms) | Trung bình | >500 ms | >1 s | Max |
+  |---|---|---|---|---|---|---|---|
+  | 12/11 14:29–15:11 (cụm chạy ổn định) | 42 phút | 0 | 565 | 145 ms | 0 | 0 | 468 ms |
+  | 13/11 08:47–09:16 (sau cold start) | 29 phút | 0 | 581 | 204 ms | 32 | 6 | 1258 ms |
+
+  Chưa có lần fsync nào quá 1 s, nhưng khoảng 20 lần ghi chậm mỗi phút và sáng nay chậm hơn chiều qua. Hai cửa sổ không cùng điều kiện: sáng nay có Longhorn rebuild sau cold start và truy vấn Prometheus 7 ngày (thử rule obs1), cả hai cùng ổ HDD. Đỉnh rơi vào 08:50, 09:00, 09:10 (chu kỳ 10 phút, chưa rõ job nào). Muốn có histogram fsync thật cần cho etcd mở metrics (`listen-metrics-urls` trong machine config cp1) và bật `kubeEtcd` trong kps: đổi cấu hình Talos, cần anh duyệt.
 - Cần đo tiếp: sau 1 tuần (20/11) đếm restart kube-apiserver và PSI io lúc cụm chạy ổn định.
