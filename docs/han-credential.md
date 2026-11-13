@@ -11,7 +11,7 @@ Cách kiểm lại cột "Hết hạn":
 
 | Credential | Dùng ở | Loại | Hết hạn | Gãy gì khi hết | Gia hạn |
 |---|---|---|---|---|---|
-| Jenkins `github-read` | Jenkins job `demo-app-gce`, checkout `talos-demo-app` | PAT fine-grained `jenkins-gce-read-demo-app`, Contents read | **31/01/2027** (regenerate 13/11) | Build không checkout được | Mục 2 |
+| Jenkins `github-read` | Jenkins job `demo-app-gce`, checkout `talos-demo-app` | PAT fine-grained `jenkins-gce-read-demo-app`, Contents read | **11/02/2027** (regenerate 13/11) | Build không checkout được | Mục 2 |
 | Jenkins `ghcr` | Jenkins push image lên GHCR | PAT classic `jenkins-gce-ghcr`, scope `repo`, `write:packages` | 31/01/2027 | Build không push image | Mục 2 |
 | GitLab CI (biến GHCR) | GitLab runner push image lên GHCR | PAT classic `gitlab-gce-ghcr`, scope `repo`, `write:packages` | 31/01/2027 | Pipeline GitLab không push image | Như mục 2, cập nhật biến CI trong GitLab |
 | Jenkins `sonarqube-token` | Jenkins phân tích SonarQube | Token SonarQube, 90 ngày | Hưng điền (xem trong SonarQube, My Account, Security) | Bước SonarQube lỗi | Tạo token mới trong SonarQube, cập nhật credential |
