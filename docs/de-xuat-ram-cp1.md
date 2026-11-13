@@ -118,6 +118,9 @@ etcd DB 65 MB nhưng chỉ dùng 25 MB (39 %). Có thể chạy `talosctl -n 10.
   |---|---|---|---|---|---|---|---|
   | 12/11 14:29–15:11 (cụm chạy ổn định) | 42 phút | 0 | 565 | 145 ms | 0 | 0 | 468 ms |
   | 13/11 08:47–09:16 (sau cold start) | 29 phút | 0 | 581 | 204 ms | 32 | 6 | 1258 ms |
+  | 13/11 09:37–09:59 (sau 2 thay đổi dưới) | 22 phút | 0 | 319 | 161 ms | 8 | 1 | 1179 ms |
+
+  Giữa hai cửa sổ: descheduler `*/10` → `*/30` (09:25) và lease argo-rollouts 15/10/2 s → 60/45/15 s (09:36). Ghi chậm mỗi phút 20 → 14,5 (−27 %); lần > 1 s 6 → 1; lease argo-rollouts trong ghi chậm còn 1 lần (trước khoảng 1 lần/phút). PSI io cp1 avg300 21,8 % → 19,6 %. Một phần có thể do Longhorn rebuild và truy vấn Prometheus buổi sáng đã xong, nên chưa tách được riêng phần của từng thay đổi.
 
   Chưa có lần fsync nào quá 1 s, nhưng khoảng 20 lần ghi chậm mỗi phút và sáng nay chậm hơn chiều qua. Hai cửa sổ không cùng điều kiện: sáng nay có Longhorn rebuild sau cold start và truy vấn Prometheus 7 ngày (thử rule obs1), cả hai cùng ổ HDD. Đỉnh rơi vào 08:50, 09:00, 09:10 (chu kỳ 10 phút, chưa rõ job nào). Muốn có histogram fsync thật cần cho etcd mở metrics (`listen-metrics-urls` trong machine config cp1) và bật `kubeEtcd` trong kps: đổi cấu hình Talos, cần anh duyệt.
 - Cần đo tiếp: sau 1 tuần (20/11) đếm restart kube-apiserver và PSI io lúc cụm chạy ổn định.
