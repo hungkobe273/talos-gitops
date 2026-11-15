@@ -5,7 +5,7 @@ machine config đầy đủ. Machine config có secret của cụm (CA, token, k
 nằm trên host2 (`~/talos-kvm/*.yaml`) và trong bundle backup mã hoá. Argo CD không đọc thư mục này.
 
 Đã đối chiếu với cấu hình đang chạy trên cả 4 node ngày 03/11 (`talosctl get machineconfig`, chỉ so các document
-không có secret): mọi giá trị khớp, kể cả hash CA trong `harbor-registry.yaml`.
+không có secret): mọi giá trị khớp.
 
 ## Patch nào áp cho node nào
 
@@ -16,15 +16,14 @@ không có secret): mọi giá trị khớp, kể cả hash CA trong `harbor-reg
 | `authn-oidc.yaml` | x | | | | kube-apiserver tin ID token Keycloak cho Headlamp (22/10). Lùi: `rollback/authn-oidc-rollback.yaml` |
 | `timesync-kvm.yaml` | x | x | x | | Đồng bộ giờ qua `/dev/ptp_kvm` (16/10) |
 | `statichost-keycloak.yaml` | x | x | x | | `keycloak.talos.internal` → host2 (21/10) |
-| `harbor-registry.yaml` | | | | | ĐÃ GỠ 09/11 (Harbor bỏ): `harbor.talos.internal` → host2, containerd tin CA nội bộ (27/10–09/11) |
-| `remove-harbor-registry.yaml` | x | x | x | | 09/11: xoá 2 document của `harbor-registry.yaml` (`$patch: delete`), áp cùng lệnh với `statichost-keycloak.yaml` |
 | `local-path.yaml` | | x | x | x | UserVolume cho local-path-provisioner (20/10) |
 | `kubespan.yaml` | x | x | x | x | KubeSpan, MTU 1380, học thêm endpoint sau NAT (30/10) |
 | `flannel-csum.yaml` | x | x | x | x | Tắt checksum offload trên `flannel.1` (VXLAN trong WireGuard, 30/10) |
 | `longhorn.yaml` | | x | x | | `UserVolumeConfig` `longhorn` kiểu `disk` trên `/dev/vdb` (đĩa qcow2 20G riêng), mount `/var/mnt/longhorn` cho Longhorn (06/11) |
 
-`statichost-keycloak.yaml` và `harbor-registry.yaml` cùng `name: 192.168.136.38`; Talos gộp `hostnames` theo thứ tự
-áp. Từ 09/11 node chỉ còn `keycloak.talos.internal` (kiểm bằng `talosctl -n <node> read /etc/hosts`).
+Patch Harbor (`harbor-registry.yaml`, 27/10–09/11, và `remove-harbor-registry.yaml` dùng để gỡ nó ngày 09/11) đã xoá
+khỏi thư mục ngày 15/11; xem lại trong lịch sử git nếu cần. Từ 09/11 StaticHostConfig trên node chỉ còn
+`keycloak.talos.internal` (kiểm bằng `talosctl -n <node> read /etc/hosts`).
 
 **Schematic (extension):** w1, w2 dùng [schematics/longhorn.yaml](schematics/longhorn.yaml) (ID `53513e54...`: qemu-guest-agent,
 iscsi-tools, util-linux-tools) từ 06/11; cp1 và w3 vẫn schematic cũ `ce4c9805...` (chỉ qemu-guest-agent). Khi upgrade Talos
