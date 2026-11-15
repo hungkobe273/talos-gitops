@@ -20,17 +20,17 @@ classes: {
 }
 
 title: |md
-  # Hạ tầng vật lý — ba máy ảo on-prem, một worker GCP, pod nằm ở đâu
+  # Hạ tầng vật lý — ba máy ảo on-prem, một worker GCP, pod nằm ở đâu (13/11)
 | {near: top-center}
 
 laptop: "Laptop trong LAN\nhttps://*.talos.internal" {class: ngoai}
 
-host2: "kvm-host2 · 192.168.136.38\nUbuntu 24.04 · i7-6700 · 16 GB RAM" {
+host2: "kvm-host2 · LAN văn phòng\nUbuntu 24.04 · i7-6700 · 16 GB RAM" {
   icon: https://cdn.simpleicons.org/ubuntu
   style: {fill: "#eef2f5"; stroke: "#5b6876"; stroke-width: 2; border-radius: 10; font-size: 22; bold: true}
 
   haproxy: "HAProxy :443\nchỉ nhận IP được phép" {class: pod; style.fill: "#e3f1f3"}
-  systemd: "systemd trên host\nbackup 16:45 · watchdog · coldstart-watch\ntắt/bật cụm: talos-cluster-stop/resume" {class: pod; style.fill: "#efeaf7"}
+  systemd: "systemd trên host\nbackup 16:45 · watchdog · coldstart-watch\nupstream-check 09:00 · tắt/bật cụm: talos-cluster-stop/resume\nnâng Talos: talos-upgrade-node.sh" {class: pod; style.fill: "#efeaf7"}
   hdd: "1 ổ HDD 1 TB\nđĩa của cả 3 VM + backup" {shape: cylinder; style: {fill: "#fbeee3"; stroke: "#a8571b"; font-size: 17; bold: true}}
 
   net: "Mạng libvirt talos-net 10.10.10.0/24 (NAT) · API qua VIP 10.10.10.100:6443" {
@@ -39,7 +39,7 @@ host2: "kvm-host2 · 192.168.136.38\nUbuntu 24.04 · i7-6700 · 16 GB RAM" {
     grid-columns: 3
     grid-gap: 50
 
-    cp1: "cp1 · 10.10.10.11\ncontrol plane · 2 vCPU · 3,5 GB" {
+    cp1: "cp1 · 10.10.10.11\ncontrol plane · 2 vCPU · 4 GB" {
       class: vm
       icon: https://cdn.simpleicons.org/talos
       grid-columns: 1
@@ -49,7 +49,7 @@ host2: "kvm-host2 · 192.168.136.38\nUbuntu 24.04 · i7-6700 · 16 GB RAM" {
       dns: "CoreDNS" {class: pod}
     }
 
-    w1: "w1 · 10.10.10.21\nworker · 2 vCPU · 4,5 GB · request RAM 69%" {
+    w1: "w1 · 10.10.10.21\nworker · 2 vCPU · 4 GB · request RAM 67%" {
       class: vm
       icon: https://cdn.simpleicons.org/talos
       grid-columns: 2
@@ -59,16 +59,17 @@ host2: "kvm-host2 · 192.168.136.38\nUbuntu 24.04 · i7-6700 · 16 GB RAM" {
       certm: "cert-manager" {class: pod; icon: ${cncf}/cert-manager/icon/color/cert-manager-icon-color.svg}
       demo: "demo-app (pod 1)" {class: pod; style.fill: "#e8f3e6"}
       vault: "Vault" {class: pod; icon: https://cdn.simpleicons.org/vault}
+      kyverno: "Kyverno (bản 1)" {class: pod; icon: ${cncf}/kyverno/icon/color/kyverno-icon-color.svg}
       longhorn: "Longhorn\nmanager · instance-manager" {class: pod; icon: ${cncf}/longhorn/icon/color/longhorn-icon-color.svg}
       lh_disk: "Đĩa Longhorn vdb 20 GiB\nbản sao 1 của volume" {class: pv}
     }
 
-    w2: "w2 · 10.10.10.22\nworker · 2 vCPU · 4,5 GB · request RAM 67%" {
+    w2: "w2 · 10.10.10.22\nworker · 2 vCPU · 4,5 GB · request RAM 78%" {
       class: vm
       icon: https://cdn.simpleicons.org/talos
       grid-columns: 2
       grafana: "Grafana" {class: pod; icon: https://cdn.simpleicons.org/grafana}
-      kyverno: "Kyverno" {class: pod; icon: ${cncf}/kyverno/icon/color/kyverno-icon-color.svg}
+      kyverno: "Kyverno (bản 2)" {class: pod; icon: ${cncf}/kyverno/icon/color/kyverno-icon-color.svg}
       traefik: "Traefik (bản 2)\nnhận :30443" {class: pod; icon: https://cdn.simpleicons.org/traefikproxy}
       eso: "External Secrets" {class: pod}
       demo: "demo-app (pod 2)" {class: pod; style.fill: "#e8f3e6"}
@@ -82,7 +83,7 @@ gcp: "Google Cloud · asia-southeast1-b\nbật 08:15–17:15 T2–T6, T2/T4 tắ
   icon: https://cdn.simpleicons.org/googlecloud
   style: {fill: "#eef2f5"; stroke: "#5b6876"; stroke-dash: 4; stroke-width: 2; border-radius: 10; font-size: 22; bold: true}
 
-  w3: "w3 · 10.148.0.4\nworker · 2 vCPU · 8 GB · request RAM 25%\ntaint cloud=gcp:NoSchedule" {
+  w3: "w3 · 10.148.0.4\nworker · 2 vCPU · 8 GB · request RAM 38%\ntaint cloud=gcp:NoSchedule" {
     class: vm
     icon: https://cdn.simpleicons.org/talos
     grid-columns: 2
@@ -111,8 +112,9 @@ note: |md
   - Volume dùng local-path: dữ liệu nằm trên đĩa của đúng một worker, nên pod có volume bị **ghim** vào node đó (Prometheus, VictoriaLogs trên w3).
   - Volume Longhorn (Grafana, Vault từ 10/11) có 2 bản sao trên đĩa riêng của w1 và w2: mất một worker thì pod lên worker kia với đúng dữ liệu. Cả hai vẫn nằm trên cùng ổ HDD của host2.
   - Không còn Harbor và NFS: image demo-app, Keycloak kéo thẳng từ GHCR như mọi image khác; Kyverno đọc chữ ký trên GHCR.
-  - w3 không tới được `*.talos.internal` (192.168.136.38): Grafana phải ở on-prem.
+  - w3 không tới được `*.talos.internal` (IP LAN của host2): Grafana phải ở on-prem.
   - OTel Collector, kube-proxy, Flannel, node-exporter chạy trên cả 4 node. Vị trí pod không ghim đo 02/11, descheduler có thể chuyển giữa w1 và w2.
   - cp2, cp3 (10.10.10.12, .13) đã tắt từ 20/10 để tiết kiệm RAM và IO, giữ đĩa để bật lại khi cần HA.
-  - Node chạy Talos Linux: không SSH, quản trị hoàn toàn qua API `talosctl`.
+  - Cả 4 node chạy Talos Linux v1.14.6, Kubernetes v1.37.1 (13/11): không SSH, quản trị hoàn toàn qua API `talosctl`.
+  - Từ 13/11 Kyverno 2 bản và demo-app 2 pod, mỗi worker một, có PDB: drain một worker (nâng Talos) không làm demo-app ngừng.
 | {class: chu; near: bottom-center}

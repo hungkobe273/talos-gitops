@@ -19,14 +19,14 @@ ingress: "Lối vào" {
 
 gitops: "Triển khai" {
   class: nentang
-  argocd: "Argo CD\n23 app, self-heal" {icon: ${cncf}/argo/icon/color/argo-icon-color.svg}
+  argocd: "Argo CD v3.6.1\n23 app, self-heal" {icon: ${cncf}/argo/icon/color/argo-icon-color.svg}
   rollouts: "Argo Rollouts\nblue-green + phân tích" {icon: ${cncf}/argo/icon/color/argo-icon-color.svg}
   sealed: "Sealed Secrets\ngiải mã secret trong Git"
 }
 
 sec: "Bảo mật" {
   class: baomat
-  kyverno: "Kyverno\nchỉ image ký bằng khoá Jenkins" {icon: ${cncf}/kyverno/icon/color/kyverno-icon-color.svg}
+  kyverno: "Kyverno (2 bản, PDB)\nchỉ image ký bằng khoá Jenkins" {icon: ${cncf}/kyverno/icon/color/kyverno-icon-color.svg}
   vap: "ValidatingAdmissionPolicy\nbắt buộc request RAM"
   vault: "Vault\nsecret của ứng dụng" {icon: ${si}/vault}
   eso: "External Secrets\nVault → Secret"
@@ -41,7 +41,7 @@ storage: "Lưu trữ" {
   localpath: "local-path\nghim vào một node"
 }
 
-app: "Ứng dụng demo-app" {
+app: "Ứng dụng demo-app (2 pod, PDB)" {
   class: ungdung
   active: "Bản active"
   preview: "Bản preview"
