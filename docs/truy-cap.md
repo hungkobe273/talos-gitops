@@ -6,15 +6,15 @@ Không ghi mật khẩu hay token vào repo này. Mật khẩu tài khoản dự
 
 ## 1. Chuẩn bị máy (một lần)
 
-Từ 16/10 các giao diện mở thẳng từ LAN qua HAProxy :443 trên kvm-host2 `192.168.136.38`. HAProxy chỉ nhận một số IP trong LAN; máy mới cần nhờ Hưng thêm IP vào danh sách.
+Từ 16/10 các giao diện mở thẳng từ LAN qua HAProxy :443 trên kvm-host2 (IP LAN của host2, hỏi người quản trị lab; repo này public nên không ghi IP). HAProxy chỉ nhận một số IP trong LAN; máy mới cần nhờ Hưng thêm IP vào danh sách.
 
 1. **File hosts** (DNS công ty không phân giải `*.talos.internal`). Thêm các dòng sau (Windows: `C:\Windows\System32\drivers\etc\hosts`, mở bằng quyền admin; mỗi dòng tối đa 9 tên):
 
    ```text
-   192.168.136.38 grafana.talos.internal headlamp.talos.internal argocd.talos.internal keycloak.talos.internal
-   192.168.136.38 demo.talos.internal demo-preview.talos.internal vault.talos.internal
-   192.168.136.38 prometheus.talos.internal alertmanager.talos.internal logs.talos.internal
-   192.168.136.38 jenkins.talos.internal gitlab.talos.internal sonarqube.talos.internal
+   <IP-host2> grafana.talos.internal headlamp.talos.internal argocd.talos.internal keycloak.talos.internal
+   <IP-host2> demo.talos.internal demo-preview.talos.internal vault.talos.internal
+   <IP-host2> prometheus.talos.internal alertmanager.talos.internal logs.talos.internal
+   <IP-host2> jenkins.talos.internal gitlab.talos.internal sonarqube.talos.internal
    ```
 
 2. **Tin CA nội bộ** `talos-kvm internal CA` (chứng chỉ công khai, không có khoá riêng): xin file `talos-internal-ca.crt` từ Hưng, cài vào Trusted Root Certification Authorities (Windows) hoặc Keychain (macOS). Không cài thì trình duyệt báo chứng chỉ không tin cậy.
@@ -47,7 +47,7 @@ Jenkins, GitLab CE, SonarQube chạy trên VM Google Cloud và chỉ nghe nội 
 
 ## 3. Dự phòng: SSH tunnel qua kvm-host2
 
-Dùng khi HAProxy hoặc Traefik có vấn đề. Cần tài khoản SSH trên host2; `kvm-host2` là alias SSH trỏ tới `192.168.136.38`.
+Dùng khi HAProxy hoặc Traefik có vấn đề. Cần tài khoản SSH trên host2; `kvm-host2` là alias SSH trỏ tới IP LAN của host2.
 
 ```bash
 ssh -L 3000:127.0.0.1:3000 kvm-host2 "KUBECONFIG=~/talos-kvm/kubeconfig kubectl -n monitoring port-forward svc/kps-grafana 3000:80"

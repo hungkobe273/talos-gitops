@@ -13,7 +13,7 @@ Cụm gần hết RAM: request trên worker 85–97% (30/10), host2 còn khoản
 - w3 có taint `cloud=gcp:NoSchedule`; chỉ pod có toleration mới lên.
 - **Chạy trên w3**: Prometheus 752Mi, Alertmanager 112Mi, VictoriaLogs 96Mi và job lúc deploy (ZAP 320Mi, smoke test). Khoảng 2,7 GB kể cả DaemonSet, phần hệ thống và dự phòng; còn chỗ cho việc khác.
 - **Giữ ở host2**: Keycloak, Vault, Harbor, Argo CD, Traefik, Kyverno, demo-app (cả bản preview), **Grafana**. Mất Internet thì chỉ mất Prometheus/Alertmanager/log; app, đăng nhập và deploy vẫn chạy.
-- **Grafana và bản preview không lên w3 được**: `keycloak.talos.internal` và `harbor.talos.internal` trỏ `192.168.136.38` (IP LAN của host2, StaticHostConfig). KubeSpan chỉ nối IP của node, w3 không tới được IP này: Grafana không đăng nhập OIDC được, pod preview không kéo được image từ Harbor.
+- **Grafana và bản preview không lên w3 được**: `keycloak.talos.internal` và `harbor.talos.internal` trỏ IP LAN của host2 (StaticHostConfig). KubeSpan chỉ nối IP của node, w3 không tới được IP này: Grafana không đăng nhập OIDC được, pod preview không kéo được image từ Harbor.
 - Dự kiến sau khi chuyển: w1 khoảng 78%, w2 khoảng 80% request (w2 có thêm 320Mi trống lúc deploy vì ZAP chạy trên w3).
 
 ## Trả lời 5 câu hỏi (tra cứu và dry-run 30/10 chiều)
@@ -124,4 +124,4 @@ Cold start sáng 02/11 có w3 bật trước: khoảng 11 phút 20 từ lúc hos
 - w3 tắt 17:15, bật 08:15 (T2–T6) theo lịch GCP. Để cụm chạy qua đêm thì Prometheus/VictoriaLogs dừng sau 17:15: tạm dừng watchdog, hoặc gỡ w3 khỏi lịch (`gcloud compute instances remove-resource-policies w3 --zone=asia-southeast1-b --resource-policies=jenkins-office-hours`).
 - Kiểm tra: `talosctl -n 10.148.0.4 get kubespanpeerstatuses` (3 peer up), `kubectl get node w3`.
 - Pod cần chạy trên w3: toleration `cloud=gcp:NoSchedule` + nodeAffinity `kubernetes.io/hostname: w3`; tra DNS nhiều thì thêm `dnsConfig.options: use-vc` (glibc, Go).
-- Không đặt lên w3 thứ cần `*.talos.internal` (192.168.136.38): Grafana (OIDC), pod kéo image từ Harbor.
+- Không đặt lên w3 thứ cần `*.talos.internal` (IP LAN của host2): Grafana (OIDC), pod kéo image từ Harbor.
