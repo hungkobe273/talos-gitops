@@ -8,6 +8,7 @@ Thay đổi nằm ngoài repo này (host2, cấu hình Talos) cũng ghi ở đâ
 
 | Thay đổi | Lý do | Commit |
 |---|---|---|
+| Cập nhật `docs/bao-cao.md` (bản trước 12/11): Talos 1.14.6, Argo CD 3.6.1, 0 CVE CRITICAL, vá HA, 4 sự cố 13/11 (jenkins-1, hook Argo CD, demo-app, Vault) kèm bài học, audit đã đóng (SSH, N1, obs1, credential, DR), backup có khoá Sealed Secrets, quy trình nâng Talos, việc tiếp từ 16/11, đề xuất quyết định xoá IP trong lịch sử git | Báo cáo tổng hợp còn là bản 12/11 | – |
 | Rà 4 sơ đồ còn lại theo 11–13/11. `boi-canh`: thêm GCS (bản backup thứ hai, có từ 30/10 mà hình thiếu), w3 trên Google Cloud, Telegram báo bản Talos/Longhorn mới. `luong-deploy`: Kyverno 2 bản, PDB, buildx prune. `luong-backup`: stop script tự backup trước khi tắt (thay "T2/T4 chạy tay"), bundle chứa khoá Sealed Secrets + CA, diễn tập Vault 10/11, timer bỏ qua khi cụm tắt. `phu-thuoc`: `VaultDown`/`VaultNotReady`, GCS. Ghi chú 3 hình chuyển sang gạch đầu dòng cho khỏi tràn ngang. Đã xem lại bằng ảnh chụp | Sơ đồ còn là bản 10/11 | – |
 | `talos/patches/statichost-keycloak.yaml`: IP LAN thay bằng chỗ trống `HOST2_LAN_IP` (thêm comment cách lấy giá trị thật), ghi chú trong `talos/README.md`. Không áp lại lên node: StaticHostConfig đang chạy giữ IP thật. Áp nguyên file chưa thay thì Talos từ chối (name phải là IP) | Repo public, không ghi IP công ty. Còn 1 chỗ: Traefik `ingressEndpoint.ip` | – |
 | `platform/traefik/values.yaml`: comment dòng 1 bỏ IP LAN (ghi "LAN IP of host2"). Chỉ đổi comment, Argo CD render ra manifest y hệt | Repo public, không ghi IP công ty | – |
