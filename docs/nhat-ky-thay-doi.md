@@ -8,6 +8,7 @@ Thay đổi nằm ngoài repo này (host2, cấu hình Talos) cũng ghi ở đâ
 
 | Thay đổi | Lý do | Commit |
 |---|---|---|
+| `talos/patches/statichost-keycloak.yaml`: IP LAN thay bằng chỗ trống `HOST2_LAN_IP` (thêm comment cách lấy giá trị thật), ghi chú trong `talos/README.md`. Không áp lại lên node: StaticHostConfig đang chạy giữ IP thật. Áp nguyên file chưa thay thì Talos từ chối (name phải là IP) | Repo public, không ghi IP công ty. Còn 1 chỗ: Traefik `ingressEndpoint.ip` | – |
 | `platform/traefik/values.yaml`: comment dòng 1 bỏ IP LAN (ghi "LAN IP of host2"). Chỉ đổi comment, Argo CD render ra manifest y hệt | Repo public, không ghi IP công ty | – |
 | Xoá `talos/patches/harbor-registry.yaml` và `remove-harbor-registry.yaml`, sửa bảng và ghi chú trong `talos/README.md`. Không đổi gì trên node: patch Harbor đã gỡ khỏi cp1, w1, w2 từ 09/11 | Harbor bỏ từ 09/11. Dựng lại node theo bảng patch không cần chúng, và bớt 2 chỗ ghi IP LAN trong repo public. Còn IP ở `platform/traefik/values.yaml` và `statichost-keycloak.yaml` (cấu hình đang chạy) | – |
 | Bỏ IP LAN văn phòng khỏi `docs/truy-cap.md` (file hosts dùng `<IP-host2>`), `docs/ke-hoach-w3-gcp.md`, `docs/nhat-ky-thay-doi.md`. Còn trong file cấu hình đang chạy (`platform/traefik/values.yaml`, `talos/patches/*.yaml`, `talos/README.md`) và trong lịch sử git | Repo public, không ghi IP công ty | – |

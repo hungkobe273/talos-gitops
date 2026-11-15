@@ -15,7 +15,7 @@ không có secret): mọi giá trị khớp.
 | `etcd-timeout.yaml` | x | | | | etcd heartbeat 500 ms, election 5 s (HDD chậm, 15/10) |
 | `authn-oidc.yaml` | x | | | | kube-apiserver tin ID token Keycloak cho Headlamp (22/10). Lùi: `rollback/authn-oidc-rollback.yaml` |
 | `timesync-kvm.yaml` | x | x | x | | Đồng bộ giờ qua `/dev/ptp_kvm` (16/10) |
-| `statichost-keycloak.yaml` | x | x | x | | `keycloak.talos.internal` → host2 (21/10) |
+| `statichost-keycloak.yaml` | x | x | x | | `keycloak.talos.internal` → host2 (21/10). IP để chỗ trống `HOST2_LAN_IP` vì repo public (từ 15/11), thay bằng IP LAN của host2 trước khi áp; giá trị đang chạy: `talosctl -n <node> read /etc/hosts` |
 | `local-path.yaml` | | x | x | x | UserVolume cho local-path-provisioner (20/10) |
 | `kubespan.yaml` | x | x | x | x | KubeSpan, MTU 1380, học thêm endpoint sau NAT (30/10) |
 | `flannel-csum.yaml` | x | x | x | x | Tắt checksum offload trên `flannel.1` (VXLAN trong WireGuard, 30/10) |
