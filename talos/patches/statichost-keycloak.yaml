@@ -1,5 +1,8 @@
+# keycloak.talos.internal -> host2 (HAProxy), so kube-apiserver (OIDC) and pods can reach Keycloak (21/10).
+# HOST2_LAN_IP is a placeholder (public repo): replace it with host2's LAN IP before applying. The running value
+# can be read with: talosctl -n <node> read /etc/hosts. Applied as is, Talos rejects the document (name must be an IP).
 apiVersion: v1alpha1
 kind: StaticHostConfig
-name: 192.168.136.38
+name: HOST2_LAN_IP
 hostnames:
   - keycloak.talos.internal
