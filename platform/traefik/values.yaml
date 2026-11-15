@@ -1,4 +1,4 @@
-# Ingress controller behind HAProxy on kvm-host2 (192.168.136.38:80/443 -> NodePort 30080/30443 on w1/w2).
+# Ingress controller behind HAProxy on kvm-host2 (LAN IP of host2, ports 80/443 -> NodePort 30080/30443 on w1/w2).
 deployment:
   replicas: 2
 # 06/11: was ScheduleAnyway, and after the talos-core rollout both replicas sat on w2 (one node down = no ingress).

@@ -8,6 +8,7 @@ Thay đổi nằm ngoài repo này (host2, cấu hình Talos) cũng ghi ở đâ
 
 | Thay đổi | Lý do | Commit |
 |---|---|---|
+| `platform/traefik/values.yaml`: comment dòng 1 bỏ IP LAN (ghi "LAN IP of host2"). Chỉ đổi comment, Argo CD render ra manifest y hệt | Repo public, không ghi IP công ty | – |
 | Xoá `talos/patches/harbor-registry.yaml` và `remove-harbor-registry.yaml`, sửa bảng và ghi chú trong `talos/README.md`. Không đổi gì trên node: patch Harbor đã gỡ khỏi cp1, w1, w2 từ 09/11 | Harbor bỏ từ 09/11. Dựng lại node theo bảng patch không cần chúng, và bớt 2 chỗ ghi IP LAN trong repo public. Còn IP ở `platform/traefik/values.yaml` và `statichost-keycloak.yaml` (cấu hình đang chạy) | – |
 | Bỏ IP LAN văn phòng khỏi `docs/truy-cap.md` (file hosts dùng `<IP-host2>`), `docs/ke-hoach-w3-gcp.md`, `docs/nhat-ky-thay-doi.md`. Còn trong file cấu hình đang chạy (`platform/traefik/values.yaml`, `talos/patches/*.yaml`, `talos/README.md`) và trong lịch sử git | Repo public, không ghi IP công ty | – |
 | Cập nhật `kien-truc.md` và sơ đồ `ha-tang`, `thanh-phan` theo 12–13/11: Talos v1.14.6 cả 4 node, Argo CD v3.6.1, cert-manager v1.21.3, RAM cp1 4 GB / w1 4 GB, request RAM sau khi cân lại (w1 67 %, w2 78 %, w3 38 %), Kyverno 2 bản + PDB, PDB demo-app, plugin topology của descheduler, `talos-upgrade-node.sh`, `talos-upstream-check`, cảnh báo mới, SSH chỉ nhận khoá, giới hạn instance-manager Longhorn, K8s 1.37.2 chờ chạy (MTU flannel 1380). Bỏ IP LAN host2 khỏi sơ đồ hạ tầng | Tài liệu kiến trúc còn là bản 10/11 | – |
