@@ -31,7 +31,7 @@ jenkins: "Jenkins trên Google Cloud" {
 ghcr: "GHCR\nnhận image đã ký" {class: db; icon: ${si}/github; label.near: top-center; icon.near: bottom-center; height: 130}
 gitops: "talos-gitops\nnewTag mới" {class: ngoai; icon: ${si}/github; label.near: top-center; icon.near: bottom-center; height: 130}
 argocd: "Argo CD\nđồng bộ Rollout" {class: nentang; icon: ${cncf}/argo/icon/color/argo-icon-color.svg; label.near: top-center; icon.near: bottom-center; height: 130}
-kyverno: "Kyverno\nđọc chữ ký trên GHCR\nkhông có chữ ký Jenkins = từ chối" {class: baomat; icon: ${cncf}/kyverno/icon/color/kyverno-icon-color.svg; label.near: top-center; icon.near: bottom-center; height: 130}
+kyverno: "Kyverno (2 bản, mỗi worker một)\nđọc chữ ký trên GHCR\nkhông có chữ ký Jenkins = từ chối" {class: baomat; icon: ${cncf}/kyverno/icon/color/kyverno-icon-color.svg; label.near: top-center; icon.near: bottom-center; height: 130}
 preview: "Bản preview\nsmoke · tỉ lệ lỗi · ZAP (DAST)" {class: ungdung; icon: ${cncf}/argo/icon/color/argo-icon-color.svg; label.near: top-center; icon.near: bottom-center; height: 130}
 zap: "OWASP ZAP\nDAST: quét app đang chạy" {class: baomat}
 active: "Bản active\nnhận traffic; bản cũ giữ 10 phút" {class: ungdung}
@@ -48,5 +48,9 @@ zap -> preview: "DAST trên bản preview" {class: kiem}
 preview -> active: "đạt cả 3 kiểm tra" {class: luong}
 
 note: |md
-  Cổng nào lỗi thì pipeline dừng, không có image được ký. Image không ký bị Kyverno từ chối. Từ 09/11 cụm kéo image thẳng từ GHCR, không còn bản sao trên Harbor.
+  - Cổng nào lỗi thì pipeline dừng, không có image được ký.
+  - Image không ký bị Kyverno từ chối.
+  - Từ 09/11 cụm kéo image thẳng từ GHCR (bỏ Harbor).
+  - Từ 13/11 Kyverno 2 bản, demo-app có PDB: drain một worker không chặn tạo pod mới.
+  - Jenkins dọn cache build sau mỗi lần (buildx prune), VM 4 GiB không đầy đĩa.
 | {class: chu; near: bottom-center}

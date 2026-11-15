@@ -7,11 +7,11 @@ title: |md
   # Backup hằng ngày: gói dữ liệu 16:45 trên host2 và Velero 09:30 trong cụm
 | {near: top-center}
 
-timer: "systemd timer 16:45\nT2/T4: chạy tay trước khi tắt" {class: giamsat; icon: ${si}/linux; label.near: top-center; icon.near: bottom-center; height: 130}
+timer: "systemd timer 16:45\ntắt cụm sớm: talos-cluster-stop.sh\ntự backup trước khi tắt" {class: giamsat; icon: ${si}/linux; label.near: top-center; icon.near: bottom-center; height: 130}
 etcd: "Snapshot etcd\nqua talosctl" {class: nentang; icon: ${si}/talos; label.near: top-center; icon.near: bottom-center; height: 130}
 keycloak: "Dump DB Keycloak\ntừ Supabase" {class: danhtinh; icon: ${cncf}/keycloak/icon/color/keycloak-icon-color.svg; label.near: top-center; icon.near: bottom-center; height: 130}
 vault: "Snapshot Vault (Raft)" {class: baomat; icon: ${si}/vault; label.near: top-center; icon.near: bottom-center; height: 130}
-bundle: "Bundle offsite\nmã hoá GPG" {class: giamsat}
+bundle: "Bundle offsite mã hoá GPG\n+ khoá Sealed Secrets, CA nội bộ" {class: giamsat}
 b2: "Backblaze B2" {class: db; icon: ${si}/backblaze; label.near: top-center; icon.near: bottom-center; height: 130}
 tg: "Telegram\nbáo khi lỗi" {class: ngoai; icon: ${si}/telegram; label.near: top-center; icon.near: bottom-center; height: 130}
 
@@ -26,5 +26,9 @@ timer -> tg: "bước nào lỗi" {class: phu}
 velero -> tg: "VeleroBackupFailed" {class: phu}
 
 note: |md
-  Đã thử giải mã gói backup. Đã diễn tập khôi phục Vault 29/10 vào namespace tạm: khoảng 2,5 phút, đọc được dữ liệu. Khôi phục etcd chưa diễn tập. Velero cài 03/11; diễn tập khôi phục toàn cụm lên GCP 05/11 (Velero trả object, gói backup trả dữ liệu PV): RTO chính 50:52. Bỏ Harbor nên không còn dump DB Harbor.
+  - Đã thử giải mã gói backup. Diễn tập khôi phục Vault 29/10 vào namespace tạm (khoảng 2,5 phút) và 10/11 trên Longhorn (59 s), đọc được dữ liệu.
+  - Khôi phục etcd chưa diễn tập (quy trình ở docs/khoi-phuc-tham-hoa.md).
+  - Velero cài 03/11; diễn tập khôi phục toàn cụm lên GCP 05/11 (Velero trả object, gói backup trả dữ liệu PV): RTO chính 50:52.
+  - Từ 12/11 cụm tắt thì timer bỏ qua (không báo lỗi giả), watchdog báo khi backup quá cũ.
+  - Từ 13/11 bundle chứa mọi khoá Sealed Secrets và CA talos-internal-ca. Bỏ Harbor (09/11) nên không còn dump DB Harbor.
 | {class: chu; near: bottom-center}

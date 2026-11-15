@@ -17,10 +17,11 @@ he: "Cụm talos-kvm\nKubernetes on-premise trên kvm-host2\nGitOps · blue-gree
 }
 
 github: "GitHub\nmã nguồn + talos-gitops" {class: ngoai; icon: ${si}/github}
-gcp: "Google Cloud\nJenkins · SonarQube · GitLab · KMS" {class: ngoai; icon: ${si}/googlecloud}
+gcp: "Google Cloud\nworker w3 · Jenkins · SonarQube · GitLab · KMS" {class: ngoai; icon: ${si}/googlecloud}
 ghcr: "GHCR\nimage gốc" {class: db}
 supabase: "Supabase\nDB của Keycloak" {class: db; icon: ${si}/supabase}
 b2: "Backblaze B2\nbackup mã hoá" {class: db; icon: ${si}/backblaze}
+gcs: "Google Cloud Storage\nbản backup thứ hai, chỉ thêm" {class: db; icon: ${si}/googlecloud}
 tg: "Telegram\ncảnh báo" {class: ngoai; icon: ${si}/telegram}
 hc: "healthchecks.io\nbáo khi mất nhịp" {class: ngoai}
 
@@ -32,8 +33,9 @@ github -> gcp: "Jenkins build" {class: luong}
 gcp -> ghcr: "image đã ký" {class: luong}
 github -> he: "Argo CD đồng bộ" {class: luong}
 ghcr -> he: "node kéo image trực tiếp" {class: luong}
-he -> gcp: "Vault unseal (KMS)" {class: phu}
+he -> gcp: "Vault unseal (KMS) · w3 qua KubeSpan" {class: phu}
 he -> supabase: "Keycloak" {class: phu}
 he -> b2: "backup 16:45" {class: phu}
-he -> tg: "cảnh báo" {class: phu}
+he -> gcs: "backup 16:45" {class: phu}
+he -> tg: "cảnh báo · bản Talos/Longhorn mới" {class: phu}
 he -> hc: "nhịp" {class: phu}
