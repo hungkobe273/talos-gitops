@@ -8,6 +8,7 @@ Thay đổi nằm ngoài repo này (host2, cấu hình Talos) cũng ghi ở đâ
 
 | Thay đổi | Lý do | Commit |
 |---|---|---|
+| Khởi động lạnh 16/11 (host2 08:28, libvirtd 08:28:48; lần đầu sau khi Longhorn tự xoá pod StatefulSet và stop script tắt cả w3): resume xong +6:02, Keycloak Ready +6:49, **Vault +7:01**, store Vault Valid +7:21, Grafana +9:09, 23/23 app và 3 volume `healthy` trước 08:38:14 (+9:26). So 12/11: Keycloak +6:37, Vault +7:14, store +7:43, Grafana +7:57. Vault không chậm thêm (dự tính chậm khoảng 1 phút không xảy ra vì tắt sạch, volume không bị tách bất thường). Grafana chậm hơn 1:12: pod Ready False → True mất 2 phút lúc PSI IO khoảng 30 % | Kiểm thay đổi Longhorn 13/11 | – |
 | GCP: tạm dừng 3 job Cloud Scheduler `w3-stop-mon-wed`, `jenkins-1-stop-mon-wed`, `gitlab-1-stop-mon-wed` (`paused = true` trong `infra/gcp/schedule.tf`, Hưng `terraform apply` 08:35–08:36: 0 add, 3 change, 0 destroy). w3, jenkins-1, gitlab-1 chạy 08:15–17:15 cả T2/T4. Lùi: `paused = false`, apply | Từ 16/11 T2/T4 làm cả buổi (tới khi có lịch mới); job cũ tắt w3 lúc 10:40 làm mất Prometheus, log, cảnh báo giữa giờ làm. Thêm khoảng 10 USD/tháng credit GCP | commit này |
 
 ## 13/11/2026
