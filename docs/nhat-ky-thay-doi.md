@@ -4,6 +4,12 @@ Ghi mỗi thay đổi về hạ tầng, cấu hình cụm hoặc ứng dụng: n
 
 Thay đổi nằm ngoài repo này (host2, cấu hình Talos) cũng ghi ở đây, vì repo không chứa file cấu hình Talos (có secret).
 
+## 16/11/2026
+
+| Thay đổi | Lý do | Commit |
+|---|---|---|
+| GCP: tạm dừng 3 job Cloud Scheduler `w3-stop-mon-wed`, `jenkins-1-stop-mon-wed`, `gitlab-1-stop-mon-wed` (`paused = true` trong `infra/gcp/schedule.tf`, Hưng `terraform apply` 08:35–08:36: 0 add, 3 change, 0 destroy). w3, jenkins-1, gitlab-1 chạy 08:15–17:15 cả T2/T4. Lùi: `paused = false`, apply | Từ 16/11 T2/T4 làm cả buổi (tới khi có lịch mới); job cũ tắt w3 lúc 10:40 làm mất Prometheus, log, cảnh báo giữa giờ làm. Thêm khoảng 10 USD/tháng credit GCP | commit này |
+
 ## 13/11/2026
 
 | Thay đổi | Lý do | Commit |

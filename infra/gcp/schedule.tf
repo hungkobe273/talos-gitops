@@ -51,7 +51,9 @@ resource "google_cloud_scheduler_job" "w3_stop_mon_wed" {
   deletion_policy  = "DELETE"
   description      = "Stop w3 at 10:40 on Mon/Wed (cluster is off from 10:30)"
   name             = "w3-stop-mon-wed"
-  paused           = false
+  # 16/11: paused. Mon/Wed are now full work days (until further notice), w3 runs to 17:15 like other days.
+  # Undo: paused = false, terraform apply.
+  paused           = true
   project          = var.project
   region           = var.region
   schedule         = "40 10 * * 1,3"
@@ -87,7 +89,8 @@ resource "google_cloud_scheduler_job" "cicd_stop_mon_wed" {
   deletion_policy  = "DELETE"
   description      = "Stop ${each.key} at 10:40 on Mon/Wed (work day ends 10:30)"
   name             = "${each.key}-stop-mon-wed"
-  paused           = false
+  # 16/11: paused with w3-stop-mon-wed (Mon/Wed full work days). Undo: paused = false.
+  paused           = true
   project          = var.project
   region           = var.region
   schedule         = "40 10 * * 1,3"
