@@ -88,7 +88,7 @@ GitHub Actions và GitLab CE vẫn build cùng app để so sánh, nhưng chỉ 
 | | vault | 0.34.1 (Vault 2.0) | secret của ứng dụng, tự unseal bằng GCP KMS, audit log |
 | | external-secrets | 2.14.0 | đưa secret từ Vault vào Secret của pod |
 | | image-scan | | CronJob Trivy 12:30 T2–T6 quét mọi image đang chạy, alert `ImageScanCritical` khi có CVE CRITICAL. Từ 13/11 có danh sách bỏ qua có hạn (`trivyignore.yaml`, hết hạn 30/11/2026) cho các mã CRITICAL đã có bản vá nhưng chưa nâng được (Longhorn, flannel) |
-| Danh tính | keycloak | keycloakx 7.4.0 | SSO OIDC/SAML, DB trên Supabase |
+| Danh tính | keycloak | keycloakx 7.4.0, image Keycloak 26.8.2 (từ 16/11; image optimized `ghcr.io/hungkobe273/talos-keycloak`, build bằng GitHub Actions) | SSO OIDC/SAML, DB trên Supabase |
 | | oauth2-proxy | | đăng nhập Keycloak trước Prometheus, Alertmanager, vmui của VictoriaLogs (`logs.talos.internal`, chỉ mở `/select`) |
 | | headlamp | 0.45.0 | giao diện cụm |
 | Giám sát | monitoring | kube-prometheus-stack 92.2.0 | Prometheus, Alertmanager, Grafana |
