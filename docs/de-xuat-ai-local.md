@@ -20,7 +20,31 @@ Kế hoạch thử:
 3. Ghi kết quả vào mục 0 này, chọn 1–2 model.
 4. Nếu anh muốn dùng tiếp trong lab: Open WebUI trong cụm (Argo CD), nối tới OpenRouter bằng OpenAI API, key trong Vault qua ExternalSecret, đăng nhập Keycloak qua oauth2-proxy, `https://ai.talos.internal`. Không tốn GCP, Open WebUI cần khoảng 0,5–1 GB RAM (đặt trên w3).
 
-Kết quả thử: chưa chạy.
+### Kết quả thử 16/11 (10:10–10:25)
+
+Script: [tools/ai-bench/openrouter-bench.ps1](../tools/ai-bench/openrouter-bench.ps1). Key không nạp tiền, credit limit 0. Hai lần chạy, 42/50 request của ngày. Lần 1 đặt `max_tokens` 800: các model suy luận (reasoning) dùng hết token để "nghĩ", trả về rỗng; lần 2 nâng lên 4000 và thử lại 1 lần khi gặp 429.
+
+| Model | Trả lời được | Thời gian | Nhận xét |
+|---|---|---|---|
+| `nvidia/nemotron-3-ultra-550b-a55b:free` | 4/4, không lỗi lần nào | 4–22 s | Ổn định nhất. Tiếng Việt tốt, hay dùng bảng và thuật ngữ tiếng Anh. Lệnh gỡ lỗi đúng |
+| `baidu/ernie-5.5-flash-preview:free` | 3/4 | 2–5 s | Nhanh nhất, tiếng Việt tự nhiên nhất, thứ tự lệnh gỡ lỗi tốt nhất. Câu YAML 2 lần đều kẹt suy luận (hết 4.000 token, không ra chữ). Câu giải thích vượt giới hạn 150 từ |
+| `nvidia/nemotron-3.5-lightning:free` | 4/4 (lần 2) | 6–13 s | Ổn. Mỗi câu nghĩ khoảng 1.300–1.500 token. Câu tiếng Việt lẫn một từ tiếng Hàn ("격리") |
+| `inclusionai/ling-3.2-flash:free` | 3/4, 4 lần bị 429 | 9–52 s | Câu gỡ lỗi đầy đủ nhất (có bảng exit code). Chậm, hay bị từ chối |
+| `google/gemma-4-31b-it:free` | 0/4 | – | 8/8 lần 429 "rate-limited upstream": nhà cung cấp hết lượt miễn phí dùng chung |
+| `openrouter/free` | 3/4 | 2–6 s | Mỗi câu một model khác (có cả model 1,7B, YAML bị cắt). Không dùng khi cần ổn định |
+
+Câu tóm tắt: cả 5 model làm đúng (câu quá dễ, không phân biệt được).
+
+**Câu YAML: 4 model trả lời, cả 4 đều sai cùng một kiểu.** Đề yêu cầu nginx chạy non-root và probe cổng 80. Các bản trả lời dùng image `nginx` (chạy root, ghi `/var/cache/nginx`, mở cổng 80) rồi đặt `runAsUser: 101` hoặc `runAsNonRoot: true`. Kết quả: pod CrashLoopBackOff (không ghi được cache, không mở được cổng dưới 1024) hoặc kubelet từ chối tạo container (`runAsNonRoot` mà image chạy root). Một bản thêm `NET_BIND_SERVICE` nhưng tiến trình non-root không được cấp quyền đó nếu không có ambient capability. Cách đúng: image `nginxinc/nginx-unprivileged` (cổng 8080, như `tunnel-proxy` trong cụm), ghim tag, và chỉ ra rằng "non-root + cổng 80" mâu thuẫn. Không model nào chỉ ra mâu thuẫn này; cả 4 dùng tag `latest` hoặc không ghi tag.
+
+Nhận xét chung:
+
+- Chất lượng chữ tốt hơn model 3–8B tự chạy, tốc độ 2–20 giây mỗi câu, không tốn tiền. Model 550B miễn phí ổn định hơn các model nhỏ trong lần thử này.
+- Không ổn định để dùng lâu: 18/41 lần gọi bị nhà cung cấp từ chối (429, toàn ở gemma và ling), model suy luận có thể kẹt không trả lời, danh sách model miễn phí đổi theo tuần.
+- Câu trả lời kỹ thuật phải kiểm lại trước khi dùng: manifest trông đúng nhưng chạy sẽ lỗi. Nếu dùng AI sinh YAML trong lab, cần bước kiểm (kubeconform, Kyverno, chạy thử) như với code người viết.
+- Không đưa dữ liệu nội bộ vào model miễn phí (mục trên).
+
+Chọn nếu dùng tiếp: `nvidia/nemotron-3-ultra-550b-a55b:free` làm chính, `baidu/ernie-5.5-flash-preview:free` cho câu ngắn cần nhanh. Đo lại vào giờ khác để xem 429 có phụ thuộc giờ cao điểm không.
 
 ## 1. Mục tiêu
 
