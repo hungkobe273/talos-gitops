@@ -1,6 +1,6 @@
 # Đề xuất: Hermes Agent + skill cho lab (16/11/2026)
 
-Trạng thái: **nghiên cứu, chưa cài.** Tiếp theo [de-xuat-ai-local.md](de-xuat-ai-local.md) mục 0 (thử model miễn phí trên OpenRouter).
+Trạng thái: **đang triển khai (anh đồng ý 16/11 10:44).** Đã có RBAC chỉ đọc (`platform/hermes`, app Argo CD `hermes`) và skill `talos-cluster-health`; Hermes chưa cài trên host2. Tiếp theo [de-xuat-ai-local.md](de-xuat-ai-local.md) mục 0 (thử model miễn phí trên OpenRouter).
 
 ## 1. Yêu cầu
 
@@ -48,6 +48,18 @@ Về "tối ưu máy hiện có": host2 nâng RAM (còn 3 khe, mới 1 thanh 16 
 | `k8s-manifest-check <file>` | `kubeconform -strict`, `kyverno apply` với policy của cụm, kiểm non-root/tag `latest`/thiếu probe | Giải thích lỗi, sửa YAML. Đúng lỗi các model mắc ở câu nginx 16/11 |
 
 Đo trước/sau trên cùng câu hỏi: số request, token, thời gian, đúng/sai (không skill: model tự gõ lệnh; có skill: gọi script).
+
+Việc lặp lại khác trong lab (rút từ nhật ký), làm skill sau:
+
+- Kiểm trước/sau nâng cấp Talos, Kubernetes, Keycloak (gọi lại `talos-upgrade-node.sh`, PDB, Longhorn, pod kẹt).
+- Sau khi drain node: đưa pod ưu tiên w3 về lại (`rollout restart`, cần quyền ghi, để người duyệt).
+- Đọc Trivy, CVE mới, bản Talos/Longhorn mới, tóm tắt có cần nâng không.
+- Kiểm backup hằng ngày (gói trên B2/GCS, dung lượng, có khoá Sealed Secrets).
+
+### Đã làm 16/11
+
+- `platform/hermes/rbac.yaml` + `argocd-apps/hermes.yaml`: ServiceAccount `hermes-readonly`, token Secret (nằm trong cụm, không trong git), ClusterRole chỉ `get/list/watch` trên node, pod, log, event, workload, PVC/PV, Ingress, PDB, Application/Rollout Argo, Longhorn volume, ExternalSecret. **Không** có Secret, ConfigMap, exec, quyền ghi. `kubectl apply --dry-run=server` đạt.
+- `tools/hermes-skills/devops/talos-cluster-health/`: `SKILL.md` + `scripts/cluster-health.sh` (một lần `kubectl get`, Python lọc, tối đa khoảng 30 dòng, exit 0 xanh / 1 cần xem / 2 mất API). Chạy thử trên host2 10:49: 10 dòng, `CHECK 1 item(s)` (longhorn-manager restart 1 lần trong giờ qua sau khi nâng K8s), 4/4 node, 23/23 app, 3 volume, Vault Ready, 73 pod.
 
 ## 6. Kế hoạch
 
