@@ -43,13 +43,13 @@ Dựng và vận hành một cụm Kubernetes theo cách làm của môi trườ
 Sơ đồ tổng thể, hạ tầng, luồng deploy và bảng thành phần: [kien-truc.md](kien-truc.md). Sáu sơ đồ đã vẽ lại theo 13/11.
 
 **Phần mềm**
-- Talos **v1.14.6** (từ 13/11), Kubernetes v1.37.1, Flannel, KubePrism, VIP Layer 2, Longhorn 1.13.0, Argo CD **v3.6.1**.
-- Kubernetes 1.37.2 đã chạy thử (`upgrade-k8s --dry-run`, sạch), chạy thật sáng 16/11. Bản này còn đổi MTU của flannel từ 1450 xuống 1380, cho khớp đường KubeSpan tới w3.
+- Talos **v1.14.6** (từ 13/11), Kubernetes **v1.37.2** (từ 16/11), Flannel 0.28.10, KubePrism, VIP Layer 2, Longhorn 1.13.0, Argo CD **v3.6.1**.
+- Nâng Kubernetes 1.37.2 sáng 16/11 (7,5 phút, API gián đoạn ngắn). Flannel nay cấp cho pod MTU 1330 (KubeSpan 1380 trừ 50 byte VXLAN), nên gói từ pod sang w3 không vượt MTU. Pod đã restart theo đợt; instance-manager của Longhorn giữ MTU cũ tới lần khởi động lạnh sau (restart nó sẽ ngắt volume).
 
 **Máy**
 - cp1 2 vCPU/4 GB và w1 2 vCPU/4 GB (12/11 chuyển 512 MiB từ w1 sang cp1, [de-xuat-ram-cp1.md](de-xuat-ram-cp1.md)); w2 2 vCPU/4,5 GB.
 - Mạng NAT `10.10.10.0/24` trên kvm-host2 (i7-6700, 16 GB RAM, 1 HDD).
-- w3 là VM GCP e2-standard-2 8 GB ở asia-southeast1, bật 08:15–17:15 (T2/T4 tắt 10:40).
+- w3 là VM GCP e2-standard-2 8 GB ở asia-southeast1, bật 08:15–17:15 T2–T6 (từ 16/11 T2/T4 không tắt sớm).
 - Request RAM sau khi cân lại pod 13/11: w1 67 %, w2 78 %, w3 38 %.
 
 **Truy cập:** từ LAN qua HAProxy :443 trên host2, tên miền `*.talos.internal`, chứng chỉ từ CA nội bộ.
@@ -103,7 +103,7 @@ Sơ đồ tổng thể, hạ tầng, luồng deploy và bảng thành phần: [k
 
 ## 4. Vận hành hằng ngày và backup
 
-Host2 bị tắt cuối ngày (T2/T4 lúc 10:30, các ngày khác khoảng 17:00), nên cụm được bật/tắt có kiểm soát.
+Host2 bị tắt cuối ngày (khoảng 17:00; từ 16/11 T2/T4 cũng làm cả ngày), nên cụm được bật/tắt có kiểm soát.
 
 **Buổi sáng**: bật host2, VM tự bật, `talos-cluster-resume.service` trả các app về số bản cũ. Kiểm tra node, Argo CD, Vault đã unseal, ExternalSecret, demo-app. Watchdog tự kích External Secrets khi Vault lên muộn.
 
@@ -189,7 +189,7 @@ Sáng hôm sau Longhorn không phải dựng lại bản sao. Lần chạy 13/11
 - **Log dịch vụ Talos (etcd, kubelet) chỉ nằm trong RAM của node**, giữ khoảng 45 phút; audit log apiserver giữ khoảng 1 ngày.
 - **sudo không mật khẩu** trên host2; thu hẹp sau, cần anh duyệt.
 - **Hạn cần nhớ:**
-  - danh sách bỏ qua CVE của image-scan hết hạn 30/11 (phải có Longhorn 1.13.1 hoặc flannel mới trước đó);
+  - danh sách bỏ qua CVE của image-scan hết hạn 30/11 (phải có Longhorn 1.13.1 trước đó; flannel đã lên 0.28.10 ngày 16/11, image-scan sẽ cho biết mã CVE của flannel còn không);
   - PAT `ghcr-pull` hết hạn 13/01/2027;
   - GCP Free Trial (gồm khoá KMS của Vault) hết 22/01/2027.
 
@@ -199,7 +199,7 @@ Thứ tự đầy đủ ở `TTS_QTDV/design/audit-10-11.md` mục 7. Việc g�
 
 | Khi | Việc | Cần anh |
 |---|---|---|
-| 16/11 sáng | Đo khởi động lạnh (Vault có chậm khoảng 1 phút sau thay đổi Longhorn không); nâng Kubernetes 1.37.2 (kèm MTU flannel 1380, restart pod sau đó); đổi IP còn lại trong values Traefik | Không |
+| 16/11 sáng (xong) | Đo khởi động lạnh (Vault không chậm thêm); nâng Kubernetes 1.37.2 (MTU pod 1330, restart pod theo đợt); `ingressEndpoint` của Traefik dùng IP giữ chỗ `10.10.10.100` | Không |
 | 17/11 sáng | Nâng Traefik, sau đó Keycloak 26.8.2, Vault 2.2.1 | Không |
 | Trước 30/11 | Nâng Longhorn 1.13.1 khi có bản (upstream-check sẽ báo) hoặc gia hạn danh sách bỏ qua CVE có lý do | Không |
 | Lần gia hạn PAT tới | Tạo lại 2 PAT push chỉ với `write:packages` | Không |
