@@ -1,6 +1,26 @@
 # Đề xuất: AI local chạy trên cloud (16/11/2026)
 
-Trạng thái: **đề xuất, chưa tạo gì trên GCP.** Chờ anh trả lời mục 8 rồi đo thử (mục 7) trước khi dựng thật.
+Trạng thái: **đổi hướng 16/11 09:07.** Anh chọn thử các model AI cloud miễn phí, tham khảo OpenRouter (mục 0). Các mục 1–9 (tự chạy model trên GCP hoặc host2) giữ lại để tham khảo, chưa tạo gì trên GCP.
+
+## 0. Hướng mới: model miễn phí qua OpenRouter
+
+OpenRouter là cổng API chung (dạng OpenAI `/v1/chat/completions`) tới nhiều nhà cung cấp model. Model có hậu tố `:free` không tính tiền. Khác hướng cũ: model chạy ở nhà cung cấp, lab chỉ gọi API.
+
+Đã kiểm 16/11:
+
+- 467 model, 17 model miễn phí (`GET /api/v1/models`, không cần key). Bỏ 2 model tạo nhạc (Lyria), còn 15 model chat, đa số có tool calling, context 256K–1M token. Ví dụ: `google/gemma-4-31b-it:free`, `nvidia/nemotron-3-ultra-550b-a55b:free`, `nvidia/nemotron-3.5-lightning:free`, `baidu/ernie-5.5-flash-preview:free`, `inclusionai/ling-3.2-flash:free`; `openrouter/free` tự chọn một model miễn phí.
+- Giới hạn ([limits](https://openrouter.ai/docs/api-reference/limits)): 20 request/phút; **50 request/ngày** nếu chưa từng nạp credit, 1.000 request/ngày nếu đã nạp từ 10 credit. Tài khoản âm tiền thì model miễn phí cũng lỗi.
+- Dữ liệu ([privacy](https://openrouter.ai/docs/features/privacy-and-logging)): mỗi nhà cung cấp có chính sách riêng, cài đặt riêng cho model trả phí và miễn phí. Model miễn phí và bản preview có thể lưu hoặc dùng prompt để huấn luyện. **Không gửi IP, tên máy, secret, cấu hình hay tài liệu công ty.**
+- Danh sách model miễn phí đổi theo tuần (nhiều bản preview), không nên ghim cứng một model cho thứ cần ổn định.
+
+Kế hoạch thử:
+
+1. Hưng tạo tài khoản OpenRouter và API key (không nạp tiền, đặt credit limit của key là 0). Key chỉ để trong biến môi trường trên laptop, không vào repo.
+2. Script so sánh 6 model × 4 câu (giải thích tiếng Việt, gỡ lỗi Kubernetes, viết YAML, tóm tắt), 24 request, dưới hạn 50/ngày. Đo thời gian trả lời, token/s, lưu câu trả lời để chấm: đúng kỹ thuật, tiếng Việt tự nhiên, theo đúng yêu cầu định dạng.
+3. Ghi kết quả vào mục 0 này, chọn 1–2 model.
+4. Nếu anh muốn dùng tiếp trong lab: Open WebUI trong cụm (Argo CD), nối tới OpenRouter bằng OpenAI API, key trong Vault qua ExternalSecret, đăng nhập Keycloak qua oauth2-proxy, `https://ai.talos.internal`. Không tốn GCP, Open WebUI cần khoảng 0,5–1 GB RAM (đặt trên w3).
+
+Kết quả thử: chưa chạy.
 
 ## 1. Mục tiêu
 
