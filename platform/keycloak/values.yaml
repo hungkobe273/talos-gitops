@@ -1,4 +1,4 @@
-# codecentric/keycloakx 7.4.0 — Keycloak 26.8.1 cho cụm talos-kvm. NHÁP, chưa áp.
+# codecentric/keycloakx 7.4.0 — Keycloak 26.8.2 (từ 16/11) cho cụm talos-kvm.
 #
 # Bối cảnh: Traefik (Ingress, NodePort sau HAProxy TCP passthrough) kết thúc TLS bằng cert do
 # ClusterIssuer talos-internal-ca cấp, rồi chuyển HTTP vào Keycloak cổng 8080 ("edge termination").
@@ -17,12 +17,13 @@ replicas: 1
 # 06/11: talos-core (platform/admission-policies/priority-core.yaml): must run on the surviving worker when one is lost.
 priorityClassName: talos-core
 
-# Image "optimized" (29/10, K10): quay.io/keycloak/keycloak:26.8.1 đã chạy sẵn `kc.sh build`
+# Image "optimized" (29/10, K10): quay.io/keycloak/keycloak:26.8.2 đã chạy sẵn `kc.sh build`
 # (platform/keycloak/image/Dockerfile, build bằng GitHub Actions, đẩy lên GHCR; 09/11 kéo thẳng từ GHCR, bỏ Harbor).
-# Lùi về image gốc: repository quay.io/keycloak/keycloak, tag "26.8.1", bỏ --optimized.
+# Lùi về image gốc: repository quay.io/keycloak/keycloak, tag "26.8.2", bỏ --optimized.
+# Lùi về bản trước: tag "26.8.1-71de393" (vẫn còn trên GHCR).
 image:
   repository: ghcr.io/hungkobe273/talos-keycloak
-  tag: "26.8.1-71de393"    # Keycloak 26.8.1 = appVersion chart 7.4.0; nâng cấp = sửa Dockerfile, chart, tag
+  tag: "26.8.2-50b49ce"    # Keycloak 26.8.2 (chart 7.4.0 appVersion 26.8.1, image đè lên); nâng cấp = sửa Dockerfile, chờ Actions build, sửa tag
 
 imagePullSecrets:
   - name: ghcr-pull        # SealedSecret platform/keycloak/manifests/ghcr-pull-sealed.yaml
