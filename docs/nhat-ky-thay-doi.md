@@ -4,6 +4,12 @@ Ghi mỗi thay đổi về hạ tầng, cấu hình cụm hoặc ứng dụng: n
 
 Thay đổi nằm ngoài repo này (host2, cấu hình Talos) cũng ghi ở đây, vì repo không chứa file cấu hình Talos (có secret).
 
+## 17/11/2026
+
+| Thay đổi | Lý do | Commit |
+|---|---|---|
+| Nâng Vault 2.0.4 → 2.2.2: chart 0.34.1 vẫn kèm 2.0.4 nên đặt `server.image.tag: "2.2.2"` trong `platform/vault/values.yaml` (`helm template` trên host2 ra đúng image). Trước đó Hưng chụp snapshot Raft `vault-2026-11-17-091025.snap` (09:10). Kiểm lưu ý nâng cấp 2.1/2.2: image 2.2 bỏ IPC_LOCK, cụm đã có `disable_mlock = true`; policy HCL không trùng thuộc tính (2.1 từ chối); AWS/SCIM không dùng. Argo lần đầu `ComparisonError` (repo-server quá hạn khi tải chart), hard refresh 09:14 thì Synced, StatefulSet sang 2.2.2; `OnDelete` nên xoá vault-0 09:16:09, Ready 09:17:01 (gián đoạn khoảng 50 s), tự unseal GCP KMS, `HA Mode active`, Raft index 32385. Log: tự tạo mount `agent-registry/`, ghi nhận version 2.2.2, 0 ERROR (1 WARN quyền file raft FSM `rw-rw----`). ExternalSecret `demo-app-env` SecretSynced, ClusterSecretStore `vault` Ready, OIDC role `keycloak` trả auth_url Keycloak, Argo CD 24/24. Lùi: restore snapshot 09:10 (Vault không hạ bản trên dữ liệu đã nâng) | Kế hoạch 17/11 (audit #17); 2.2.2 sửa lỗi rule deny trong ACL bị lách bằng chữ hoa/thường | `7d13f5c` |
+
 ## 16/11/2026
 
 | Thay đổi | Lý do | Commit |

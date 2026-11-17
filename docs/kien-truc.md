@@ -85,7 +85,7 @@ GitHub Actions và GitLab CE vẫn build cùng app để so sánh, nhưng chỉ 
 | | admission-policies | | PriorityClass `talos-core` (2000, từ 06/11: Traefik, Keycloak, Kyverno, cert-manager, External Secrets, Vault) và `talos-pinned` (1000, pod bị ghim); ValidatingAdmissionPolicy `require-memory-request` (Deny + Audit từ 05/11) |
 | | gcp-tools | | pod nginx `tunnel-proxy` và Ingress cho Jenkins, GitLab, SonarQube trên GCP (qua tunnel SSH của host2) |
 | Bảo mật | kyverno | 3.9.2 (Kyverno 1.19.2, từ 12/11) | ImageValidatingPolicy: chỉ nhận image ký bằng khoá Jenkins, webhook chỉ ở ns demo. Từ 13/11 admission controller chạy 2 bản (một bản mỗi worker), PDB `minAvailable: 1`: policy để `failurePolicy: Fail`, nên chỉ một bản thì lúc bản đó bị drain không tạo được pod demo-app nào |
-| | vault | 0.34.1 (Vault 2.0) | secret của ứng dụng, tự unseal bằng GCP KMS, audit log |
+| | vault | 0.34.1, image Vault 2.2.2 (từ 17/11) | secret của ứng dụng, tự unseal bằng GCP KMS, audit log |
 | | external-secrets | 2.14.0 | đưa secret từ Vault vào Secret của pod |
 | | image-scan | | CronJob Trivy 12:30 T2–T6 quét mọi image đang chạy, alert `ImageScanCritical` khi có CVE CRITICAL. Từ 13/11 có danh sách bỏ qua có hạn (`trivyignore.yaml`, hết hạn 30/11/2026) cho các mã CRITICAL đã có bản vá nhưng chưa nâng được (Longhorn, flannel) |
 | Danh tính | keycloak | keycloakx 7.4.0, image Keycloak 26.8.2 (từ 16/11; image optimized `ghcr.io/hungkobe273/talos-keycloak`, build bằng GitHub Actions) | SSO OIDC/SAML, DB trên Supabase |

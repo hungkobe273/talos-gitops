@@ -200,7 +200,7 @@ Thứ tự đầy đủ ở `TTS_QTDV/design/audit-10-11.md` mục 7. Việc g�
 | Khi | Việc | Cần anh |
 |---|---|---|
 | 16/11 sáng (xong) | Đo khởi động lạnh (Vault không chậm thêm); nâng Kubernetes 1.37.2 (MTU pod 1330, restart pod theo đợt); `ingressEndpoint` của Traefik dùng IP giữ chỗ `10.10.10.100` | Không |
-| 17/11 sáng | Nâng Vault 2.2.1 (Traefik 3.7.18 và Keycloak 26.8.2 đã nâng 16/11) | Không |
+| 17/11 sáng (xong) | Nâng Vault 2.0.4 → 2.2.2 (bản 2.2.2 ra 12/11, mới hơn 2.2.1 dự kiến); Traefik 3.7.18 và Keycloak 26.8.2 đã nâng 16/11 | Không |
 | Trước 30/11 | Nâng Longhorn 1.13.1 khi có bản (upstream-check sẽ báo) hoặc gia hạn danh sách bỏ qua CVE có lý do | Không |
 | Lần gia hạn PAT tới | Tạo lại 2 PAT push chỉ với `write:packages` | Không |
 | Sắp lịch | Diễn tập khôi phục etcd trên cụm tạm theo [khoi-phuc-tham-hoa.md](khoi-phuc-tham-hoa.md) | Không, nhưng anh nên biết lịch |
