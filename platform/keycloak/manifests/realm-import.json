@@ -26,6 +26,7 @@
   "clients": [
     {
       "clientId": "grafana",
+      "fullScopeAllowed": false,
       "name": "Grafana",
       "enabled": true,
       "protocol": "openid-connect",
@@ -68,6 +69,7 @@
     },
     {
       "clientId": "argocd",
+      "fullScopeAllowed": false,
       "name": "Argo CD",
       "enabled": true,
       "protocol": "openid-connect",
@@ -110,6 +112,7 @@
     },
     {
       "clientId": "headlamp",
+      "fullScopeAllowed": false,
       "name": "Headlamp",
       "enabled": true,
       "protocol": "openid-connect",
@@ -152,6 +155,7 @@
     },
     {
       "clientId": "vault",
+      "fullScopeAllowed": false,
       "name": "Vault",
       "enabled": true,
       "protocol": "openid-connect",
@@ -421,6 +425,7 @@
     },
     {
       "clientId": "oauth2-proxy",
+      "fullScopeAllowed": false,
       "name": "oauth2-proxy (Prometheus, Alertmanager)",
       "enabled": true,
       "protocol": "openid-connect",
