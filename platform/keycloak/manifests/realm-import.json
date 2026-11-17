@@ -197,6 +197,7 @@
     },
     {
       "clientId": "sonarqube",
+      "fullScopeAllowed": false,
       "name": "SonarQube",
       "enabled": true,
       "protocol": "saml",
@@ -273,6 +274,7 @@
     },
     {
       "clientId": "gitlab",
+      "fullScopeAllowed": false,
       "name": "GitLab",
       "enabled": true,
       "protocol": "saml",
@@ -349,6 +351,7 @@
     },
     {
       "clientId": "jenkins",
+      "fullScopeAllowed": false,
       "name": "Jenkins",
       "enabled": true,
       "protocol": "saml",
