@@ -1,6 +1,6 @@
 # Đề xuất: Hermes Agent + skill cho lab (16/11/2026)
 
-Trạng thái: **đang triển khai (anh đồng ý 16/11 10:44).** Đã có RBAC chỉ đọc (`platform/hermes`, app Argo CD `hermes`) và skill `talos-cluster-health`; Hermes chưa cài trên host2. Tiếp theo [de-xuat-ai-local.md](de-xuat-ai-local.md) mục 0 (thử model miễn phí trên OpenRouter).
+Trạng thái: **đang triển khai (anh đồng ý 16/11 10:44).** Đã có RBAC chỉ đọc (`platform/hermes`, app Argo CD `hermes`) và skill `talos-cluster-health`; Hermes v0.23.2 đã cài trên host2 (17/11), skill health chạy được qua Hermes. Tiếp theo [de-xuat-ai-local.md](de-xuat-ai-local.md) mục 0 (thử model miễn phí trên OpenRouter).
 
 ## 1. Yêu cầu
 
@@ -60,6 +60,15 @@ Việc lặp lại khác trong lab (rút từ nhật ký), làm skill sau:
 
 - `platform/hermes/rbac.yaml` + `argocd-apps/hermes.yaml`: ServiceAccount `hermes-readonly`, token Secret (nằm trong cụm, không trong git), ClusterRole chỉ `get/list/watch` trên node, pod, log, event, workload, PVC/PV, Ingress, PDB, Application/Rollout Argo, Longhorn volume, ExternalSecret. **Không** có Secret, ConfigMap, exec, quyền ghi. `kubectl apply --dry-run=server` đạt.
 - `tools/hermes-skills/devops/talos-cluster-health/`: `SKILL.md` + `scripts/cluster-health.sh` (một lần `kubectl get`, Python lọc, tối đa khoảng 30 dòng, exit 0 xanh / 1 cần xem / 2 mất API). Chạy thử trên host2 10:49: 10 dòng, `CHECK 1 item(s)` (longhorn-manager restart 1 lần trong giờ qua sau khi nâng K8s), 4/4 node, 23/23 app, 3 volume, Vault Ready, 73 pod.
+
+### Đo lần đầu 17/11 (Hermes v0.23.2, `nemotron-3-ultra-550b-a55b:free`)
+
+- `hermes -z` một câu không tool: 31 s (gồm khởi động). Trong phiên tương tác: 5,3 s cho câu chào.
+- `/talos-cluster-health` (Hưng duyệt lệnh một lần): **2 request** model (1 gọi script, 1 tóm tắt), 19 s từ lúc gõ tới câu trả lời, gồm cả lúc chờ người duyệt. Model gọi đúng `bash .../cluster-health.sh`, không chạy kubectl nào khác.
+- Cả phiên (3 request): 20.536 token vào, 345 token ra, 0 USD. Khoảng 7.000 token vào mỗi request, phần lớn là system prompt và nội dung skill.
+- Sai một chỗ: model nói 48 event `Unhealthy` của local-path-provisioner là "expected during rollouts". Lúc đó không có rollout nào; nguyên nhân là dòng Pitfalls trong skill viết "probe failures during a rollout are expected", model áp vào. Đã sửa skill (`1ce3616`, v1.0.1): không đoán nguyên nhân, chỉ nêu số và đề xuất `describe` cho người đọc.
+- Skill chạy từ bản copy `~/.hermes/skills/talos-lab/` (chép vào 16/11), bản này được ưu tiên hơn `external_dirs`. Phải xoá bản copy để Hermes dùng bản trong repo.
+- Chưa đo "không skill" (model tự gõ lệnh) để so; cần quyền chạy nhiều lệnh kubectl, mỗi lệnh phải duyệt.
 
 ## 6. Kế hoạch
 
