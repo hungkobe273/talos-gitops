@@ -50,4 +50,4 @@ echo "can-i create pods/exec: $(run kubectl auth can-i create pods/exec -A || tr
 echo "model: $(run hermes config get model.default) via $(run hermes config get model.provider)"
 echo "approvals: $(run hermes config get approvals.mode); metrics: $(run hermes config get telemetry.shared_metrics.enabled)/$(run hermes config get telemetry.shared_metrics.send)"
 echo "OPENROUTER_API_KEY set: $(run sh -c 'grep -c "^OPENROUTER_API_KEY=..*" ~/.hermes/.env || true')"
-run sh -c 'cd ~ && sh ~/talos-gitops/tools/hermes-skills/devops/talos-cluster-health/scripts/cluster-health.sh | tail -4' || true
+run bash -c 'cd ~ && bash ~/talos-gitops/tools/hermes-skills/devops/talos-cluster-health/scripts/cluster-health.sh | tail -4' || true
