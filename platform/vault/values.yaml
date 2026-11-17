@@ -1,4 +1,4 @@
-# Values for hashicorp/vault 0.34.1 (Vault 2.0.4). See argocd-apps/vault.yaml for the why.
+# Values for hashicorp/vault 0.34.1 (image overridden to Vault 2.2.2, see server.image). See argocd-apps/vault.yaml for the why.
 global:
   enabled: true
   # TLS inside the cluster is off for the lab (traffic stays on the pod network).
@@ -15,6 +15,11 @@ ui:
   enabled: true
 
 server:
+  # 17/11: chart 0.34.1 still ships 2.0.4; image pinned to 2.2.2 (2.2.1 was the plan, 2.2.2 came out 12/11).
+  # OnDelete: the new image runs only after vault-0 is deleted. Rollback = restore the Raft snapshot taken before.
+  image:
+    repository: hashicorp/vault
+    tag: "2.2.2"
   # 06/11: talos-core, above pinned (priority-core.yaml). updateStrategy OnDelete: takes effect at the next restart.
   # 10/11: data + audit on Longhorn (2 replicas, w1 and w2), Vault no longer pinned to w2.
   # Design: TTS_QTDV/design/vault-longhorn.md.
