@@ -15,6 +15,7 @@ Cách kiểm lại cột "Hết hạn":
 | Jenkins `ghcr` | Jenkins push image lên GHCR | PAT classic `jenkins-gce-ghcr`, scope `repo`, `write:packages` | 31/01/2027 | Build không push image | Mục 2 |
 | GitLab CI (biến GHCR) | GitLab runner push image lên GHCR | PAT classic `gitlab-gce-ghcr`, scope `repo`, `write:packages` | 31/01/2027 | Pipeline GitLab không push image | Như mục 2, cập nhật biến CI trong GitLab |
 | Jenkins `sonarqube-token` | Jenkins phân tích SonarQube | Token SonarQube, 90 ngày | Hưng điền (xem trong SonarQube, My Account, Security) | Bước SonarQube lỗi | Tạo token mới trong SonarQube, cập nhật credential |
+| OpenRouter `hermes-host2` | Hermes Agent trên host2 (`/home/hermes/.hermes/.env`) | API key OpenRouter, credit limit 0,01 USD (chỉ model `:free`) | **17/12/2026 14:03** | Hermes báo lỗi xác thực, không gọi được model | Tạo key mới trên openrouter.ai/settings/keys, chạy `sudo bash tools/hermes/set-openrouter-key.sh` trên host2 |
 | Secret `ghcr-pull` (ns `demo`, `keycloak`, SealedSecret trong Git) | Cụm kéo image từ GHCR, Kyverno đọc chữ ký, `image-scan` | PAT classic `talos-kvm ghcr-pull (read only)`, `read:packages` | **13/01/2027** (sớm nhất trong bảng) | Pod mới không kéo được image, Kyverno từ chối pod | Tạo PAT mới, seal lại bằng `kubeseal`, commit |
 | `kubeconfig` (admin) | host2, laptop | Chứng chỉ client Talos | 14/10/2027 | Mất `kubectl` | `talosctl kubeconfig` sinh lại |
 | `talosconfig` (os:admin) | host2 | Chứng chỉ client Talos | 14/10/2027 | Mất `talosctl` | `talosctl config new` từ `secrets.yaml` |
