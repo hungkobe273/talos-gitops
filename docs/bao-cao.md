@@ -189,7 +189,7 @@ Sáng hôm sau Longhorn không phải dựng lại bản sao. Lần chạy 13/11
 - **Log dịch vụ Talos (etcd, kubelet) chỉ nằm trong RAM của node**, giữ khoảng 45 phút; audit log apiserver giữ khoảng 1 ngày.
 - **sudo không mật khẩu** trên host2; thu hẹp sau, cần anh duyệt.
 - **Hạn cần nhớ:**
-  - danh sách bỏ qua CVE của image-scan hết hạn 30/11 (phải có Longhorn 1.13.1 trước đó; flannel đã lên 0.28.10 ngày 16/11, image-scan sẽ cho biết mã CVE của flannel còn không);
+  - danh sách bỏ qua CVE của image-scan hết hạn 30/11: quét 17/11 xác nhận flannel v0.28.10 vẫn còn mã brotli, chưa có Longhorn 1.13.1; các gói không được nạp lúc chạy. Kế hoạch: nâng khi có bản vá, nếu tới 27/11 chưa có thì gia hạn tới 31/12 ([ke-hoach-cve-30-11.md](ke-hoach-cve-30-11.md));
   - PAT `ghcr-pull` hết hạn 13/01/2027;
   - GCP Free Trial (gồm khoá KMS của Vault) hết 22/01/2027.
 
