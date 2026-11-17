@@ -1,7 +1,7 @@
 ---
 name: talos-cluster-health
 description: Check the health of the talos-kvm Kubernetes cluster (nodes, Argo CD apps, Longhorn volumes, Vault, pods, restarts, ExternalSecrets, warning events) with one read-only script. Use for "is the cluster OK", morning checks, after a cold start or an upgrade.
-version: 1.0.0
+version: 1.0.1
 platforms: [linux]
 metadata:
   hermes:
@@ -25,7 +25,10 @@ metadata:
 - Right after a cold start (first ~10 minutes) Keycloak, Vault and Grafana are still starting: `NotReady` and `Unhealthy` probe events there are normal.
 - `VAULT: NOT READY` usually means sealed or the pod is restarting; it unseals itself through GCP KMS. External Secrets then retries on its own (up to ~16 minutes back-off).
 - Longhorn volumes that are `detached` are skipped on purpose (Grafana/Vault scaled to 0 in the evening).
-- Warning events are counts by reason and object only; probe failures during a rollout are expected.
+- Warning events are counts by reason and object only; the script cannot tell why they happened. Do not guess a cause
+  (no "rollout", "cold start" or "expected" unless the output itself shows a restart or a recent cold start).
+  Say the count and the object, and suggest `kubectl -n <ns> describe pod <pod>` for a human to read the probe message.
+  A pod that is Ready with many probe timeouts often means slow IO on host2's single HDD.
 - w3 runs on GCP 08:15–17:15; outside these hours it shows NotReady, which is expected.
 
 ## Verification
