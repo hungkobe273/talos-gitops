@@ -68,8 +68,44 @@ Việc lặp lại khác trong lab (rút từ nhật ký), làm skill sau:
 3. Viết `talos-cluster-health`, đo trước/sau.
 4. Hai skill còn lại, ghi kết quả vào file này.
 
-## 7. Câu hỏi cho anh
+## 7. Câu hỏi cho anh (đáp án soạn sẵn 17/11)
 
-1. Nạp 10 USD vào OpenRouter để được 1.000 request/ngày (vẫn dùng model miễn phí) không, hay giữ 50 request/ngày?
-2. Agent chỉ đọc cụm (đề xuất) hay được chạy cả lệnh sửa có duyệt?
-3. Có cần gateway Telegram không, hay dùng CLI trên host2 là đủ?
+Không câu nào chặn bước 1 của mục 6. Nếu anh chưa trả lời, em cài theo đáp án **A** của cả 3 câu (miễn phí, chỉ đọc, CLI). Các đáp án này đổi sau được mà không phải cài lại.
+
+### Câu 1. OpenRouter: giữ 50 request/ngày hay nạp 10 USD?
+
+| | A. Giữ 50 request/ngày (đề xuất cho tuần đầu) | B. Nạp 10 USD một lần |
+|---|---|---|
+| Hạn mức | 50 request/ngày, 20 request/phút | 1.000 request/ngày, vẫn dùng model `:free` |
+| Đủ cho | Khoảng 10 việc/ngày (mỗi việc 3–6 request). Ngày 16/11 thử 6 model đã dùng 42/50 | Đo trước/sau cả 3 skill trong 1 ngày, dùng hằng ngày thoải mái |
+| Tiền | 0 | 10 USD, không tự gia hạn. Credit dùng được cho model trả phí nếu sau này cần |
+| Rủi ro | Hết hạn mức giữa chừng, đo trước/sau phải chia nhiều ngày | Gần như không. Model miễn phí vẫn có thể lưu prompt, nên quy tắc lọc output giữ nguyên |
+
+Đề xuất: tuần đầu dùng A. Skill gom việc vào 1–2 request, nên 50 request/ngày có thể đủ. Nếu đo thấy thường xuyên hết hạn mức thì chuyển B. Việc nạp tiền do anh hoặc Hưng tự làm trên trang OpenRouter.
+
+### Câu 2. Agent chỉ đọc hay được chạy lệnh sửa có duyệt?
+
+| | A. Chỉ đọc (đề xuất, đã làm 16/11) | B. Thêm lệnh sửa, mỗi lệnh người duyệt |
+|---|---|---|
+| Quyền | ServiceAccount `hermes-readonly`: chỉ `get/list/watch`, không Secret, ConfigMap, exec | Thêm ServiceAccount thứ hai có quyền ghi hẹp: `rollout restart` deployment/statefulset, xoá pod; namespace giới hạn |
+| Agent làm được | Kiểm cụm, đọc log, đoán nguyên nhân, **đề xuất** lệnh cho người chạy | Như A, cộng thêm tự chạy lệnh sửa sau khi người bấm duyệt |
+| Rủi ro | Thấp: tệ nhất là tóm tắt sai | Model miễn phí đôi khi đề xuất sai (4/6 model sai câu YAML nginx 16/11). Người duyệt quen tay bấm đồng ý thì lệnh sai vẫn chạy. Phải viết thêm RBAC, có skill riêng cho mỗi lệnh ghi |
+| Phù hợp quy tắc lab | Khớp "người chạy lệnh CHANGE" | Cần ghi rõ ai duyệt và ghi nhật ký mỗi lệnh |
+
+Đề xuất: A. Xét B sau khi có 1–2 tuần số liệu agent đề xuất đúng hay sai. Lúc đó làm hẹp, chỉ 1 việc: đưa pod ưu tiên w3 về lại sau khi drain.
+
+### Câu 3. Có cần gateway Telegram không?
+
+| | A. Chỉ CLI trên host2 (đề xuất trước mắt) | B. Thêm gateway Telegram |
+|---|---|---|
+| Dùng thế nào | `ssh kvm-host2`, rồi `sudo -u hermes hermes` | Nhắn bot trong nhóm Telegram, điện thoại cũng dùng được |
+| Cần thêm | Không | Bot riêng (không dùng chung bot cảnh báo), chỉ nhận lệnh từ chat ID của nhóm; Hermes chạy thường trực dưới dạng service (thêm vài trăm MB RAM trên host2, host2 còn khoảng 1,8 GB) |
+| Rủi ro | Thấp | Ai trong nhóm cũng gọi được, request tiêu nhanh hơn hạn mức 50/ngày. Thêm một token bot phải giữ |
+| Khi nào đáng làm | Lúc thử và đo | Khi agent đã ổn và có hạn mức B ở câu 1. Hợp với cảnh báo Telegram: nhận cảnh báo xong hỏi agent ngay trong cùng chat |
+
+Đề xuất: A trong lúc thử. Làm B sau khi xong 3 skill và đã chọn B ở câu 1.
+
+### Tóm tắt để anh chọn
+
+- **Mặc định nếu anh chưa trả lời:** 1A, 2A, 3A. Chiều 17/11 có thể cài luôn, không tốn tiền.
+- **Nếu anh muốn đo nhanh và dùng qua Telegram:** 1B, 2A, 3B. Cần 10 USD và một bot mới.
