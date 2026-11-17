@@ -87,7 +87,7 @@ GitHub Actions và GitLab CE vẫn build cùng app để so sánh, nhưng chỉ 
 | Bảo mật | kyverno | 3.9.2 (Kyverno 1.19.2, từ 12/11) | ImageValidatingPolicy: chỉ nhận image ký bằng khoá Jenkins, webhook chỉ ở ns demo. Từ 13/11 admission controller chạy 2 bản (một bản mỗi worker), PDB `minAvailable: 1`: policy để `failurePolicy: Fail`, nên chỉ một bản thì lúc bản đó bị drain không tạo được pod demo-app nào |
 | | vault | 0.34.1, image Vault 2.2.2 (từ 17/11) | secret của ứng dụng, tự unseal bằng GCP KMS, audit log |
 | | external-secrets | 2.14.0 | đưa secret từ Vault vào Secret của pod |
-| | image-scan | | CronJob Trivy 12:30 T2–T6 quét mọi image đang chạy, alert `ImageScanCritical` khi có CVE CRITICAL. Từ 13/11 có danh sách bỏ qua có hạn (`trivyignore.yaml`, hết hạn 30/11/2026) cho các mã CRITICAL đã có bản vá nhưng chưa nâng được (Longhorn, flannel) |
+| | image-scan | | CronJob Trivy 09:45 T2–T6 (12:30 tới 16/11) quét mọi image đang chạy, alert `ImageScanCritical` khi có CVE CRITICAL. Từ 13/11 có danh sách bỏ qua có hạn (`trivyignore.yaml`, hết hạn 30/11/2026) cho các mã CRITICAL đã có bản vá nhưng chưa nâng được (Longhorn, flannel) |
 | Danh tính | keycloak | keycloakx 7.4.0, image Keycloak 26.8.2 (từ 16/11; image optimized `ghcr.io/hungkobe273/talos-keycloak`, build bằng GitHub Actions) | SSO OIDC/SAML, DB trên Supabase |
 | | oauth2-proxy | | đăng nhập Keycloak trước Prometheus, Alertmanager, vmui của VictoriaLogs (`logs.talos.internal`, chỉ mở `/select`) |
 | | headlamp | 0.45.0 | giao diện cụm |

@@ -96,7 +96,7 @@ metadata:
   name: image-scan
   namespace: demo
 spec:
-  schedule: "30 12 * * 1-5"
+  schedule: "45 9 * * 1-5"         # 17/11: was 12:30, missed 16/11 (host2 off 12:20); 09:45 after Velero 09:30
   timeZone: Asia/Ho_Chi_Minh
   concurrencyPolicy: Forbid
   startingDeadlineSeconds: 3600
