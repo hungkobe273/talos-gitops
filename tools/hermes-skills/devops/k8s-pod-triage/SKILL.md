@@ -1,7 +1,7 @@
 ---
 name: k8s-pod-triage
 description: Find out why one Kubernetes pod in the talos-kvm cluster is not healthy (CrashLoopBackOff, not Ready, probe failures, OOMKilled, Pending, many restarts) with one read-only script that collects state, probes, events and the last log lines. Use when the user names a pod or a deployment, or after talos-cluster-health reports a pod.
-version: 1.0.0
+version: 1.0.1
 platforms: [linux]
 metadata:
   hermes:
@@ -16,16 +16,16 @@ metadata:
 - The user gives a Deployment/StatefulSet name: pass it as the prefix, the script picks a not-Ready replica first.
 
 ## Procedure
-1. You need a namespace and a pod name (or prefix). If the user did not give the namespace, ask once (clarify tool); do not run `kubectl get pods -A` to search.
+1. You need a namespace and a pod name (or prefix). If the user did not give them, ask once with the clarify tool as a free-text question ("namespace and pod, e.g. `keycloak keycloak-0`"), without guessed namespace choices; do not run `kubectl get pods -A` to search.
 2. Run `bash scripts/pod-triage.sh <namespace> <pod-or-prefix>` with the terminal tool. Do not run other kubectl commands first: the script already collects everything in one pass.
 3. First line `OK`: say the pod looks fine in one sentence and quote the CONTAINER line.
 4. First line `CHECK`: answer in the user's language, in this order:
    - What is wrong, quoting the exact lines (CONDITIONS, CONTAINER, LAST TERMINATED, EVENTS, LOGS) that show it.
    - The most likely cause, only if a quoted line supports it. If the lines do not show a cause, say "not clear from this output".
-   - At most 3 next steps. Read-only commands you may suggest: `kubectl describe pod`, `kubectl logs --previous`, `kubectl get events`, `kubectl top pod`. Write actions (delete pod, rollout restart, edit limits or probes) are proposals for a human, never run by you.
+   - At most 3 next steps. Read-only commands you may suggest: `kubectl describe pod`, `kubectl logs --previous`, `kubectl get events`. Not `kubectl top`: the cluster has no metrics-server. Write actions (delete pod, rollout restart, edit limits or probes) are proposals for a human, never run by you.
 
 ## Pitfalls
-- `Readiness probe failed ... context deadline exceeded` with `ready=True` and `restarts=0`: the probe sometimes takes longer than its `timeout`. On this cluster the usual reason is slow IO on host2's single HDD (cold start, backups at 16:45, image pulls). Say so as a possibility, not as a fact.
+- `Readiness probe failed ... context deadline exceeded` with `ready=True` and `restarts=0`: the probe sometimes takes longer than its `timeout`. On this cluster the usual reason is slow IO on host2's single HDD (cold start, the 16:45 backup, image pulls, image-scan 09:45). Say so as a possibility, not as a fact, and name only the IO sources that fit the time of the event.
 - `LAST TERMINATED: reason=OOMKilled`: the container hit its memory limit; compare with `RESOURCES lim`.
 - `exit=137` without OOMKilled: killed from outside (liveness probe or node pressure). `exit=143`: normal SIGTERM on shutdown or rollout.
 - `Pending` with `PodScheduled=False`: scheduling (taints, w3 `cloud=gcp:NoSchedule`, resources). Events show the scheduler message.

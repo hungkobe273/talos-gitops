@@ -68,6 +68,7 @@ Việc lặp lại khác trong lab (rút từ nhật ký), làm skill sau:
 - Cả phiên (3 request): 20.536 token vào, 345 token ra, 0 USD. Khoảng 7.000 token vào mỗi request, phần lớn là system prompt và nội dung skill.
 - Sai một chỗ: model nói 48 event `Unhealthy` của local-path-provisioner là "expected during rollouts". Lúc đó không có rollout nào; nguyên nhân là dòng Pitfalls trong skill viết "probe failures during a rollout are expected", model áp vào. Đã sửa skill (`1ce3616`, v1.0.1): không đoán nguyên nhân, chỉ nêu số và đề xuất `describe` cho người đọc.
 - Skill chạy từ bản copy `~/.hermes/skills/talos-lab/` (chép vào 16/11), bản này được ưu tiên hơn `external_dirs`. Phải xoá bản copy để Hermes dùng bản trong repo.
+- `/k8s-pod-triage` (14:52–14:54, keycloak-0): **3 request** (1 hỏi namespace/pod vì gọi không kèm tham số, 1 chạy script, 1 tóm tắt), 14 s từ lúc trả lời câu hỏi tới bản tóm tắt; 10.932 token vào, 1.018 ra. Model trích đúng các dòng (event readiness timeout 3 phút trước, lần dừng cũ do tắt máy, log REFRESH_TOKEN_ERROR vô hại), nêu nguyên nhân dạng khả năng (IO trên HDD). Hai chỗ chưa tốt: đề xuất `kubectl top` (cụm không có metrics-server) và nhắc backup 16:45 khi lúc đó mới 14:53; câu hỏi clarify đưa lựa chọn namespace đoán bừa. Sửa skill v1.0.1.
 - Chưa đo "không skill" (model tự gõ lệnh) để so; cần quyền chạy nhiều lệnh kubectl, mỗi lệnh phải duyệt.
 
 ## 6. Kế hoạch
