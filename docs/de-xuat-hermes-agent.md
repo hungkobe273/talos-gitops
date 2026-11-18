@@ -45,7 +45,7 @@ Về "tối ưu máy hiện có": host2 nâng RAM (còn 3 khe, mới 1 thanh 16 
 |---|---|---|
 | `talos-cluster-health` | Node Ready, app Argo CD không Healthy/Synced, volume Longhorn không healthy, pod restart nhiều, Vault sealed; in tối đa 30 dòng | Tóm tắt, chỉ ra mục đỏ |
 | `k8s-pod-triage <ns> <pod>` | `describe` (Events, Last State, exit code), `logs --previous --tail=80`, events namespace; lọc dòng giống secret | Đoán nguyên nhân, đề xuất lệnh kiểm tiếp (không tự chạy lệnh ghi) |
-| `k8s-manifest-check <file>` | `kubeconform -strict`, `kyverno apply` với policy của cụm, kiểm non-root/tag `latest`/thiếu probe | Giải thích lỗi, sửa YAML. Đúng lỗi các model mắc ở câu nginx 16/11 |
+| `k8s-manifest-check <file\|->` | Schema từ OpenAPI v3 của chính cụm (thay `kubeconform`, host2 không có), Pod Security theo nhãn namespace, policy Kyverno đọc từ repo (thay `kyverno apply`), kiểm non-root/tag `latest`/thiếu probe, gợi ý image chạy root | Giải thích lỗi, sửa YAML rồi kiểm lại. Đúng lỗi các model mắc ở câu nginx 16/11 |
 
 Đo trước/sau trên cùng câu hỏi: số request, token, thời gian, đúng/sai (không skill: model tự gõ lệnh; có skill: gọi script).
 
@@ -70,6 +70,17 @@ Việc lặp lại khác trong lab (rút từ nhật ký), làm skill sau:
 - Skill chạy từ bản copy `~/.hermes/skills/talos-lab/` (chép vào 16/11), bản này được ưu tiên hơn `external_dirs`. Phải xoá bản copy để Hermes dùng bản trong repo.
 - `/k8s-pod-triage` (14:52–14:54, keycloak-0): **3 request** (1 hỏi namespace/pod vì gọi không kèm tham số, 1 chạy script, 1 tóm tắt), 14 s từ lúc trả lời câu hỏi tới bản tóm tắt; 10.932 token vào, 1.018 ra. Model trích đúng các dòng (event readiness timeout 3 phút trước, lần dừng cũ do tắt máy, log REFRESH_TOKEN_ERROR vô hại), nêu nguyên nhân dạng khả năng (IO trên HDD). Hai chỗ chưa tốt: đề xuất `kubectl top` (cụm không có metrics-server) và nhắc backup 16:45 khi lúc đó mới 14:53; câu hỏi clarify đưa lựa chọn namespace đoán bừa. Sửa skill v1.0.1.
 - Chưa đo "không skill" (model tự gõ lệnh) để so; cần quyền chạy nhiều lệnh kubectl, mỗi lệnh phải duyệt.
+
+### Đã làm 18/11: skill thứ 3 `k8s-manifest-check`
+
+- `tools/hermes-skills/devops/k8s-manifest-check/`: `SKILL.md` + `scripts/manifest-check.sh <file|-> [namespace]` (gọi `manifest_check.py`, chỉ cần python3 + PyYAML có sẵn trên host2).
+- Không dùng `kubeconform`/`kyverno` CLI (host2 không có, không cài thêm) và không dùng `kubectl apply --dry-run=server` (SA chỉ đọc không có quyền create). Thay bằng:
+  - schema: tải `/openapi/v3/<group>/<version>` của cụm (quyền đọc có sẵn), kiểm trường lạ, thiếu trường bắt buộc, sai kiểu, giá trị ngoài enum, CRD chưa cài. Đã thử `kubectl create --dry-run=client --validate=strict`: không bắt được trường lạ.
+  - Pod Security: đọc nhãn `pod-security.kubernetes.io/enforce` của namespace, tự kiểm luật baseline/restricted.
+  - Kyverno: đọc `ImageValidatingPolicy` trong `platform/kyverno/manifests` (SA không list được policy).
+- Không in giá trị (trừ enum, tên image, namespace); không đọc Secret.
+- Thử bằng quyền hermes trên host2: 21 file (nginx sai, nginx-unprivileged đúng, YAML hỏng, CRD lạ, Secret, stdin, toàn bộ `apps/demo-app`), mỗi lần 0,2–0,3 s. Quét `apps/*` và `platform/*`: không ERROR giả; WARN thật: nginx trong `gcp-tools` thiếu probe, vài container chưa `readOnlyRootFilesystem`. File values Helm trả `SKIP`.
+- Chưa thử qua Hermes (model).
 
 ## 6. Kế hoạch
 

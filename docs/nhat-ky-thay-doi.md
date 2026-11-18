@@ -4,6 +4,12 @@ Ghi mỗi thay đổi về hạ tầng, cấu hình cụm hoặc ứng dụng: n
 
 Thay đổi nằm ngoài repo này (host2, cấu hình Talos) cũng ghi ở đây, vì repo không chứa file cấu hình Talos (có secret).
 
+## 18/11/2026
+
+| Thay đổi | Lý do | Commit |
+|---|---|---|
+| Skill Hermes thứ 3 `tools/hermes-skills/devops/k8s-manifest-check` (SKILL.md + `manifest-check.sh <file\|-> [namespace]`): kiểm YAML trước khi vào Git bằng schema OpenAPI v3 của chính cụm (trường lạ, sai kiểu, enum, CRD chưa cài), Pod Security theo nhãn namespace, `ImageValidatingPolicy` đọc từ repo, best practice (tag, requests/limits, probe, `readOnlyRootFilesystem`) và gợi ý image chạy root (nginx chính thức → `nginx-unprivileged`). Chỉ GET, không in giá trị, không đọc Secret; không cần cài thêm công cụ. Thử bằng quyền hermes trên 21 file, quét `apps/` và `platform/` không có lỗi giả. Chi tiết ở [de-xuat-hermes-agent.md](de-xuat-hermes-agent.md) mục 5 | Hermes kế hoạch bước 4 (skill cuối trong 3 skill đầu) | commit này |
+
 ## 17/11/2026
 
 | Thay đổi | Lý do | Commit |
