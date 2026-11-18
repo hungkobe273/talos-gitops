@@ -6,4 +6,7 @@
 # Exit: 0 no error, 1 errors found, 2 usage / file / API unreachable.
 # KUBECONFIG must point at the hermes-readonly kubeconfig (platform/hermes) or any read-only one.
 set -uo pipefail
-exec python3 -I "$(dirname "$(readlink -f "$0")")/manifest_check.py" "$@"
+# System python on purpose: inside Hermes, `python3` on PATH is Hermes' own venv (no PyYAML).
+# /usr/bin/python3 has PyYAML from the Ubuntu package python3-yaml. Never pip install for this.
+PY=/usr/bin/python3; [ -x "$PY" ] || PY=python3
+exec "$PY" -I "$(dirname "$(readlink -f "$0")")/manifest_check.py" "$@"

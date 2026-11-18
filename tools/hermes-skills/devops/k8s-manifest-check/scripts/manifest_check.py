@@ -32,7 +32,9 @@ import sys
 try:
     import yaml
 except ImportError:
-    print("python3-yaml (PyYAML) is missing"); sys.exit(2)
+    print("SETUP: PyYAML missing for %s. Stop and tell the human; do not install packages "
+          "(the script must run with /usr/bin/python3, Ubuntu package python3-yaml)" % sys.executable)
+    sys.exit(2)
 
 MAX_LINES_PER_DOC = 18
 REPO = os.path.abspath(os.path.join(os.path.dirname(__file__), *[".."] * 5))

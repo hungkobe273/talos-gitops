@@ -80,7 +80,9 @@ Việc lặp lại khác trong lab (rút từ nhật ký), làm skill sau:
   - Kyverno: đọc `ImageValidatingPolicy` trong `platform/kyverno/manifests` (SA không list được policy).
 - Không in giá trị (trừ enum, tên image, namespace); không đọc Secret.
 - Thử bằng quyền hermes trên host2: 21 file (nginx sai, nginx-unprivileged đúng, YAML hỏng, CRD lạ, Secret, stdin, toàn bộ `apps/demo-app`), mỗi lần 0,2–0,3 s. Quét `apps/*` và `platform/*`: không ERROR giả; WARN thật: nginx trong `gcp-tools` thiếu probe, vài container chưa `readOnlyRootFilesystem`. File values Helm trả `SKIP`.
-- Chưa thử qua Hermes (model).
+- Thử qua Hermes 08:56–09:00 (`/k8s-manifest-check .../platform/gcp-tools/gcp-tools.yaml`, Hưng duyệt): kết quả cuối đúng (WARN, 0 lỗi, 3 cảnh báo nginx, gợi ý emptyDir `/tmp`), nhưng **19 request**, 18 lần gọi tool, 61.086 token vào (271.808 token cache), 1.510 ra, 0 USD, khoảng 4 phút. Nguyên nhân: trong tool terminal của Hermes, `python3` là venv riêng của Hermes (không có PyYAML), khác `/usr/bin/python3` lúc mình thử bằng `sudo -u hermes bash -lc`. Model báo "PyYAML missing" rồi tự xử: đọc mã script, `pip install` (vào python của thư mục tools Hermes), `apt-get install`, `sudo apt-get` (Hermes hỏi mật khẩu sudo, không có nên thất bại), `ensurepip` + `pip install pyyaml` vào venv Hermes, rồi mới chạy được.
+- Bài học: `approvals.mode manual` chỉ hỏi duyệt lệnh Hermes coi là nguy hiểm (`python3 -c` bị hỏi), **`pip install`, `apt-get`, `sudo` không bị hỏi**. Hàng rào thật là user `hermes` không có sudo và SA chỉ đọc. Mỗi script trong skill phải tự chọn đúng interpreter, và skill phải nói rõ khi thiếu phụ thuộc thì dừng.
+- Sửa v1.0.1: wrapper gọi `/usr/bin/python3`; thiếu PyYAML thì in `SETUP:` và bảo dừng; Procedure bước 6: gặp `SETUP:`/`API:`/`FILE:` thì báo người, cấm pip/apt/sudo, không đọc mã. Thử lại với venv Hermes đứng đầu PATH: chạy đúng.
 
 ## 6. Kế hoạch
 
