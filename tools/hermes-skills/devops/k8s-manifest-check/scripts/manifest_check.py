@@ -391,7 +391,11 @@ def main():
             else:
                 level = labels.get("pod-security.kubernetes.io/enforce", "privileged")
             head += "  (ns Pod Security: %s)" % level
-            out_err += ["PSA %s %s" % (level, e) for e in psa_checks(spec, level)]
+            psa = psa_checks(spec, level)
+            out_err += ["PSA %s %s" % (level, e) for e in psa]
+            if psa and kind != "Pod":
+                notes.append("NOTE PSA: the %s itself is admitted with a warning; its pods are rejected when "
+                             "created (events FailedCreate on the ReplicaSet/Job), so nothing runs" % kind)
             w, h = best_and_hints(kind, spec, kust)
             out_warn += ["BEST " + x for x in w]
             out_hint += ["HINT " + x for x in h]

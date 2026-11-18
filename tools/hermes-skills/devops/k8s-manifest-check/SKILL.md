@@ -1,7 +1,7 @@
 ---
 name: k8s-manifest-check
 description: Check Kubernetes YAML (a file or a pasted manifest) against the talos-kvm cluster before it goes to Git, with one read-only script - schema from the cluster's own OpenAPI (unknown fields, wrong types, bad enum values, CRD not installed), Pod Security level of the target namespace, the repo's Kyverno image policy, and best practices (image tag, requests/limits, probes, non-root). Use when the user asks to review, validate or fix a manifest, or asks why a pod spec is rejected.
-version: 1.0.1
+version: 1.0.2
 platforms: [linux]
 metadata:
   hermes:
@@ -23,10 +23,11 @@ metadata:
    - Neither: ask once with the clarify tool as a free-text question ("file path or paste the YAML").
 2. Run `bash scripts/manifest-check.sh <file-or-dash> [namespace]` with the terminal tool. The namespace argument is only used for documents without `metadata.namespace` (default `default`). Do not run kubectl first: the script already reads the schema and the namespace label.
 3. First line `RESULT: OK`: say it passes in one sentence; mention HINT or KYVERNO lines if any.
-4. First line `RESULT: WARN` or `RESULT: FAIL`: answer in the user's language, in this order:
-   - Every ERROR line, quoted, with what to change. ERROR means the API server or admission will reject it.
+4. First line `RESULT: WARN` or `RESULT: FAIL`: answer in the language the user wrote in (Vietnamese request → Vietnamese answer; keep field names and quoted lines as they are), in this order:
+   - Every ERROR line, quoted, with what to change. SCHEMA errors: the API server rejects the object. PSA errors: a Pod is rejected; a Deployment/StatefulSet/Job is accepted but its pods are never created (see the NOTE PSA line).
    - WARN lines grouped in one short list (they do not block deploy).
    - HINT lines: explain them; they cover runtime failures that admission does not catch.
+   - If you wrote the first draft yourself, still list what the first run found (one line per ERROR group) before the fix, so the user sees why each change is there.
    - If the user asked for a fix: give the corrected YAML, then run the script again on the corrected YAML (stdin) and show the new RESULT line. Only claim it passes if the second run says so.
 5. `RESULT: SKIP`: the input is not a Kubernetes manifest (e.g. Helm values). Say so; do not invent checks.
 6. Output starts with `SETUP:`, `API:` or `FILE:`, or the script fails to start: stop. Quote the line to the user and end the turn. Do not install anything (no pip, ensurepip, apt, sudo), do not read the script source, do not retry with another interpreter.
