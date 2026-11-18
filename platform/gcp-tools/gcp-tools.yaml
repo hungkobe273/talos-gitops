@@ -60,6 +60,13 @@ data:
           proxy_read_timeout 300s;
         }
       }
+      # 18/11: probe target that does not depend on the tunnels, so probes stay green while the
+      # GCP VMs are off (evenings, Mon/Wed from 10:40) and nginx is not restarted in a loop.
+      server {
+        listen 8090;
+        access_log off;
+        location = /healthz { return 200 "ok\n"; }
+      }
 ---
 apiVersion: apps/v1
 kind: Deployment
@@ -89,19 +96,34 @@ spec:
               containerPort: 8081
             - name: sonarqube
               containerPort: 8082
+            - name: health
+              containerPort: 8090
+          readinessProbe:
+            httpGet: {path: /healthz, port: health}
+            periodSeconds: 10
+          livenessProbe:
+            httpGet: {path: /healthz, port: health}
+            periodSeconds: 20
+            failureThreshold: 3
           resources:
             requests: {cpu: 5m, memory: 16Mi}
             limits: {memory: 64Mi}
           securityContext:
             allowPrivilegeEscalation: false
             capabilities: {drop: [ALL]}
+            readOnlyRootFilesystem: true
           volumeMounts:
             - name: conf
               mountPath: /etc/nginx/conf.d
+            # nginx-unprivileged keeps its pid file and temp paths (request bodies up to 200m) in /tmp.
+            - name: tmp
+              mountPath: /tmp
       volumes:
         - name: conf
           configMap:
             name: tunnel-proxy
+        - name: tmp
+          emptyDir: {sizeLimit: 512Mi}
 ---
 apiVersion: v1
 kind: Service
