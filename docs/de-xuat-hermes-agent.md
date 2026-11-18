@@ -89,6 +89,13 @@ Việc lặp lại khác trong lab (rút từ nhật ký), làm skill sau:
 - Đối chiếu bằng `kubectl apply --dry-run=server` (kubeconfig admin): 4 ERROR PSA của script khớp đúng 4 vi phạm API server báo; bản sửa được nhận không cảnh báo. Chưa chạy pod thật.
 - Hai chỗ chưa tốt, sửa v1.0.2: (1) model trả lời tiếng Anh cho câu tiếng Việt và không liệt kê lỗi của bản nháp trước khi sửa; (2) script/skill nói ERROR là "API server từ chối", nhưng với Deployment, API server chỉ cảnh báo PSA và nhận object, còn pod bị chặn lúc tạo (FailedCreate). Script thêm dòng `NOTE PSA` cho kind khác Pod.
 
+### Hook chặn cài gói và sudo (18/11)
+
+- Vì `approvals.mode manual` không hỏi pip/apt/sudo, thêm shell hook `pre_tool_call` của Hermes: `tools/hermes/hooks/block-installs.sh`, cài bằng `setup-host2.sh` bước 2b vào `/usr/local/lib/hermes-hooks/` (root sở hữu, agent không sửa được), matcher `terminal|process|execute_code`, `timeout: 10`, `fail_closed: true` (hook hỏng thì chặn luôn).
+- Chặn khi lệnh có từ lệnh: `sudo su doas pkexec runuser`, `apt apt-get aptitude dpkg snap flatpak brew`, `pip pip3 pipx easy_install ensurepip conda mamba uv`, `-m pip`, `-m ensurepip`, `npm npx pnpm yarn gem cargo`, `go install/get`, `curl|wget ... | sh`. Kể cả gọi theo đường dẫn (`.../bin/pip3`). Trả exit 2 kèm lời nhắn bảo model dừng và báo người; ghi `~/.hermes/logs/policy-blocks.log` (giờ, session, tool, luật; không ghi lệnh).
+- Thử với payload giả trên host2: chặn đủ 9 lệnh model đã chạy hoặc tương tự 18/11; cho qua script skill (cả heredoc), `kubectl ... | grep`, `get snapshots.longhorn.io`, `ls /var/lib/apt/lists`, `python3 -c`, `git log`.
+- Giới hạn: lọc theo chữ, không phải sandbox. Manifest dán vào có chữ `apt-get` trong `command:` cũng bị chặn (báo rõ luật nên dễ nhận ra). Hàng rào thật vẫn là user `hermes` không sudo và SA chỉ đọc; hook chặn model tự cài vào home của nó và đỡ tốn request.
+
 ## 6. Kế hoạch
 
 1. Cài Hermes trên host2 (installer chính thức, user riêng), nối OpenRouter, chạy thử 1 câu không tool.

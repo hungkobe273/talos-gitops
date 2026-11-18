@@ -24,6 +24,14 @@ run hermes config set telemetry.shared_metrics.send false
 run hermes tools disable web browser code_execution vision image_gen tts cronjob computer_use \
   delegation connections
 
+# 2b. (18/11) Policy hook: block package installs and sudo/su before any terminal command runs.
+#     approvals.mode manual does not ask for pip/apt/sudo. Root-owned copy so the agent cannot edit
+#     it; fail_closed so a broken hook blocks instead of allowing. First launch asks once for
+#     consent (shell hooks are opt-in); answer yes. Blocks are logged to ~/.hermes/logs/policy-blocks.log.
+install -d -m 755 -o root -g root /usr/local/lib/hermes-hooks
+install -m 755 -o root -g root "$HH/talos-gitops/tools/hermes/hooks/block-installs.sh" /usr/local/lib/hermes-hooks/block-installs.sh
+run hermes config set hooks '{"pre_tool_call":[{"matcher":"terminal|process|execute_code","command":"/usr/local/lib/hermes-hooks/block-installs.sh","timeout":10,"fail_closed":true}]}'
+
 # 3. kubeconfig from ServiceAccount hermes/hermes-readonly (ClusterRole without Secret/ConfigMap/exec/write).
 #    Token and CA go straight into the file (0600, owner hermes); nothing is printed.
 #    Hermes' built-in write denylist covers ~/.kube, so the agent cannot change this file.
@@ -49,5 +57,7 @@ echo "can-i delete pods:    $(run kubectl auth can-i delete pods -A || true)"
 echo "can-i create pods/exec: $(run kubectl auth can-i create pods/exec -A || true)"
 echo "model: $(run hermes config get model.default) via $(run hermes config get model.provider)"
 echo "approvals: $(run hermes config get approvals.mode); metrics: $(run hermes config get telemetry.shared_metrics.enabled)/$(run hermes config get telemetry.shared_metrics.send)"
+echo "policy hook pip blocked (expect rc=2): $(printf '{"tool_name":"terminal","tool_input":{"command":"pip install x"}}' | run /usr/local/lib/hermes-hooks/block-installs.sh >/dev/null 2>&1; echo rc=$?)"
+run hermes hooks list 2>&1 | grep -E 'block-installs' || echo "policy hook NOT configured"
 echo "OPENROUTER_API_KEY set: $(run sh -c 'grep -c "^OPENROUTER_API_KEY=..*" ~/.hermes/.env || true')"
 run bash -c 'cd ~ && bash ~/talos-gitops/tools/hermes-skills/devops/talos-cluster-health/scripts/cluster-health.sh | tail -4' || true
