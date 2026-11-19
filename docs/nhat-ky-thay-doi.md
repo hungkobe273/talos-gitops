@@ -4,6 +4,12 @@ Ghi mỗi thay đổi về hạ tầng, cấu hình cụm hoặc ứng dụng: n
 
 Thay đổi nằm ngoài repo này (host2, cấu hình Talos) cũng ghi ở đây, vì repo không chứa file cấu hình Talos (có secret).
 
+## 19/11/2026
+
+| Thay đổi | Lý do | Commit |
+|---|---|---|
+| Skill Hermes thứ 4 `tools/hermes-skills/devops/talos-backup-check` (SKILL.md + `backup-check.sh`): đọc `/var/lib/talos-backup/status.json`, xếp OK/CHECK theo tuổi lần thành công cuối (26 giờ + 24 giờ mỗi T7/CN, cùng ngưỡng với watchdog), kết quả lần chạy cuối, đủ 6 phần (etcd, Keycloak, Vault, bundle, B2, GCS), số khoá Sealed Secrets trong bundle, kích thước lệch so với 5 lần trước, file local mới, chỗ trống `/home`. File trạng thái do `host2/bin/talos-backup-status.sh` ghi, chạy bằng `ExecStopPost` (drop-in `50-status.conf`, có `-` nên không làm unit lỗi) sau mỗi lần backup: chỉ tên file, kích thước, giờ và các dòng OK/ERROR trong journal của lần chạy (rút gọn đường dẫn, che IP LAN công ty), không có nội dung hay khoá. Cần vì user hermes không đọc được `~/talos-kvm` (700) và `systemctl show` mất giờ chạy sau khi host2 khởi động lại. Thử trên host2 bằng quyền hermes: dữ liệu thật ra OK (lần 18/11 10:18, 6/6 phần, 2 khoá); file thiếu ra `SETUP`; dữ liệu giả (cũ 119 giờ, lần cuối lỗi, bundle 4,8 MiB so với 15 MiB) ra CHECK 3 mục | Hermes: việc lặp lại "kiểm backup hằng ngày" trong [de-xuat-hermes-agent.md](de-xuat-hermes-agent.md) mục 5 | commit này |
+
 ## 18/11/2026
 
 | Thay đổi | Lý do | Commit |

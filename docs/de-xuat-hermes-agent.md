@@ -89,6 +89,11 @@ Việc lặp lại khác trong lab (rút từ nhật ký), làm skill sau:
 - Đối chiếu bằng `kubectl apply --dry-run=server` (kubeconfig admin): 4 ERROR PSA của script khớp đúng 4 vi phạm API server báo; bản sửa được nhận không cảnh báo. Chưa chạy pod thật.
 - Hai chỗ chưa tốt, sửa v1.0.2: (1) model trả lời tiếng Anh cho câu tiếng Việt và không liệt kê lỗi của bản nháp trước khi sửa; (2) script/skill nói ERROR là "API server từ chối", nhưng với Deployment, API server chỉ cảnh báo PSA và nhận object, còn pod bị chặn lúc tạo (FailedCreate). Script thêm dòng `NOTE PSA` cho kind khác Pod.
 
+### Skill thứ 4 `talos-backup-check` (19/11)
+
+- Nguồn dữ liệu: user hermes không đọc được thư mục backup (`~/talos-kvm` của ngochung, 700), không có khoá B2/GCS, và `systemctl show` mất giờ chạy sau khi host2 khởi động lại. Nên backup tự ghi file trạng thái không có secret `/var/lib/talos-backup/status.json` (`host2/bin/talos-backup-status.sh`, `ExecStopPost` drop-in `50-status.conf`), skill chỉ đọc file đó và timer.
+- `scripts/backup-check.sh`: OK/CHECK, tối đa khoảng 25 dòng; ngưỡng tuổi giống `talos-watchdog.sh` (26 giờ, cộng 24 giờ mỗi ngày T7/CN). Không chứng minh khôi phục được, skill nói rõ điều này.
+
 ### Hook chặn cài gói và sudo (18/11)
 
 - Vì `approvals.mode manual` không hỏi pip/apt/sudo, thêm shell hook `pre_tool_call` của Hermes: `tools/hermes/hooks/block-installs.sh`, cài bằng `setup-host2.sh` bước 2b vào `/usr/local/lib/hermes-hooks/` (root sở hữu, agent không sửa được), matcher `terminal|process|execute_code`, `timeout: 10`, `fail_closed: true` (hook hỏng thì chặn luôn).
