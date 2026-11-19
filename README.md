@@ -19,7 +19,7 @@ Quy ước: thay đổi nào làm khác kiến trúc, phiên bản hoặc cách 
 ```text
 talos-gitops/
 ├── bootstrap/        # apply tay một lần: root.yaml (app-of-apps), values Argo CD, secret OIDC của Argo CD
-├── argocd-apps/      # 24 Application do root quản lý (mỗi file một app)
+├── argocd-apps/      # 25 Application do root quản lý (mỗi file một app)
 ├── platform/         # values Helm, manifest và SealedSecret của từng thành phần nền tảng
 │   ├── traefik, cert-manager, local-path, longhorn, descheduler, argo-rollouts, admission-policies
 │   ├── monitoring, headlamp, oauth2-proxy, victoria-logs, otel-collector, image-scan
