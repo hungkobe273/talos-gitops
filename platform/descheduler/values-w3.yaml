@@ -1,0 +1,54 @@
+# Second descheduler release (app descheduler-w3): move pods that PREFER w3 back to w3.
+# Why a separate release: the main one (values.yaml) excludes w3 from its node list on purpose
+# (LowNodeUtilization would see the near-empty, tainted w3 as "underutilized"), and the node list is
+# policy-wide, so RemovePodsViolatingNodeAffinity there could never pick w3 as the better node.
+# Case 19/11: w3 stopped 18/11 10:20, kubelet ended argo-rollouts (TerminationByKubelet), the
+# replacement ran on w2 and stayed there; the scheduler never moves running pods.
+kind: CronJob
+# UTC (kube-controller-manager). 01:45-09:45 UTC = 08:45-16:45 VN, Mon-Fri, while w3 is up
+# (08:15-17:15, Ready about 08:36 after a cold start). Hourly at :45 so it does not add to the
+# :00/:30 runs of the main release (etcd write spikes on cp1, 13/11). Most runs evict nothing.
+schedule: "45 1-9 * * 1-5"
+startingDeadlineSeconds: 300
+successfulJobsHistoryLimit: 1
+failedJobsHistoryLimit: 1
+priorityClassName: ""
+resources:
+  requests:
+    cpu: 20m
+    memory: 64Mi
+  limits:
+    cpu: 200m
+    memory: 256Mi
+podSecurityContext:
+  seccompProfile:
+    type: RuntimeDefault
+deschedulerPolicy:
+  # w1, w2 and w3. NotReady nodes (w3 outside its hours) are skipped by descheduler itself.
+  nodeSelector: "!node-role.kubernetes.io/control-plane"
+  maxNoOfPodsToEvictPerNode: 5
+  maxNoOfPodsToEvictTotal: 5
+  profiles:
+    - name: prefer-w3
+      pluginConfig:
+        - name: DefaultEvictor
+          args:
+            # Evict only if the pod fits on another node (w3: toleration, free resources).
+            nodeFit: true
+            podProtections:
+              defaultDisabled:
+                - "PodsWithLocalStorage"
+              extraEnabled:
+                - "PodsWithPVC"
+        - name: RemovePodsViolatingNodeAffinity
+          args:
+            nodeAffinityType:
+              - preferredDuringSchedulingIgnoredDuringExecution
+            namespaces:
+              # image-scan Job (prefers w3): never kill a scan in progress.
+              exclude:
+                - demo
+      plugins:
+        deschedule:
+          enabled:
+            - RemovePodsViolatingNodeAffinity
