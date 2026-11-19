@@ -1,7 +1,7 @@
 ---
 name: talos-cluster-health
 description: Check the health of the talos-kvm Kubernetes cluster (nodes, Argo CD apps, Longhorn volumes, Vault, pods, restarts, ExternalSecrets, warning events) with one read-only script. Use for "is the cluster OK", morning checks, after a cold start or an upgrade.
-version: 1.0.1
+version: 1.0.2
 platforms: [linux]
 metadata:
   hermes:

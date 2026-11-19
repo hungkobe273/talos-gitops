@@ -46,11 +46,17 @@ out.append(f"LONGHORN: {len(vols)} volumes, {len(vols)-len(vb)} ok" + (f"; {', '
 bad += bool(vb)
 
 pods = L("pods.json")
-pb, rs = [], []
+pb, rs, left = [], [], 0
 for p in pods:
     ns, name = p["metadata"]["namespace"], p["metadata"]["name"]
     ph = p["status"].get("phase")
     cs = p["status"].get("containerStatuses", []) or []
+    # Pods failed by the kubelet (node shutdown or eviction) stay as Failed until garbage-collected;
+    # their controller already made a replacement, which is checked on its own.
+    if ph == "Failed" and any(c["type"] == "DisruptionTarget" and c["status"] == "True"
+                              for c in p["status"].get("conditions", [])):
+        left += 1
+        continue
     waiting = [c["state"]["waiting"].get("reason", "") for c in cs if "waiting" in c.get("state", {})]
     notready = ph == "Running" and any(not c.get("ready") for c in cs)
     if ph not in ("Running", "Succeeded") or waiting or notready:
@@ -65,10 +71,45 @@ vault = [p for p in pods if p["metadata"]["namespace"] == "vault" and p["metadat
 vr = all(all(c.get("ready") for c in (p["status"].get("containerStatuses") or [{}])) for p in vault) if vault else False
 out.append(f"VAULT: {'Ready (unsealed)' if vr else 'NOT READY (sealed, down or missing)'}")
 bad += not vr
-out.append(f"PODS: {len(pods)} total, {len(pb)} not healthy" + (f"; {', '.join(pb[:8])}" + (" ..." if len(pb) > 8 else "") if pb else ""))
+out.append(f"PODS: {len(pods)} total, {len(pb)} not healthy" + (f"; {', '.join(pb[:8])}" + (" ..." if len(pb) > 8 else "") if pb else "")
+           + (f"; {left} old Failed left by node shutdown/eviction (replaced, harmless)" if left else ""))
 bad += bool(pb)
 out.append(f"RESTARTS (last 1h): {len(rs)}" + (f"; {', '.join(rs[:6])}" if rs else ""))
 bad += bool(rs)
+
+# Workloads that prefer w3 (preferred nodeAffinity on hostname w3) but have no pod there.
+# descheduler-w3 moves them back hourly at :45 (08:45-16:45 Mon-Fri), so only count it as a problem
+# when a pod has been off w3 for more than 75 min since both w3 became Ready and the pod was created.
+w3 = next((n for n in nodes if n["metadata"]["name"] == "w3"), None)
+w3c = next((c for c in (w3 or {}).get("status", {}).get("conditions", []) if c["type"] == "Ready"), {})
+if not w3 or w3c.get("status") != "True":
+    out.append("W3 PREFERRED: w3 not Ready, skipped")
+else:
+    w3since = ts(w3c.get("lastTransitionTime"))
+    grp = {}
+    for p in pods:
+        if p["status"].get("phase") != "Running":
+            continue
+        pref = json.dumps(((p["spec"].get("affinity") or {}).get("nodeAffinity") or {})
+                          .get("preferredDuringSchedulingIgnoredDuringExecution") or [])
+        if '"w3"' not in pref:
+            continue
+        o = (p["metadata"].get("ownerReferences") or [{}])[0]
+        if o.get("kind") == "Job":
+            continue
+        k = (p["metadata"]["namespace"], o.get("name", p["metadata"]["name"]))
+        grp.setdefault(k, []).append(p)
+    off, late = [], 0
+    for (ns, owner), ps in sorted(grp.items()):
+        if any(p["spec"].get("nodeName") == "w3" for p in ps):
+            continue
+        age = min((now - max(w3since, ts(p["metadata"]["creationTimestamp"]))).total_seconds() for p in ps)
+        name = owner.rsplit("-", 1)[0] if ps[0]["metadata"].get("labels", {}).get("pod-template-hash") else owner
+        off.append(f"{ns}/{name} {int(age // 60)}m")
+        late += age > 4500
+    out.append(f"W3 PREFERRED: {len(grp)-len(off)}/{len(grp)} on w3" + (f"; off w3: {', '.join(off[:6])}" if off else "")
+               + ("; descheduler-w3 did not move them (runs :45)" if late else ""))
+    bad += bool(late)
 
 es = L("es.json")
 eb = [f'{e["metadata"]["namespace"]}/{e["metadata"]["name"]}' for e in es
