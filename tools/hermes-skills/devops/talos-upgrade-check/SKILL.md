@@ -1,7 +1,7 @@
 ---
 name: talos-upgrade-check
 description: Before/after check for a Talos or Kubernetes upgrade of one node of the talos-kvm cluster (node versions, Longhorn replicas, PodDisruptionBudgets that would block the drain, stuck pods, Argo CD apps, what goes down during the reboot, pods that left w3) with one read-only script. Use when the user plans or has just finished an upgrade, asks "can I upgrade w1 now", or asks whether the cluster recovered after an upgrade.
-version: 1.0.0
+version: 1.0.1
 platforms: [linux]
 metadata:
   hermes:
@@ -16,9 +16,11 @@ metadata:
 - The user asks if the cluster is ready for, or recovered from, an upgrade or a node reboot.
 
 ## Procedure
-1. Find the node. Accepted: node name, IP, or `w3`. Known: cp1 = `talos-w9b-tsv` 10.10.10.11 (only control plane), w1 = `talos-hdl-7jo` 10.10.10.21, w2 = `talos-iv6-z5m` 10.10.10.22, w3 = GCP VM 10.148.0.4. If the user gives no node, run without one (cluster-wide check).
-2. Before: `bash scripts/upgrade-check.sh pre <node> [--expect vX.Y.Z]`. After: `bash scripts/upgrade-check.sh post <node> --expect vX.Y.Z`. The version is the Talos version the user named; without one, leave `--expect` out. Run only this script.
-3. Answer in the language the user wrote in:
+Write the whole answer in the user's language: if the user wrote Vietnamese, answer in Vietnamese (keep the quoted script lines as they are).
+
+1. Pass the node exactly as the user wrote it: the script accepts `cp1`, `w1`, `w2`, `w3`, a node name or an IP. (cp1 = `talos-w9b-tsv` 10.10.10.11, the only control plane; w1 = `talos-hdl-7jo` 10.10.10.21; w2 = `talos-iv6-z5m` 10.10.10.22; w3 = GCP VM 10.148.0.4.) No node given: run without one (cluster-wide check).
+2. Run the script right away, as your first tool call. Do not open or read the script files first; this page is all you need. Before: `bash scripts/upgrade-check.sh pre <node> [--expect vX.Y.Z]`. After: `bash scripts/upgrade-check.sh post <node> --expect vX.Y.Z`. The version is the Talos version the user named; without one, leave `--expect` out. Run only this script, once.
+3. Answer:
    - `GO (Kubernetes side)` or `OK`: one or two sentences, quote the NODES and LONGHORN lines.
    - `NO-GO n item(s)` or `CHECK n item(s)`: quote every `- ` item first, then at most 3 points on what a human should look at.
    - Then the `NOTE` lines that matter for this node (what goes down, vault-0, control plane), shortened.

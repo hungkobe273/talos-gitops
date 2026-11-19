@@ -81,11 +81,13 @@ def ready(n):
 
 
 byname = {n["metadata"]["name"]: n for n in nodes}
+SHORT = {"cp1": "10.10.10.11", "w1": "10.10.10.21", "w2": "10.10.10.22"}   # w3 is the real node name
 target = None
 if target_arg:
-    target = next((n for n in nodes if target_arg in (n["metadata"]["name"], ip_of(n))), None)
+    want = SHORT.get(target_arg, target_arg)
+    target = next((n for n in nodes if want in (n["metadata"]["name"], ip_of(n))), None)
     if target is None:
-        print("NODE: no node named or with IP '%s'" % target_arg)
+        print("NODE: no node named or with IP '%s' (short names: cp1 w1 w2 w3)" % target_arg)
         sys.exit(2)
 tname = target["metadata"]["name"] if target else None
 
