@@ -93,6 +93,8 @@ Việc lặp lại khác trong lab (rút từ nhật ký), làm skill sau:
 
 - Nguồn dữ liệu: user hermes không đọc được thư mục backup (`~/talos-kvm` của ngochung, 700), không có khoá B2/GCS, và `systemctl show` mất giờ chạy sau khi host2 khởi động lại. Nên backup tự ghi file trạng thái không có secret `/var/lib/talos-backup/status.json` (`host2/bin/talos-backup-status.sh`, `ExecStopPost` drop-in `50-status.conf`), skill chỉ đọc file đó và timer.
 - `scripts/backup-check.sh`: OK/CHECK, tối đa khoảng 25 dòng; ngưỡng tuổi giống `talos-watchdog.sh` (26 giờ, cộng 24 giờ mỗi ngày T7/CN). Không chứng minh khôi phục được, skill nói rõ điều này.
+- Cài trên host2 08:52–08:56 (Hưng): `~/bin/talos-backup-status.sh`, `/var/lib/talos-backup` (ngochung 755), drop-in `50-status.conf`, `daemon-reload`, chạy tay một lần để có file đầu. Lần 16:45 hôm nay là lần đầu `ExecStopPost` tự ghi.
+- Thử qua Hermes 09:20 (`/talos-backup-check`): **2 request**, 1 lần gọi tool, 14 s, 8.978 token vào, 285 ra, không lệnh nào phải duyệt. Trả lời đúng: lần thành công cuối 18/11 10:19 (23 giờ, ngưỡng 26 giờ), đủ 6 phần, 2 khoá Sealed Secrets. Trả lời tiếng Anh vì lệnh gọi chỉ có `/talos-backup-check`, không có câu tiếng Việt.
 
 ### Hook chặn cài gói và sudo (18/11)
 
