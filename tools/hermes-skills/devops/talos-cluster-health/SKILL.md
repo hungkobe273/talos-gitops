@@ -30,6 +30,8 @@ metadata:
   Say the count and the object, and suggest `kubectl -n <ns> describe pod <pod>` for a human to read the probe message.
   A pod that is Ready with many probe timeouts often means slow IO on host2's single HDD.
 - w3 runs on GCP 08:15–17:15; outside these hours it shows NotReady, which is expected.
+- `W3 PREFERRED` lists workloads that prefer w3 but have no pod there. The CronJob `descheduler-w3` moves them back hourly at :45 (08:45–16:45 Mon–Fri), so a short time off w3 is normal and not counted. It is counted only with "descheduler-w3 did not move them": then suggest, for a human, `kubectl -n descheduler logs job/<latest descheduler-w3 job>` and `kubectl -n <ns> rollout restart <kind>/<name>`.
+- `old Failed left by node shutdown/eviction` are pods the kubelet ended (w3 stop, memory pressure). Their replacement is checked separately; these leftovers are harmless and not a problem to report.
 
 ## Verification
 - The answer quotes the first line of the script output.
