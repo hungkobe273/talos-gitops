@@ -255,7 +255,7 @@ if mode == "post":
             if '"w3"' in pref and not any(p["spec"].get("nodeName") == "w3" for p in ps):
                 off.append("%s/%s %s" % (ns, k.lower(), n))
         if off:
-            items.append("prefer w3 but have no pod there (piled onto w1/w2 during the drain): " + ", ".join(off)
+            items.append("prefer w3 but have no pod there (moved to w1/w2 by an earlier w3 drain or w3 outage; they do not move back by themselves): " + ", ".join(off)
                          + ". A human runs kubectl -n <ns> rollout restart <kind>/<name>")
     rec = collections.Counter()
     for p in pods:
