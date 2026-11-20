@@ -1,7 +1,7 @@
 ---
 name: k8s-pod-triage
 description: Find out why one Kubernetes pod in the talos-kvm cluster is not healthy (CrashLoopBackOff, not Ready, probe failures, OOMKilled, Pending, many restarts) with one read-only script that collects state, probes, events and the last log lines. Use when the user names a pod or a deployment, or after talos-cluster-health reports a pod.
-version: 1.0.1
+version: 1.0.2
 platforms: [linux]
 metadata:
   hermes:
@@ -27,10 +27,10 @@ metadata:
 ## Pitfalls
 - `Readiness probe failed ... context deadline exceeded` with `ready=True` and `restarts=0`: the probe sometimes takes longer than its `timeout`. On this cluster the usual reason is slow IO on host2's single HDD (cold start, the 16:45 backup, image pulls, image-scan 09:45). Say so as a possibility, not as a fact, and name only the IO sources that fit the time of the event.
 - `LAST TERMINATED: reason=OOMKilled`: the container hit its memory limit; compare with `RESOURCES lim`.
-- `exit=137` without OOMKilled: killed from outside (liveness probe or node pressure). `exit=143`: normal SIGTERM on shutdown or rollout.
+- `exit=143`: the container got SIGTERM and stopped normally (someone or something stopped it). `exit=137` without OOMKilled: SIGKILL, e.g. the grace period ran out at the evening shutdown, a failed liveness probe, or memory pressure. Name which one only if an EVENTS line shows it.
 - `Pending` with `PodScheduled=False`: scheduling (taints, w3 `cloud=gcp:NoSchedule`, resources). Events show the scheduler message.
 - `ImagePullBackOff`: registry or tag; logs are empty in that case.
-- w3 (GCP) runs 08:15–17:15. Pods on w3 outside these hours are expected to be unreachable.
+- w3 (GCP) runs 08:15–17:15 Mon–Fri and also stops at 10:40 on Monday and Wednesday. Pods on w3 outside those hours are expected to be unreachable; pods that keep data on w3 stay Pending or Terminating until it is back.
 - Logs show at most 12 lines (error-like lines first). If the cause is not there, suggest `kubectl logs --previous --tail=200` for a human instead of guessing.
 - Longhorn `Error during scrape ... metrics.k8s.io`: the cluster has no metrics-server; harmless noise, not the cause of anything.
 - Keycloak `REFRESH_TOKEN_ERROR ... Token is not active`: a browser tab kept refreshing after its session expired; harmless unless users report they cannot log in.

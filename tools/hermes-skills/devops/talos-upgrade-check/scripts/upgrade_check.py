@@ -24,46 +24,63 @@ UPGRADE_SCRIPT = "~/bin/talos-upgrade-node.sh"   # on host2, user ngochung
 
 
 def kget(*args):
-    r = subprocess.run(["kubectl", "--request-timeout=20s", "get", *args, "-o", "json"],
-                       capture_output=True, text=True, timeout=60)
-    if r.returncode != 0:
+    try:
+        r = subprocess.run(["kubectl", "--request-timeout=20s", "get", *args, "-o", "json"],
+                           capture_output=True, text=True, timeout=60)
+        if r.returncode != 0:
+            return None
+        return json.loads(r.stdout).get("items", [])
+    except (subprocess.TimeoutExpired, ValueError):
         return None
-    return json.loads(r.stdout).get("items", [])
+
+
+failed = []
+
+
+def need(name, *args):
+    """A list that could not be read must not look empty (that would give a false GO/OK)."""
+    r = kget(*args)
+    if r is None:
+        failed.append(name)
+        return []
+    return r
 
 
 def usage():
-    print("usage: upgrade-check.sh pre|post [node-name-or-ip] [--expect vX.Y.Z]")
+    print("usage: upgrade-check.sh pre|post [node-name-or-ip] [--expect vX.Y.Z (Talos) | --expect-k8s vX.Y.Z (Kubernetes)]")
     sys.exit(2)
 
 
 args = sys.argv[1:]
 if not args or args[0] not in ("pre", "post"):
     usage()
-mode, expect, target_arg = args[0], None, None
+mode, expect, expect_k8s, target_arg = args[0], None, None, None
 rest = args[1:]
 while rest:
     a = rest.pop(0)
     if a == "--expect" and rest:
         expect = rest.pop(0)
-    elif re.fullmatch(r"[a-z0-9.-]+", a) and target_arg is None:
-        target_arg = a
+    elif a == "--expect-k8s" and rest:
+        expect_k8s = rest.pop(0)
+    elif re.fullmatch(r"[A-Za-z0-9.-]+", a) and target_arg is None:
+        target_arg = a.lower()
     else:
         usage()
-if expect and not re.fullmatch(r"v\d+\.\d+\.\d+", expect):
+if any(v and not re.fullmatch(r"v\d+\.\d+\.\d+", v) for v in (expect, expect_k8s)) or (expect and expect_k8s):
     usage()
 
 nodes = kget("nodes")
 if nodes is None:
     print("API: UNREACHABLE")
     sys.exit(2)
-pods = kget("pods", "-A") or []
-pdbs = kget("pdb", "-A") or []
-vols = kget("volumes.longhorn.io", "-n", "longhorn-system") or []
-reps = kget("replicas.longhorn.io", "-n", "longhorn-system") or []
-engs = kget("engines.longhorn.io", "-n", "longhorn-system") or []
-apps = kget("applications.argoproj.io", "-n", "argocd") or []
-pvs = kget("pv") or []
-rss = kget("replicasets", "-A") or []
+pods = need("pods", "pods", "-A")
+pdbs = need("pdb", "pdb", "-A")
+vols = need("longhorn volumes", "volumes.longhorn.io", "-n", "longhorn-system")
+reps = need("longhorn replicas", "replicas.longhorn.io", "-n", "longhorn-system")
+engs = need("longhorn engines", "engines.longhorn.io", "-n", "longhorn-system")
+apps = need("argocd apps", "applications.argoproj.io", "-n", "argocd")
+pvs = need("pv", "pv")
+rss = need("replicasets", "replicasets", "-A")
 now = dt.datetime.now(dt.timezone.utc)
 
 
@@ -134,6 +151,12 @@ if target:
             rdy[tname].astimezone().strftime("%H:%M"), (now - rdy[tname]).total_seconds() // 60))
     if mode == "post" and expect and "(%s)" % expect not in ti.get("osImage", ""):
         items.append("%s runs %s, expected Talos %s" % (tname, ti.get("osImage"), expect))
+if mode == "post" and expect_k8s:
+    # upgrade-k8s changes every node, so check them all, not only the target
+    for n in nodes:
+        kv = n["status"]["nodeInfo"]["kubeletVersion"]
+        if kv != expect_k8s:
+            items.append("node %s kubelet %s, expected Kubernetes %s" % (n["metadata"]["name"], kv, expect_k8s))
     if mode == "pre" and cp:
         notes.append("control plane: the only one (cp2/cp3 are off) -> Kubernetes API is down while it reboots, "
                      "a few minutes; the upgrade script takes an etcd snapshot first")
@@ -164,6 +187,7 @@ if target and mode == "pre":
 pod_node = {}
 STUCK_WAIT = ("CrashLoopBackOff", "ImagePullBackOff", "ErrImagePull", "CreateContainerConfigError",
               "CreateContainerError", "ContainerCreating", "PodInitializing", "InvalidImageName")
+STARTING = ("ContainerCreating", "PodInitializing", "CrashLoopBackOff")
 stuck = []
 for p in pods:
     ns, nm = p["metadata"]["namespace"], p["metadata"]["name"]
@@ -178,11 +202,17 @@ for p in pods:
         if age > 120:
             why = "Terminating %dm" % (age // 60)
     elif phase == "Pending":
-        why = "Pending"
+        made = max([x for x in (ts(p["metadata"].get("creationTimestamp")), boot_of(p)) if x], default=None)
+        if made is None or (now - made).total_seconds() > 600:
+            why = "Pending > 10m"
     else:
+        # Starting states only count after 10 min from the pod start and its node's boot;
+        # image and config errors do not fix themselves, so they count at once.
+        since = max([x for x in (ts(st.get("startTime")), boot_of(p)) if x], default=None)
+        young = since is not None and (now - since).total_seconds() < 600
         for c in (st.get("initContainerStatuses") or []) + (st.get("containerStatuses") or []):
             w = (c.get("state") or {}).get("waiting") or {}
-            if w.get("reason") in STUCK_WAIT:
+            if w.get("reason") in STUCK_WAIT and not (young and w["reason"] in STARTING):
                 why = w["reason"]
                 break
         if not why and phase == "Running":
@@ -300,6 +330,9 @@ if mode == "post":
                      + ", ".join("%s %d" % kv for kv in boot.most_common(8)))
 
 # ---------------------------------------------------------------- output
+if failed:
+    items.insert(0, "could not read %s (kubectl failed or timed out): verdict incomplete, re-run in a few minutes"
+                 % ", ".join(failed))
 if mode == "pre":
     print(("NO-GO %d item(s)" % len(items)) if items else "GO (Kubernetes side)")
 else:
@@ -311,6 +344,10 @@ for n in notes:
     print("NOTE " + n)
 if mode == "pre":
     ip = ip_of(target) if target else "<node-ip>"
-    print("TALOS SIDE (human, on host2, prints the plan and changes nothing): %s %s %s"
-          % (UPGRADE_SCRIPT, ip, expect or "<vX.Y.Z>"))
+    if expect_k8s:
+        print("K8S SIDE (human, on host2, plan only): talosctl -e 10.10.10.11 -n 10.10.10.11 "
+              "upgrade-k8s --to %s --dry-run" % expect_k8s)
+    else:
+        print("TALOS SIDE (human, on host2, prints the plan and changes nothing): %s %s %s"
+              % (UPGRADE_SCRIPT, ip, expect or "<vX.Y.Z>"))
 sys.exit(1 if items else 0)

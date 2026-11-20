@@ -14,7 +14,9 @@ TMP=$(mktemp -d); trap 'rm -rf "$TMP"' EXIT
 k() { kubectl --request-timeout=20s "$@" 2>/dev/null; }
 
 if ! k get pods -n "$ns" -o json >"$TMP/pods.json"; then echo "API: UNREACHABLE or namespace $ns not readable"; exit 2; fi
-pod=$(python3 - "$TMP/pods.json" "$want" <<'PY'
+# System python on purpose: inside Hermes, `python3` on PATH is Hermes' own venv.
+PY=/usr/bin/python3; [ -x "$PY" ] || PY=python3
+pod=$("$PY" - "$TMP/pods.json" "$want" <<'PY'
 import json, sys
 items = json.load(open(sys.argv[1]))["items"]; w = sys.argv[2]
 names = [p["metadata"]["name"] for p in items]
@@ -29,7 +31,7 @@ PY
 if [ -z "$pod" ]; then echo "POD: no pod named or starting with '$want' in namespace $ns"; exit 2; fi
 
 k get events -n "$ns" --field-selector "involvedObject.name=$pod" -o json >"$TMP/ev.json" || echo '{"items":[]}' >"$TMP/ev.json"
-python3 - "$TMP/pods.json" "$pod" >"$TMP/containers.txt" <<'PY'
+"$PY" - "$TMP/pods.json" "$pod" >"$TMP/containers.txt" <<'PY'
 import json, sys, datetime as dt
 p = next(x for x in json.load(open(sys.argv[1]))["items"] if x["metadata"]["name"] == sys.argv[2])
 now = dt.datetime.now(dt.timezone.utc)
@@ -52,7 +54,7 @@ while read -r c restarted; do
   fi
 done <"$TMP/containers.txt"
 
-python3 - "$TMP" "$pod" <<'PY'
+"$PY" - "$TMP" "$pod" <<'PY'
 import json, sys, os, re, glob, datetime as dt
 d, name = sys.argv[1], sys.argv[2]
 now = dt.datetime.now(dt.timezone.utc)
@@ -63,6 +65,8 @@ def ago(s):
     m = int((now - t).total_seconds() // 60)
     return f"{m}m" if m < 120 else f"{m//60}h" if m < 2880 else f"{m//1440}d"
 RED = [
+    # credentials inside a URL: scheme://user:password@host
+    (re.compile(r"(?i)\b([a-z][a-z0-9+.-]*://[^/\s:@]+:)[^@\s/]+@"), r"\1<REDACTED>@"),
     (re.compile(r"\b192\.168\.\d{1,3}\.\d{1,3}\b"), "<LAN-IP>"),
     (re.compile(r"(?i)\b(bearer|basic)\s+[A-Za-z0-9._~+/=-]{8,}"), r"\1 <REDACTED>"),
     (re.compile(r"eyJ[A-Za-z0-9_-]{10,}\.[A-Za-z0-9_-]{10,}\.[A-Za-z0-9_-]{5,}"), "<JWT>"),
@@ -113,7 +117,7 @@ for c in (st.get("initContainerStatuses") or []) + (st.get("containerStatuses") 
     if last:
         out.append(f'  LAST TERMINATED: reason={last.get("reason")} exit={last.get("exitCode")} finished {ago(last.get("finishedAt"))} ago{"" if recent else " (old, e.g. evening shutdown)"}' + (f' msg={cut(last.get("message",""),120)}' if last.get("message") else ""))
     r = s.get("resources", {})
-    out.append(f'  RESOURCES: req={r.get("requests",{})} lim={r.get("limits",{})}  LIVENESS: {probe(s.get("livenessProbe"))}  READINESS: {probe(s.get("readinessProbe"))}')
+    out.append(red(f'  RESOURCES: req={r.get("requests",{})} lim={r.get("limits",{})}  LIVENESS: {probe(s.get("livenessProbe"))}  READINESS: {probe(s.get("readinessProbe"))}'))
     if not c.get("ready") and state != "terminated": bad += 1
     if state == "waiting" or (recent and last.get("reason") in ("OOMKilled", "Error")): bad += 1
 

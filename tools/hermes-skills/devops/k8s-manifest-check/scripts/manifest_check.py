@@ -266,8 +266,9 @@ def best_and_hints(kind, spec, kust_images=frozenset()):
             warns.append("container %s: image %s has tag %s; pin a version (or digest), Argo CD cannot "
                          "see a new :latest" % (n, image, tag or "(none = latest)"))
         res = c.get("resources") or {}
-        if not (res.get("requests") or {}).get("memory") or not (res.get("requests") or {}).get("cpu"):
-            warns.append("container %s: resources.requests cpu/memory missing (worker RAM is tight)" % n)
+        # A missing memory request is an ERROR (policy require-memory-request), reported in main().
+        if not (res.get("requests") or {}).get("cpu"):
+            warns.append("container %s: resources.requests.cpu missing" % n)
         if not (res.get("limits") or {}).get("memory"):
             warns.append("container %s: resources.limits.memory missing" % n)
         if field == "containers" and kind not in BATCH_KINDS:
@@ -361,6 +362,7 @@ def main():
         ns = meta.get("namespace") or default_ns
         head = "DOC %d %s %s" % (i, kind or "?", name if kind in CLUSTER_SCOPED else ns + "/" + name)
         out_err, out_warn, out_hint, notes = [], [], [], []
+        level_note = ""
         if not api or not kind:
             out_err.append("SCHEMA apiVersion and kind are required")
         elif str(api).startswith("kustomize.config.k8s.io/"):
@@ -388,14 +390,30 @@ def main():
                 out_warn.append("NS namespace %s does not exist in the cluster (or is not readable); "
                                 "Pod Security level unknown, checked as restricted" % ns)
                 level = "restricted"
+            elif "pod-security.kubernetes.io/enforce" in labels:
+                level = labels["pod-security.kubernetes.io/enforce"]
             else:
-                level = labels.get("pod-security.kubernetes.io/enforce", "privileged")
-            head += "  (ns Pod Security: %s)" % level
+                # No label: Talos' PodSecurity admission default applies (enforce baseline);
+                # only kube-system is exempt.
+                level = "privileged" if ns == "kube-system" else "baseline"
+                level_note = " (no label: cluster default)"
+            head += "  (ns Pod Security: %s%s)" % (level, level_note)
             psa = psa_checks(spec, level)
             out_err += ["PSA %s %s" % (level, e) for e in psa]
             if psa and kind != "Pod":
                 notes.append("NOTE PSA: the %s itself is admitted with a warning; its pods are rejected when "
                              "created (events FailedCreate on the ReplicaSet/Job), so nothing runs" % kind)
+            # ValidatingAdmissionPolicy require-memory-request (platform/admission-policies): Deny on
+            # pod CREATE in every namespace except kube-system, for containers and initContainers.
+            if ns != "kube-system":
+                miss = [c.get("name", "?") for f, c in containers(spec) if f != "ephemeralContainers"
+                        and not ((c.get("resources") or {}).get("requests") or {}).get("memory")]
+                if miss:
+                    out_err.append("POLICY require-memory-request: resources.requests.memory missing in "
+                                   "container(s) %s; the API server rejects these pods" % ", ".join(miss))
+                    if kind != "Pod":
+                        notes.append("NOTE POLICY: the %s itself is admitted; its pods are rejected when "
+                                     "created (FailedCreate), so nothing runs" % kind)
             w, h = best_and_hints(kind, spec, kust)
             out_warn += ["BEST " + x for x in w]
             out_hint += ["HINT " + x for x in h]
