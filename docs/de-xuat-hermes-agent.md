@@ -105,6 +105,20 @@ Việc lặp lại khác trong lab (rút từ nhật ký), làm skill sau:
 - Thử lại v1.0.1 lúc 09:49, cùng câu: **2 request**, 1 lần gọi tool (`pre w1 --expect v1.14.7`), 19 s, 10.422 token vào (8.768 cache), 668 ra, 0 USD. Trả lời tiếng Việt, đủ NODES/LONGHORN, 4 ghi chú cho w1 và dòng TALOS SIDE.
 - Thử `post` 09:54 ("Kiểm sau khi nâng w2", cùng phiên): **2 request**, 1 lần gọi tool (`post w2`), 11 s. CHECK 1 mục đúng (`argo-rollouts` ưu tiên w3 nhưng ở w2), đưa lệnh `rollout restart` cho người, không tự chạy. Model diễn giải sai "dồn khi drain w2" vì chữ của script ("during the drain"); v1.0.2 đổi thành "do một lần drain hoặc tắt w3 trước đó, không tự quay lại".
 
+### Đo lại 20/11: health v1.0.3–v1.0.4, upgrade-check v1.0.3
+
+Cùng model `nemotron-3-ultra-550b-a55b:free`, phiên tương tác mới, Hưng duyệt "once". Thời gian tính từ lúc gõ câu hỏi tới câu trả lời.
+
+| Lần thử | Request | Gọi tool | Thời gian | Token vào / ra | Kết quả |
+|---|---|---|---|---|---|
+| health v1.0.3, 09:14, "cụm có ổn không" | 3 | 2 (`skill_view`, script) | khoảng 21 s | 17.830 / 924 | Chạy script ngay, không đọc file, trả lời tiếng Việt. Nhưng script ra `CHECK 1` giả: 4 restart CSI Longhorn lúc khởi động lạnh 08:50, model báo "cụm có vấn đề" |
+| health v1.0.4, 09:37, cùng câu | 3 | 2 | khoảng 17 s | 13.623 / 683 | `GREEN`, có dòng `COLD START`, model nói 4 restart là của khởi động lạnh, "không cần làm gì thêm" |
+| upgrade-check v1.0.3, 09:43, "kiểm sau khi nâng w2 lên v1.14.6" | 3 | 3 (`skill_view` x2, script) | khoảng 24 s | 17.442 / 687 | Chạy `post w2 --expect v1.14.6` ngay, `OK`, có dòng `TARGET READY`. Model nạp thêm cả skill health trong cùng request (thêm khoảng 4k token, không thêm request) |
+
+- Lần đo 17/11 health là 2 request; nay là 3 vì Hermes gọi `skill_view` riêng khi câu hỏi là tiếng thường (17/11 gọi bằng `/talos-cluster-health`, nội dung skill nạp sẵn). Với câu tự nhiên, 3 request là mức thấp nhất: nạp skill, chạy script, trả lời.
+- Bài học: script phải biết lúc khởi động lạnh hoặc node vừa khởi động lại, không thì model đọc nguyên văn và báo lỗi giả. Cả hai skill nay tách restart trong 10 phút đầu sau khi control plane hoặc node Ready.
+- upgrade-check v1.0.4 bỏ các NOTE PDB "known/handled" ở chế độ `post` (chỉ có ích trước khi drain; lần thử 09:43 model vẫn diễn giải dòng "dry run" đó trong câu trả lời sau nâng cấp).
+
 ### Hook chặn cài gói và sudo (18/11)
 
 - Vì `approvals.mode manual` không hỏi pip/apt/sudo, thêm shell hook `pre_tool_call` của Hermes: `tools/hermes/hooks/block-installs.sh`, cài bằng `setup-host2.sh` bước 2b vào `/usr/local/lib/hermes-hooks/` (root sở hữu, agent không sửa được), matcher `terminal|process|execute_code`, `timeout: 10`, `fail_closed: true` (hook hỏng thì chặn luôn).

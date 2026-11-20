@@ -213,6 +213,8 @@ for b in pdbs:
         continue
     known = next((txt for rx, txt in KNOWN_PDB if ns == "longhorn-system" and re.search(rx, nm)), None)
     if known:
+        if mode == "post":
+            continue   # only matters before a drain
         notes.append("PDB %s/%s allows 0 disruptions (%s)" % (ns, nm, known))
     else:
         blocking.append("%s/%s" % (ns, nm))

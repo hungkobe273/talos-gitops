@@ -1,7 +1,7 @@
 ---
 name: talos-upgrade-check
 description: Before/after check for a Talos or Kubernetes upgrade of one node of the talos-kvm cluster (node versions, Longhorn replicas, PodDisruptionBudgets that would block the drain, stuck pods, Argo CD apps, what goes down during the reboot, pods that left w3) with one read-only script. Use when the user plans or has just finished an upgrade, asks "can I upgrade w1 now", or asks whether the cluster recovered after an upgrade.
-version: 1.0.3
+version: 1.0.4
 platforms: [linux]
 metadata:
   hermes:
