@@ -36,7 +36,7 @@ Về "tối ưu máy hiện có": host2 nâng RAM (còn 3 khe, mới 1 thanh 16 
 
 - host2: Hermes CLI (user `hermes`, không sudo), model chính `nvidia/nemotron-3-ultra-550b-a55b:free` (ổn định nhất lần thử 16/11), key OpenRouter trong `~/.hermes/.env` (quyền 600).
 - `KUBECONFIG` riêng từ ServiceAccount `hermes-readonly` (namespace `hermes`, ClusterRole `view`), quản lý bằng Argo CD trong repo này; token tạo trên host2, không commit.
-- Skill viết trong repo (`tools/hermes-skills/`), host2 trỏ `external_dirs` vào bản clone chỉ đọc `~/talos-gitops`. Sửa skill = commit + pull, mentor xem được.
+- Skill viết trong repo (`tools/hermes-skills/`), host2 trỏ `external_dirs` vào bản clone `/opt/talos-gitops` thuộc root, user hermes chỉ đọc (từ 20/11; trước đó là `~hermes/talos-gitops`, model sửa được). Sửa skill = commit + `sudo git -C /opt/talos-gitops pull --ff-only`, mentor xem được.
 - Bước sau (nếu anh muốn): gateway Telegram dùng bot riêng, chỉ nhận lệnh từ chat của nhóm.
 
 ## 5. Ba skill đầu
@@ -104,6 +104,15 @@ Việc lặp lại khác trong lab (rút từ nhật ký), làm skill sau:
 - Thử qua Hermes 09:32 ("Kiểm trước khi nâng w1 lên v1.14.7"): kết quả đúng (GO, ghi chú volume, PDB, workload trên w1, dòng TALOS SIDE) nhưng **5 request**, 4 lần gọi tool, 25 s, 19.172 token vào (43.840 cache), 1.198 ra, 0 USD. Tốn vì: model đọc 2 file script trước khi chạy; script không nhận tên `w1` nên lần chạy đầu ra `NODE:`; trả lời tiếng Anh. Sửa v1.0.1: script nhận `cp1 w1 w2 w3`, skill bảo chạy script ngay không đọc file, câu ngôn ngữ đặt đầu Procedure.
 - Thử lại v1.0.1 lúc 09:49, cùng câu: **2 request**, 1 lần gọi tool (`pre w1 --expect v1.14.7`), 19 s, 10.422 token vào (8.768 cache), 668 ra, 0 USD. Trả lời tiếng Việt, đủ NODES/LONGHORN, 4 ghi chú cho w1 và dòng TALOS SIDE.
 - Thử `post` 09:54 ("Kiểm sau khi nâng w2", cùng phiên): **2 request**, 1 lần gọi tool (`post w2`), 11 s. CHECK 1 mục đúng (`argo-rollouts` ưu tiên w3 nhưng ở w2), đưa lệnh `rollout restart` cho người, không tự chạy. Model diễn giải sai "dồn khi drain w2" vì chữ của script ("during the drain"); v1.0.2 đổi thành "do một lần drain hoặc tắt w3 trước đó, không tự quay lại".
+
+### Hook và cấu hình sau review 20/11
+
+Review độc lập 20/11 tìm ra 3 lỗ của bản hook 18/11: lách được bằng `python3 -mpip`, `\pip`, `p""ip`, `curl ... | /bin/bash`, `bash <(curl ...)`; model tự ghi file bằng tool file rồi `bash /tmp/x.sh`; model đổi được hook qua `hermes config set hooks`; và bản hook của root được cài từ clone mà hermes sửa được. Bản 20/11:
+
+- Hook chuẩn hoá lệnh (bỏ dấu nháy, `\`, `{a,b}`, `$'\x..'`) rồi mới so luật; thêm luật `-m pip/venv`, `runpy`, `eval`, đẩy `curl`/`wget`/`base64 -d` vào shell hoặc python, chạy script trong `/tmp`, `~`, `/home`, `./`, `chmod +x`, lệnh `hermes config|hooks|tools|update|...`, `chattr`, và mọi lệnh hay tool file đụng `~/.hermes/.env`, `auth.json`, `config.yaml`, `~/.kube/config`. Matcher thêm `read_file|write_file|patch|search_files`; tool ghi không được ghi vào `/opt/talos-gitops`. Payload hỏng ra exit 2 (trước có lúc exit 1). Thử 61 trường hợp trên host2: 0 sai.
+- Clone skill chuyển sang `/opt/talos-gitops` (root, chỉ đọc), hook cài từ đó; setup từ chối nếu clone có thay đổi cục bộ.
+- `~/.hermes/config.yaml` và `shell-hooks-allowlist.json` gắn `chattr +i` (không sửa, đổi tên hay thay được dù nằm trong thư mục của hermes); setup gỡ cờ ở đầu và gắn lại ở cuối.
+- Vẫn chỉ là lọc chữ: `x=pip; $x install` lọt. Hàng rào thật là user không sudo, SA chỉ đọc, skill/hook/config thuộc root.
 
 ### Đo lại 20/11: health v1.0.3–v1.0.4, upgrade-check v1.0.3
 
