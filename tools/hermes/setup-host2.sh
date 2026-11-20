@@ -52,7 +52,8 @@ install -d -m 755 -o root -g root /usr/local/lib/hermes-hooks
 install -m 755 -o root -g root "$SRC/tools/hermes/hooks/block-installs.sh" /usr/local/lib/hermes-hooks/block-installs.sh
 # (20/11) The file tools too: they may not read credential files, write Hermes config or the skills.
 # Consent is stored per (event, command), so a new matcher does not ask again.
-run hermes config set hooks '{"pre_tool_call":[{"matcher":"terminal|process|execute_code|read_file|write_file|patch|search_files","command":"/usr/local/lib/hermes-hooks/block-installs.sh","timeout":10,"fail_closed":true}]}'
+# Leaf key: once the hooks section exists (since 18/11), `config set hooks` refuses to replace it.
+run hermes config set hooks.pre_tool_call '[{"matcher":"terminal|process|execute_code|read_file|write_file|patch|search_files","command":"/usr/local/lib/hermes-hooks/block-installs.sh","timeout":10,"fail_closed":true}]'
 
 # 3. kubeconfig from ServiceAccount hermes/hermes-readonly (ClusterRole without Secret/ConfigMap/exec/write).
 #    Token and CA go straight into the file (0600, owner hermes); nothing is printed.
