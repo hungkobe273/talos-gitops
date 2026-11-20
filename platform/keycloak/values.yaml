@@ -20,10 +20,10 @@ priorityClassName: talos-core
 # Image "optimized" (29/10, K10): quay.io/keycloak/keycloak:26.8.2 đã chạy sẵn `kc.sh build`
 # (platform/keycloak/image/Dockerfile, build bằng GitHub Actions, đẩy lên GHCR; 09/11 kéo thẳng từ GHCR, bỏ Harbor).
 # Lùi về image gốc: repository quay.io/keycloak/keycloak, tag "26.8.2", bỏ --optimized.
-# Lùi về bản trước: tag "26.8.1-71de393" (vẫn còn trên GHCR).
+# Lùi về bản trước: tag "26.8.2-50b49ce" (vẫn còn trên GHCR).
 image:
   repository: ghcr.io/hungkobe273/talos-keycloak
-  tag: "26.8.2-50b49ce"    # Keycloak 26.8.2 (chart 7.4.0 appVersion 26.8.1, image đè lên); nâng cấp = sửa Dockerfile, chờ Actions build, sửa tag
+  tag: "26.8.2-3-3eaed62"  # Keycloak 26.8.2 (base 26.8.2-3, 20/11 OpenJDK CVE-2026-114938) (chart 7.4.0 appVersion 26.8.1, image đè lên); nâng cấp = sửa Dockerfile, chờ Actions build, sửa tag
 
 imagePullSecrets:
   - name: ghcr-pull        # SealedSecret platform/keycloak/manifests/ghcr-pull-sealed.yaml
