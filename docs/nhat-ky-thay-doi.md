@@ -4,6 +4,12 @@ Ghi mỗi thay đổi về hạ tầng, cấu hình cụm hoặc ứng dụng: n
 
 Thay đổi nằm ngoài repo này (host2, cấu hình Talos) cũng ghi ở đây, vì repo không chứa file cấu hình Talos (có secret).
 
+## 20/11/2026
+
+| Thay đổi | Lý do | Commit |
+|---|---|---|
+| Skill `talos-cluster-health` v1.0.3: đầu Procedure thêm câu trả lời theo ngôn ngữ người hỏi; bước 1 bắt chạy script ngay ở lần gọi tool đầu, không mở file script, chỉ chạy một lần (giống `talos-upgrade-check` v1.0.2). Pitfall `API: UNREACHABLE` đổi mốc "08:30" thành "thường tới khoảng 09:00" (sáng 20/11 cụm xong khởi động lạnh lúc 08:54). Lùi: revert commit | 19/11 11:32 model vẫn đọc script trước khi chạy, tốn thêm request | commit này |
+
 ## 19/11/2026
 
 | Thay đổi | Lý do | Commit |
