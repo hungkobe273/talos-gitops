@@ -30,6 +30,16 @@ nr = [n["metadata"]["name"] for n in nodes
 ver = sorted({n["status"]["nodeInfo"]["kubeletVersion"] for n in nodes})
 out.append(f"NODES: {len(nodes)-len(nr)}/{len(nodes)} Ready, kubelet {','.join(ver)}" + (f"; NOT READY: {', '.join(nr)}" if nr else ""))
 bad += bool(nr)
+# Ready time of each node. Restarts that finished before both the control plane and the pod's own node
+# had been Ready for SETTLE seconds belong to the cold start (containers crash while the API or the
+# network is not up yet) and are reported apart instead of counted.
+SETTLE = 600
+rdy = {n["metadata"]["name"]: ts(next((c.get("lastTransitionTime") for c in n["status"].get("conditions", [])
+                                       if c["type"] == "Ready" and c["status"] == "True"), None)) for n in nodes}
+cpn = [n["metadata"]["name"] for n in nodes if "node-role.kubernetes.io/control-plane" in n["metadata"].get("labels", {})]
+cpr = max((rdy[n] for n in cpn if rdy.get(n)), default=None)
+if cpr and (now - cpr).total_seconds() < 7200:
+    out.append(f"COLD START: control plane Ready since {cpr.astimezone().strftime('%H:%M')} ({int((now - cpr).total_seconds() // 60)} min ago)")
 
 apps = L("apps.json")
 ab = [f'{a["metadata"]["name"]}({a.get("status",{}).get("sync",{}).get("status","?")}/{a.get("status",{}).get("health",{}).get("status","?")})'
@@ -46,7 +56,7 @@ out.append(f"LONGHORN: {len(vols)} volumes, {len(vols)-len(vb)} ok" + (f"; {', '
 bad += bool(vb)
 
 pods = L("pods.json")
-pb, rs, left = [], [], 0
+pb, rs, left, boot = [], [], 0, 0
 for p in pods:
     ns, name = p["metadata"]["namespace"], p["metadata"]["name"]
     ph = p["status"].get("phase")
@@ -65,6 +75,10 @@ for p in pods:
     for c in cs:
         fin = ts(c.get("lastState", {}).get("terminated", {}).get("finishedAt"))
         if fin and (now - fin).total_seconds() < 3600:
+            nrdy = [t for t in (cpr, rdy.get(p["spec"].get("nodeName"))) if t]
+            if nrdy and (fin - max(nrdy)).total_seconds() < SETTLE:
+                boot += 1
+                continue
             rs.append(f'{ns}/{name}:{c["name"]} x{c.get("restartCount",0)} ({c["lastState"]["terminated"].get("reason","?")})')
 vault = [p for p in pods if p["metadata"]["namespace"] == "vault" and p["metadata"]["name"].startswith("vault-")
          and not p["metadata"]["name"].startswith("vault-agent")]
@@ -74,7 +88,8 @@ bad += not vr
 out.append(f"PODS: {len(pods)} total, {len(pb)} not healthy" + (f"; {', '.join(pb[:8])}" + (" ..." if len(pb) > 8 else "") if pb else "")
            + (f"; {left} old Failed left by node shutdown/eviction (replaced, harmless)" if left else ""))
 bad += bool(pb)
-out.append(f"RESTARTS (last 1h): {len(rs)}" + (f"; {', '.join(rs[:6])}" if rs else ""))
+out.append(f"RESTARTS (last 1h): {len(rs)}" + (f"; {', '.join(rs[:6])}" if rs else "")
+           + (f"; {boot} more during the cold start (before nodes were Ready 10 min, expected)" if boot else ""))
 bad += bool(rs)
 
 # Workloads that prefer w3 (preferred nodeAffinity on hostname w3) but have no pod there.

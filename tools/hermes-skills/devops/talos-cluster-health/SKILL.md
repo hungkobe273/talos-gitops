@@ -1,7 +1,7 @@
 ---
 name: talos-cluster-health
 description: Check the health of the talos-kvm Kubernetes cluster (nodes, Argo CD apps, Longhorn volumes, Vault, pods, restarts, ExternalSecrets, warning events) with one read-only script. Use for "is the cluster OK", morning checks, after a cold start or an upgrade.
-version: 1.0.3
+version: 1.0.4
 platforms: [linux]
 metadata:
   hermes:
@@ -25,6 +25,7 @@ Write the whole answer in the user's language: if the user wrote Vietnamese, ans
 ## Pitfalls
 - Exit code 2 / `API: UNREACHABLE`: the cluster is off (host2 powered off, or the morning cold start has not finished, often until about 09:00) or the kubeconfig is wrong. Do not retry in a loop.
 - Right after a cold start (first ~10 minutes) Keycloak, Vault and Grafana are still starting: `NotReady` and `Unhealthy` probe events there are normal.
+- `COLD START: control plane Ready since HH:MM` appears for 2 hours after the morning start. Restarts from that start are listed as `more during the cold start (expected)` and are not counted; do not report them as a problem. Warning events from the first 30 minutes after that time (Unhealthy, FailedMount, NetworkNotReady) are the same start: say the count once, as a consequence of the cold start, not as separate problems.
 - `VAULT: NOT READY` usually means sealed or the pod is restarting; it unseals itself through GCP KMS. External Secrets then retries on its own (up to ~16 minutes back-off).
 - Longhorn volumes that are `detached` are skipped on purpose (Grafana/Vault scaled to 0 in the evening).
 - Warning events are counts by reason and object only; the script cannot tell why they happened. Do not guess a cause
