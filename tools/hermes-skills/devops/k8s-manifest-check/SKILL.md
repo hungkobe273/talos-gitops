@@ -17,7 +17,7 @@ metadata:
 
 ## Procedure
 1. Get the YAML:
-   - A file path: use it as is (paths in the repo clone are under `/home/hermes/talos-gitops`).
+   - A file path: use it as is (paths in the repo clone are under `/opt/talos-gitops`).
    - Pasted YAML, or a draft you wrote: save it first with the file tool to `/tmp/manifest-<short-random>.yaml`, exactly the text, then pass that path. Do not use a heredoc: a line `EOF` inside the YAML would end it early and run the rest as shell.
    - Neither: ask once with the clarify tool as a free-text question ("file path or paste the YAML").
 2. Run `bash scripts/manifest-check.sh <file-or-dash> [namespace]` with the terminal tool. The namespace argument is only used for documents without `metadata.namespace` (default `default`). Do not run kubectl first: the script already reads the schema and the namespace label.

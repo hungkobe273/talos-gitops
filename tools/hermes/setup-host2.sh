@@ -2,21 +2,41 @@
 # Hermes Agent on host2, step 2 (17/11/2026): config + read-only kubeconfig for user "hermes".
 # Step 1 (install) was: sudo -u hermes -H bash install.sh --non-interactive --skip-browser --skip-computer-use
 # Usage on host2 (as ngochung): cd ~/talos-gitops && git pull -q --rebase && sudo sh tools/hermes/setup-host2.sh
+# Later skill updates only: sudo git -C /opt/talos-gitops pull -q --ff-only
 # Safe to re-run. Prints no token or key.
 # Design: docs/de-xuat-hermes-agent.md (answers 1A 2A 3A: free OpenRouter, read-only, CLI only).
 set -eu
 H=hermes
 HH=/home/hermes
+SRC=/opt/talos-gitops                       # skills + hook source, root-owned, read-only for hermes
+REPO=https://github.com/hungkobe273/talos-gitops.git
+LOCKED="$HH/.hermes/config.yaml $HH/.hermes/shell-hooks-allowlist.json"
 run() { sudo -u "$H" -H env PATH="$HH/.local/bin:/usr/local/bin:/usr/bin:/bin" "$@"; }
 
-# 1. Skills come from the hermes user's own read-only clone (ngochung's home is 750).
-run git -C "$HH/talos-gitops" pull -q --ff-only
+# 0. (20/11) Unlock the files step 5 locks, so `hermes config set` below can write.
+for f in $LOCKED; do if [ -e "$f" ]; then chattr -i "$f"; fi; done
+
+# 1. (20/11) Skills and the hook come from a root-owned clone the agent cannot change. Before, the
+#    clone was ~hermes/talos-gitops: the agent could edit a skill script (e.g. drop the redaction)
+#    or the hook source, and root installed that hook on the next run (independent review 20/11).
+if [ -d "$SRC/.git" ]; then
+  git -C "$SRC" pull -q --ff-only
+else
+  git clone -q "$REPO" "$SRC"
+fi
+[ -z "$(git -C "$SRC" status --porcelain)" ] || { echo "$SRC has local changes, refusing" >&2; exit 1; }
+chown -R root:root "$SRC"; chmod -R u+rwX,go+rX,go-w "$SRC"
+# The old hermes-owned clone is no longer used; keep it aside instead of deleting it.
+if [ -d "$HH/talos-gitops" ]; then
+  mv "$HH/talos-gitops" "$HH/talos-gitops.old-$(date +%Y%m%d)"
+  echo "moved old clone to $HH/talos-gitops.old-$(date +%Y%m%d) (not used any more)"
+fi
 
 # 2. Model, approvals, skills, telemetry off.
 run hermes config set model.provider openrouter
 run hermes config set model.default 'nvidia/nemotron-3-ultra-550b-a55b:free'
 run hermes config set approvals.mode manual
-run hermes config set skills.external_dirs '["~/talos-gitops/tools/hermes-skills"]'
+run hermes config set skills.external_dirs '["/opt/talos-gitops/tools/hermes-skills"]'
 run hermes config set telemetry.shared_metrics.enabled false
 run hermes config set telemetry.shared_metrics.send false
 # Keep terminal, file, skills, todo, memory, session_search, clarify. The rest is not needed for
@@ -29,8 +49,10 @@ run hermes tools disable web browser code_execution vision image_gen tts cronjob
 #     it; fail_closed so a broken hook blocks instead of allowing. First launch asks once for
 #     consent (shell hooks are opt-in); answer yes. Blocks are logged to ~/.hermes/logs/policy-blocks.log.
 install -d -m 755 -o root -g root /usr/local/lib/hermes-hooks
-install -m 755 -o root -g root "$HH/talos-gitops/tools/hermes/hooks/block-installs.sh" /usr/local/lib/hermes-hooks/block-installs.sh
-run hermes config set hooks '{"pre_tool_call":[{"matcher":"terminal|process|execute_code","command":"/usr/local/lib/hermes-hooks/block-installs.sh","timeout":10,"fail_closed":true}]}'
+install -m 755 -o root -g root "$SRC/tools/hermes/hooks/block-installs.sh" /usr/local/lib/hermes-hooks/block-installs.sh
+# (20/11) The file tools too: they may not read credential files, write Hermes config or the skills.
+# Consent is stored per (event, command), so a new matcher does not ask again.
+run hermes config set hooks '{"pre_tool_call":[{"matcher":"terminal|process|execute_code|read_file|write_file|patch|search_files","command":"/usr/local/lib/hermes-hooks/block-installs.sh","timeout":10,"fail_closed":true}]}'
 
 # 3. kubeconfig from ServiceAccount hermes/hermes-readonly (ClusterRole without Secret/ConfigMap/exec/write).
 #    Token and CA go straight into the file (0600, owner hermes); nothing is printed.
@@ -50,7 +72,12 @@ printf 'apiVersion: v1\nkind: Config\nclusters:\n- name: talos-kvm\n  cluster:\n
 unset token
 install -m 600 -o "$H" -g "$H" "$K" "$HH/.kube/config"
 
-# 4. Checks (as hermes).
+# 4. (20/11) Lock Hermes config and the hook consent list. ~/.hermes is the agent's own directory, so
+#    a root-owned file there could still be renamed or replaced; the immutable flag stops that too.
+#    Hermes only reads config.yaml at runtime (unchanged since 18/11 across many sessions).
+for f in $LOCKED; do if [ -e "$f" ]; then chattr +i "$f"; fi; done
+
+# 5. Checks (as hermes).
 echo "can-i get pods:       $(run kubectl auth can-i get pods -A || true)"
 echo "can-i get secrets:    $(run kubectl auth can-i get secrets -A || true)"
 echo "can-i delete pods:    $(run kubectl auth can-i delete pods -A || true)"
@@ -60,4 +87,8 @@ echo "approvals: $(run hermes config get approvals.mode); metrics: $(run hermes 
 echo "policy hook pip blocked (expect rc=2): $(printf '{"tool_name":"terminal","tool_input":{"command":"pip install x"}}' | run /usr/local/lib/hermes-hooks/block-installs.sh >/dev/null 2>&1; echo rc=$?)"
 run hermes hooks list 2>&1 | grep -E 'block-installs' || echo "policy hook NOT configured"
 echo "OPENROUTER_API_KEY set: $(run sh -c 'grep -c "^OPENROUTER_API_KEY=..*" ~/.hermes/.env || true')"
-run bash -c 'cd ~ && bash ~/talos-gitops/tools/hermes-skills/devops/talos-cluster-health/scripts/cluster-health.sh | tail -4' || true
+echo "skills dir: $(run hermes config get skills.external_dirs); clone $(git -C "$SRC" log --oneline -1)"
+echo "immutable flag (expect ----i---- on both):"; lsattr $LOCKED
+echo "own script blocked (expect rc=2): $(printf '{"tool_name":"terminal","tool_input":{"command":"bash /tmp/x.sh"}}' | run /usr/local/lib/hermes-hooks/block-installs.sh >/dev/null 2>&1; echo rc=$?)"
+echo "skill run allowed (expect rc=0): $(printf '{"tool_name":"terminal","tool_input":{"command":"bash scripts/cluster-health.sh"}}' | run /usr/local/lib/hermes-hooks/block-installs.sh >/dev/null 2>&1; echo rc=$?)"
+run bash -c "cd $SRC/tools/hermes-skills/devops/talos-cluster-health && bash scripts/cluster-health.sh | head -1" || true
