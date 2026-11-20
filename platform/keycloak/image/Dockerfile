@@ -7,7 +7,7 @@
 # runtime (KC_DB, KC_CACHE*, KC_HEALTH/METRICS*, KC_HTTP_RELATIVE_PATH). If they differ,
 # `start --optimized` refuses to start and names the option, so a mismatch is loud.
 # Bump the version in both FROM lines and in values.yaml together.
-FROM quay.io/keycloak/keycloak:26.8.2 AS builder
+FROM quay.io/keycloak/keycloak:26.8.2-3 AS builder
 
 ENV KC_DB=postgres \
     KC_CACHE=ispn \
@@ -19,5 +19,5 @@ ENV KC_DB=postgres \
 
 RUN /opt/keycloak/bin/kc.sh build
 
-FROM quay.io/keycloak/keycloak:26.8.2
+FROM quay.io/keycloak/keycloak:26.8.2-3
 COPY --from=builder /opt/keycloak/ /opt/keycloak/
