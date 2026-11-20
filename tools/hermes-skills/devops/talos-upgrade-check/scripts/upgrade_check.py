@@ -81,6 +81,25 @@ def ready(n):
 
 
 byname = {n["metadata"]["name"]: n for n in nodes}
+
+
+def ready_since(n):
+    return ts(next((c.get("lastTransitionTime") for c in n["status"].get("conditions", [])
+                    if c["type"] == "Ready" and c["status"] == "True"), None))
+
+
+# A container that ended within SETTLE seconds after the control plane or its own node became Ready
+# belongs to that boot (reboot after an upgrade, or the morning cold start), not to a new fault.
+SETTLE = 600
+rdy = {nm: ready_since(n) for nm, n in byname.items()}
+cpr = max((rdy[nm] for nm, n in byname.items() if rdy.get(nm)
+           and "node-role.kubernetes.io/control-plane" in n["metadata"].get("labels", {})), default=None)
+
+
+def boot_of(p):
+    """Latest Ready time that matters for this pod: control plane or the pod's node."""
+    t = [x for x in (cpr, rdy.get(p["spec"].get("nodeName"))) if x]
+    return max(t) if t else None
 SHORT = {"cp1": "10.10.10.11", "w1": "10.10.10.21", "w2": "10.10.10.22"}   # w3 is the real node name
 target = None
 if target_arg:
@@ -110,6 +129,9 @@ if target:
     cp = "node-role.kubernetes.io/control-plane" in target["metadata"].get("labels", {})
     lines.append("TARGET: %s (%s) %s, kubelet %s, control-plane=%s" % (
         tname, ip_of(target), ti.get("osImage"), ti["kubeletVersion"], "yes" if cp else "no"))
+    if mode == "post" and rdy.get(tname):
+        lines.append("TARGET READY since %s (%d min ago)" % (
+            rdy[tname].astimezone().strftime("%H:%M"), (now - rdy[tname]).total_seconds() // 60))
     if mode == "post" and expect and "(%s)" % expect not in ti.get("osImage", ""):
         items.append("%s runs %s, expected Talos %s" % (tname, ti.get("osImage"), expect))
     if mode == "pre" and cp:
@@ -165,7 +187,7 @@ for p in pods:
                 break
         if not why and phase == "Running":
             cs = st.get("containerStatuses") or []
-            started = ts(st.get("startTime"))
+            started = max([x for x in (ts(st.get("startTime")), boot_of(p)) if x], default=None)
             if cs and not all(c.get("ready") for c in cs) and started and (now - started).total_seconds() > 600:
                 why = "Running but not Ready > 10m"
     if why:
@@ -248,23 +270,32 @@ if target and mode == "pre":
 if mode == "post":
     w3 = byname.get("w3")
     if w3 is not None and ready(w3) and not w3["spec"].get("unschedulable"):
-        off = []
+        late, recent = [], []
         for (ns, k, n), ps in sorted(groups.items()):
             pref = json.dumps(((ps[0]["spec"].get("affinity") or {}).get("nodeAffinity") or {})
                               .get("preferredDuringSchedulingIgnoredDuringExecution") or [])
             if '"w3"' in pref and not any(p["spec"].get("nodeName") == "w3" for p in ps):
-                off.append("%s/%s %s" % (ns, k.lower(), n))
-        if off:
-            items.append("prefer w3 but have no pod there (moved to w1/w2 by an earlier w3 drain or w3 outage; they do not move back by themselves): " + ", ".join(off)
+                # descheduler-w3 moves them back hourly at :45 (08:45-16:45 Mon-Fri): only late ones count
+                age = min((now - max(rdy.get("w3") or now, ts(p["metadata"]["creationTimestamp"]))).total_seconds() for p in ps)
+                (late if age > 4500 else recent).append("%s/%s %s %dm" % (ns, k.lower(), n, age // 60))
+        if late:
+            items.append("prefer w3 but have no pod there for more than 75 min (descheduler-w3 at :45 did not move them): " + ", ".join(late)
                          + ". A human runs kubectl -n <ns> rollout restart <kind>/<name>")
-    rec = collections.Counter()
+        if recent:
+            notes.append("prefer w3, not there yet (descheduler-w3 moves them at :45, or a human runs rollout restart now): " + ", ".join(recent))
+    rec, boot = collections.Counter(), collections.Counter()
     for p in pods:
+        b = boot_of(p)
         for c in p.get("status", {}).get("containerStatuses") or []:
-            fin = ((c.get("lastState") or {}).get("terminated") or {}).get("finishedAt")
-            if fin and (now - ts(fin)).total_seconds() < 1800:
-                rec[p["metadata"]["namespace"]] += 1
+            fin = ts(((c.get("lastState") or {}).get("terminated") or {}).get("finishedAt"))
+            if fin and (now - fin).total_seconds() < 1800:
+                (boot if b and (fin - b).total_seconds() < SETTLE else rec)[p["metadata"]["namespace"]] += 1
     if rec:
-        notes.append("container restarts in the last 30 min by namespace: " + ", ".join("%s %d" % kv for kv in rec.most_common(8)))
+        notes.append("container restarts in the last 30 min by namespace (after the nodes were up): "
+                     + ", ".join("%s %d" % kv for kv in rec.most_common(8)))
+    if boot:
+        notes.append("container restarts during the node boot (expected, not a problem): "
+                     + ", ".join("%s %d" % kv for kv in boot.most_common(8)))
 
 # ---------------------------------------------------------------- output
 if mode == "pre":

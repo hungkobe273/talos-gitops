@@ -32,3 +32,6 @@ vault-init*.json
 *.tfvars
 crash.log
 crash.*.log
+
+# Python bytecode from local test runs
+__pycache__/
