@@ -30,7 +30,7 @@ def block(rule, p):
           "scripts it wrote, change Hermes config or touch credential files. The text matched that "
           "rule; if the command was none of those, rephrase it without that word. Do not retry another "
           "way; tell the user what you needed and stop. Do not give the user an install, sudo or pip command "
-          "to run instead: say what is missing; installing on host2 is the admin's decision." % rule, file=sys.stderr)
+          "to run instead: say what is missing; the admin decides what to install on host2." % rule, file=sys.stderr)
     sys.exit(2)
 
 # A command word is at the start, or after a separator, a quote, a subshell, a brace or a path slash.
