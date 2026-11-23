@@ -74,7 +74,7 @@ GitHub Actions và GitLab CE vẫn build cùng app để so sánh, nhưng chỉ 
 | Nhóm | App Argo CD | Chart / phiên bản | Vai trò |
 |---|---|---|---|
 | Nền tảng | root | | app-of-apps |
-| | Argo CD (cài bằng Helm, `bootstrap/argocd-values.yaml`) | argo-cd 10.12.1 (Argo CD v3.6.1, từ 13/11) | GitOps, Server-Side Diff; application-controller RSS trung bình khoảng 530 MiB (đo 13/11, [de-xuat-argocd-3.6.md](de-xuat-argocd-3.6.md)) |
+| | Argo CD (cài bằng Helm, `bootstrap/argocd-values.yaml`) | argo-cd 10.18.2 (Argo CD v3.6.2, từ 23/11) | GitOps, Server-Side Diff; application-controller RSS trung bình khoảng 530 MiB (đo 13/11, [de-xuat-argocd-3.6.md](de-xuat-argocd-3.6.md)) |
 | | traefik | traefik 42.4.0 (Traefik v3.7.18, từ 16/11) | ingress |
 | | cert-manager, cert-manager-issuers | cert-manager v1.21.3 (từ 12/11) | chứng chỉ từ CA nội bộ `talos-internal-ca` |
 | | sealed-secrets | 2.20.0 | secret mã hóa nằm trong Git |
