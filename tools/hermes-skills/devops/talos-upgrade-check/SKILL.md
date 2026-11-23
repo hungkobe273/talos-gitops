@@ -1,7 +1,7 @@
 ---
 name: talos-upgrade-check
 description: Before/after check for a Talos or Kubernetes upgrade of one node of the talos-kvm cluster (node versions, Longhorn replicas, PodDisruptionBudgets that would block the drain, stuck pods, Argo CD apps, what goes down during the reboot, pods that left w3) with one read-only script. Use when the user plans or has just finished an upgrade, asks "can I upgrade w1 now", or asks whether the cluster recovered after an upgrade.
-version: 1.0.5
+version: 1.0.6
 platforms: [linux]
 metadata:
   hermes:
@@ -32,7 +32,7 @@ Write the whole answer in the user's language: if the user wrote Vietnamese, ans
 - `instance-manager-*` PDBs in longhorn-system always show 0 allowed disruptions in a dry run. Longhorn removes them when the node is really cordoned (seen 13/11). The script labels them `known`; do not call them blockers.
 - `csi-attacher` / `csi-provisioner` PDBs: the upgrade script deletes these pods on the node before upgrading. Labelled `handled`; not blockers.
 - w3 runs only 08:15-17:15 Mon-Fri (GCP schedule) and also stops at 10:40 on Monday and Wednesday. Outside those hours w3 NotReady is the schedule, not a fault; do not plan a w3 upgrade then.
-- Pods that prefer w3 pile onto w1/w2 while w3 is drained or off. The CronJob `descheduler-w3` moves them back hourly at :45 (08:45-16:45 Mon-Fri). `post` shows them as a `NOTE` while they have been off w3 for less than 75 minutes (a human may run `kubectl -n <ns> rollout restart` now, or wait for :45), and as a CHECK item only after that.
+- Pods that prefer w3 pile onto w1/w2 while w3 is drained or off. The CronJob `descheduler-w3` moves them back hourly at :45 (08:45-16:45 Mon-Fri). `post` shows them as a `NOTE` while they have been off w3 for less than 75 minutes (plus 1 hour per extra batch of 5, since descheduler-w3 moves at most 5 pods per run) (a human may run `kubectl -n <ns> rollout restart` now, or wait for :45), and as a CHECK item only after that.
 - `TARGET READY since HH:MM` is when the node came back. Container restarts listed as `during the node boot (expected, not a problem)` happened in the first 10 minutes after the node or the control plane became Ready (reboot, morning cold start): do not report them as a problem. Restarts `after the nodes were up` are worth a sentence. A pod counts as stuck only if it is Pending, starting or not Ready more than 10 minutes after both its start and its node's boot; image and config errors (ImagePullBackOff, CreateContainerConfigError) count at once.
 - `could not read ... (kubectl failed or timed out)`: part of the cluster could not be read, so GO/OK cannot be trusted. Quote it, say the check is incomplete and suggest re-running in a few minutes.
 - Vault is a StatefulSet with `updateStrategy: OnDelete`: the node reboot restarts vault-0, an image change does not. After the reboot vault-0 auto-unseals through GCP KMS; if it stays sealed, that is the item to report.

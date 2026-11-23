@@ -132,7 +132,7 @@ else:
 
 # Workloads that prefer w3 (preferred nodeAffinity on hostname w3) but have no pod there.
 # descheduler-w3 moves them back hourly at :45 (08:45-16:45 Mon-Fri), so only count it as a problem
-# when a pod has been off w3 for more than 75 min since both w3 became Ready and the pod was created.
+# when a pod has been off w3 longer than 75 min (plus 1 h per extra batch of 5 pods) since both w3 became Ready and the pod was created.
 w3 = next((n for n in nodes if n["metadata"]["name"] == "w3"), None)
 w3c = next((c for c in (w3 or {}).get("status", {}).get("conditions", []) if c["type"] == "Ready"), {})
 if "pods" in failed:
@@ -154,14 +154,15 @@ else:
             continue
         k = (p["metadata"]["namespace"], o.get("name", p["metadata"]["name"]))
         grp.setdefault(k, []).append(p)
+    offg = [(k, ps) for k, ps in sorted(grp.items()) if not any(p["spec"].get("nodeName") == "w3" for p in ps)]
+    # descheduler-w3 evicts at most 5 pods per run: n workloads off w3 need ceil(n/5) runs, one hour apart.
+    grace = 4500 + 3600 * max(0, (len(offg) + 4) // 5 - 1)
     off, late = [], 0
-    for (ns, owner), ps in sorted(grp.items()):
-        if any(p["spec"].get("nodeName") == "w3" for p in ps):
-            continue
+    for (ns, owner), ps in offg:
         age = min((now - max(w3since, ts(p["metadata"]["creationTimestamp"]))).total_seconds() for p in ps)
         name = owner.rsplit("-", 1)[0] if ps[0]["metadata"].get("labels", {}).get("pod-template-hash") else owner
         off.append(f"{ns}/{name} {int(age // 60)}m")
-        late += age > 4500
+        late += age > grace
     out.append(f"W3 PREFERRED: {len(grp)-len(off)}/{len(grp)} on w3" + (f"; off w3: {', '.join(off[:6])}" if off else "")
                + ("; descheduler-w3 did not move them (runs :45)" if late else ""))
     bad += bool(late)

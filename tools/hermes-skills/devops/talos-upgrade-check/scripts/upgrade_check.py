@@ -302,16 +302,20 @@ if target and mode == "pre":
 if mode == "post":
     w3 = byname.get("w3")
     if w3 is not None and ready(w3) and not w3["spec"].get("unschedulable"):
-        late, recent = [], []
+        late, recent, offg = [], [], []
         for (ns, k, n), ps in sorted(groups.items()):
             pref = json.dumps(((ps[0]["spec"].get("affinity") or {}).get("nodeAffinity") or {})
                               .get("preferredDuringSchedulingIgnoredDuringExecution") or [])
             if '"w3"' in pref and not any(p["spec"].get("nodeName") == "w3" for p in ps):
-                # descheduler-w3 moves them back hourly at :45 (08:45-16:45 Mon-Fri): only late ones count
-                age = min((now - max(rdy.get("w3") or now, ts(p["metadata"]["creationTimestamp"]))).total_seconds() for p in ps)
-                (late if age > 4500 else recent).append("%s/%s %s %dm" % (ns, k.lower(), n, age // 60))
+                offg.append((ns, k, n, ps))
+        # descheduler-w3 moves them back hourly at :45 (08:45-16:45 Mon-Fri), at most 5 pods per run:
+        # n workloads off w3 need ceil(n/5) runs, so allow 75 min plus 1 h per extra batch.
+        grace = 4500 + 3600 * max(0, (len(offg) + 4) // 5 - 1)
+        for ns, k, n, ps in offg:
+            age = min((now - max(rdy.get("w3") or now, ts(p["metadata"]["creationTimestamp"]))).total_seconds() for p in ps)
+            (late if age > grace else recent).append("%s/%s %s %dm" % (ns, k.lower(), n, age // 60))
         if late:
-            items.append("prefer w3 but have no pod there for more than 75 min (descheduler-w3 at :45 did not move them): " + ", ".join(late)
+            items.append("prefer w3 but have no pod there for more than %d min (descheduler-w3 at :45, 5 pods per run, did not move them): " % (grace // 60) + ", ".join(late)
                          + ". A human runs kubectl -n <ns> rollout restart <kind>/<name>")
         if recent:
             notes.append("prefer w3, not there yet (descheduler-w3 moves them at :45, or a human runs rollout restart now): " + ", ".join(recent))

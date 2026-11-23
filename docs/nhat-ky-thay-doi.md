@@ -4,6 +4,12 @@ Ghi mỗi thay đổi về hạ tầng, cấu hình cụm hoặc ứng dụng: n
 
 Thay đổi nằm ngoài repo này (host2, cấu hình Talos) cũng ghi ở đây, vì repo không chứa file cấu hình Talos (có secret).
 
+## 23/11/2026
+
+| Thay đổi | Lý do | Commit |
+|---|---|---|
+| Skill `talos-cluster-health` v1.0.6 và `talos-upgrade-check` v1.0.6 (review 20/11 M3): ngưỡng "descheduler-w3 did not move them" từ cố định 75 phút thành 75 phút cộng 1 giờ cho mỗi lô 5 workload thêm (descheduler-w3 evict tối đa 5 pod mỗi lần, khoảng 8 workload ưu tiên w3, nên sau khi w3 tắt sớm T2/T4 cần 2 lần chạy :45; trước đây lần thứ hai ra CHECK giả). Lùi: revert commit | Review độc lập 20/11 M3 | commit này |
+
 ## 20/11/2026
 
 | Thay đổi | Lý do | Commit |

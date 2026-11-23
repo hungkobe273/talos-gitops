@@ -1,7 +1,7 @@
 ---
 name: talos-cluster-health
 description: Check the health of the talos-kvm Kubernetes cluster (nodes, Argo CD apps, Longhorn volumes, Vault, pods, restarts, ExternalSecrets, warning events) with one read-only script. Use for "is the cluster OK", morning checks, after a cold start or an upgrade.
-version: 1.0.5
+version: 1.0.6
 platforms: [linux]
 metadata:
   hermes:
@@ -33,7 +33,7 @@ Write the whole answer in the user's language: if the user wrote Vietnamese, ans
 - w3 runs on GCP 08:15–17:15 Mon–Fri and also stops at 10:40 on Monday and Wednesday; outside those hours w3 NotReady is the schedule, not a fault. Pods that keep data on w3 (Prometheus, VictoriaLogs) then stay Pending or Terminating until w3 is back.
 - `UNKNOWN (kubectl get failed or timed out)`: that part could not be read, so nothing is known about it; never call it healthy. Often a slow API right after a cold start: suggest re-running in a few minutes.
 - `NODE REBOOT: <node> Ready since HH:MM, long after the control plane`: that worker came up more than 30 minutes after the cold start, so it rebooted or was restarted by hand. Restarts on it are counted, not excused. Report it; the cause is not in the output.
-- `W3 PREFERRED` lists workloads that prefer w3 but have no pod there. The CronJob `descheduler-w3` moves them back hourly at :45 (08:45–16:45 Mon–Fri), so a short time off w3 is normal and not counted. It is counted only with "descheduler-w3 did not move them": then suggest, for a human, `kubectl -n descheduler logs job/<latest descheduler-w3 job>` and `kubectl -n <ns> rollout restart <kind>/<name>`.
+- `W3 PREFERRED` lists workloads that prefer w3 but have no pod there. The CronJob `descheduler-w3` moves them back hourly at :45 (08:45–16:45 Mon–Fri), at most 5 pods per run, so a short time off w3 is normal and not counted (75 min, plus 1 h per extra batch of 5). It is counted only with "descheduler-w3 did not move them": then suggest, for a human, `kubectl -n descheduler logs job/<latest descheduler-w3 job>` and `kubectl -n <ns> rollout restart <kind>/<name>`.
 - `old Failed left by node shutdown/eviction` are pods the kubelet ended (w3 stop, memory pressure). Their replacement is checked separately; these leftovers are harmless and not a problem to report.
 
 ## Verification
