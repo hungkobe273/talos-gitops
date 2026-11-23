@@ -1,7 +1,7 @@
 ---
 name: talos-upgrade-check
 description: Before/after check for a Talos or Kubernetes upgrade of one node of the talos-kvm cluster (node versions, Longhorn replicas, PodDisruptionBudgets that would block the drain, stuck pods, Argo CD apps, what goes down during the reboot, pods that left w3) with one read-only script. Use when the user plans or has just finished an upgrade, asks "can I upgrade w1 now", or asks whether the cluster recovered after an upgrade.
-version: 1.0.6
+version: 1.0.7
 platforms: [linux]
 metadata:
   hermes:
@@ -39,6 +39,7 @@ Write the whole answer in the user's language: if the user wrote Vietnamese, ans
 - cp1 is the only control plane: during its reboot every kubectl call fails. Run `post` a few minutes after the node is back.
 - A Talos upgrade does not change Kubernetes. Flannel, CoreDNS and kube-proxy change only with `talosctl upgrade-k8s`; do not expect new versions of them after a node upgrade.
 - Longhorn `degraded` right after `post` usually means a replica is rebuilding. Suggest re-running in 5-10 minutes before calling it a problem.
+- `NOTE w3 not Ready (GCP VM off on its schedule)`: normal outside 08:15-17:15 and after 10:40 Mon/Wed. It does not block upgrading cp1, w1 or w2. For a Kubernetes upgrade (`--expect-k8s`) or for w3 itself, w3 must be up: a human starts it with `gcloud compute instances start w3 --zone asia-southeast1-b`.
 
 ## Verification
 - Every statement is backed by a quoted line of the script output.

@@ -136,7 +136,12 @@ for n in nodes:
     m = re.search(r"\((v[\d.]+[^)]*)\)", os_img)
     vers[(m.group(1) if m else os_img, n["status"]["nodeInfo"]["kubeletVersion"])] += 1
     if not ready(n):
-        items.append("node %s not Ready" % nm)
+        if nm == "w3" and tname != "w3" and not expect_k8s:
+            # w3 is a GCP VM started on a schedule (08:15-17:15, off at 10:40 Mon/Wed); it holds no
+            # Longhorn replica, so a w1/w2/cp1 upgrade does not need it. upgrade-k8s touches every node.
+            notes.append("w3 not Ready (GCP VM off on its schedule); not needed to upgrade %s" % tname)
+        else:
+            items.append("node %s not Ready" % nm)
     if n["spec"].get("unschedulable"):
         items.append("node %s is cordoned (kubectl uncordon %s, by a human)" % (nm, nm))
 lines.append("NODES: %d, versions %s" % (len(nodes), ", ".join(
