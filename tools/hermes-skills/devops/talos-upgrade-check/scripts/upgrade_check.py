@@ -234,15 +234,32 @@ lines.append("PODS: %d, stuck %d" % (len(pods), len(stuck)))
 # ---------------------------------------------------------------- PDB
 KNOWN_PDB = [(r"^csi-(attacher|provisioner)$", "handled: the upgrade script deletes these CSI pods on the node first"),
              (r"^instance-manager-", "known: always 0 in a dry run; Longhorn removes it on a real cordon (13/11)")]
+def sel_match(sel, labels):
+    """Kubernetes label selector: matchLabels and matchExpressions. policy/v1: {} matches every pod, null none."""
+    if sel is None:
+        return False
+    if any(labels.get(k) != v for k, v in (sel.get("matchLabels") or {}).items()):
+        return False
+    for e in sel.get("matchExpressions") or []:
+        k, op, vals = e.get("key"), e.get("operator"), e.get("values") or []
+        if op == "In" and labels.get(k) not in vals:
+            return False
+        if op == "NotIn" and k in labels and labels[k] in vals:
+            return False
+        if op == "Exists" and k not in labels:
+            return False
+        if op == "DoesNotExist" and k in labels:
+            return False
+    return True
+
 blocking = []
 for b in pdbs:
     ns, nm = b["metadata"]["namespace"], b["metadata"]["name"]
     st = b.get("status", {})
     if st.get("disruptionsAllowed", 0) > 0 or st.get("expectedPods", 0) == 0:
         continue
-    sel = (b["spec"].get("selector") or {}).get("matchLabels") or {}
-    covered = [p for p in pods if p["metadata"]["namespace"] == ns and sel
-               and all(p["metadata"].get("labels", {}).get(k) == v for k, v in sel.items())]
+    sel = b["spec"].get("selector")
+    covered = [p for p in pods if p["metadata"]["namespace"] == ns and sel_match(sel, p["metadata"].get("labels") or {})]
     on_t = [p for p in covered if p["spec"].get("nodeName") == tname] if target else covered
     if target and not on_t:
         continue
