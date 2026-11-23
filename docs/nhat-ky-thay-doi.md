@@ -8,6 +8,7 @@ Thay đổi nằm ngoài repo này (host2, cấu hình Talos) cũng ghi ở đâ
 
 | Thay đổi | Lý do | Commit |
 |---|---|---|
+| Sự cố khởi động sáng: T6 20/11 chỉ tắt cụm, host2 không poweroff, chạy tới CN 22/11 09:31 (nhiều khả năng mất điện). Sáng 23/11 host2 bật 08:37 với đồng hồ phần cứng mất giờ, timesyncd đặt giờ theo mốc lưu cuối (CN 22/11 09:31), VM tự bật theo giờ sai (node ghi Ready 22/11 09:33). 08:41:10 sau khi đăng nhập portal NTP đồng bộ, đồng hồ nhảy khoảng 23 giờ: lease hết hạn, API mất khoảng 3 phút (08:41–08:44), controller-manager, scheduler, external-secrets, cert-manager-cainjector, argocd-server restart rồi tự hồi phục. Health ra CHECK (15 restart) vì không nhận ra khởi động lạnh. Chưa sửa: có thể cho VM tự bật chờ `time-sync.target`. Setup Hermes chạy lại 09:15 (clone 3421085, hook chặn pip và script tự viết theo log, cờ i đủ); dòng in rc trống do `set -e`, sửa ở 1b0d5a7 | Ghi nhận; nhớ `sudo poweroff` host2 sau khi tắt cụm | 1b0d5a7 |
 | Skill `talos-cluster-health` v1.0.6 và `talos-upgrade-check` v1.0.6 (review 20/11 M3): ngưỡng "descheduler-w3 did not move them" từ cố định 75 phút thành 75 phút cộng 1 giờ cho mỗi lô 5 workload thêm (descheduler-w3 evict tối đa 5 pod mỗi lần, khoảng 8 workload ưu tiên w3, nên sau khi w3 tắt sớm T2/T4 cần 2 lần chạy :45; trước đây lần thứ hai ra CHECK giả). Lùi: revert commit | Review độc lập 20/11 M3 | commit này |
 
 ## 20/11/2026
