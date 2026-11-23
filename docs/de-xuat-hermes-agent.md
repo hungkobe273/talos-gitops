@@ -39,13 +39,21 @@ Về "tối ưu máy hiện có": host2 nâng RAM (còn 3 khe, mới 1 thanh 16 
 - Skill viết trong repo (`tools/hermes-skills/`), host2 trỏ `external_dirs` vào bản clone `/opt/talos-gitops` thuộc root, user hermes chỉ đọc (từ 20/11; trước đó là `~hermes/talos-gitops`, model sửa được). Sửa skill = commit + `sudo git -C /opt/talos-gitops pull --ff-only`, mentor xem được.
 - Bước sau (nếu anh muốn): gateway Telegram dùng bot riêng, chỉ nhận lệnh từ chat của nhóm.
 
-## 5. Ba skill đầu
+## 5. Skill và kết quả đo
+
+Năm skill trong `tools/hermes-skills/devops/` (phiên bản 23/11). Mỗi skill có một script chỉ đọc, gọi `/usr/bin/python3`; model chạy script ngay ở lần gọi tool đầu rồi tóm tắt.
 
 | Skill | Script làm gì | LLM làm gì |
 |---|---|---|
-| `talos-cluster-health` | Node Ready, app Argo CD không Healthy/Synced, volume Longhorn không healthy, pod restart nhiều, Vault sealed; in tối đa 30 dòng | Tóm tắt, chỉ ra mục đỏ |
-| `k8s-pod-triage <ns> <pod>` | `describe` (Events, Last State, exit code), `logs --previous --tail=80`, events namespace; lọc dòng giống secret | Đoán nguyên nhân, đề xuất lệnh kiểm tiếp (không tự chạy lệnh ghi) |
-| `k8s-manifest-check <file\|->` | Schema từ OpenAPI v3 của chính cụm (thay `kubeconform`, host2 không có), Pod Security theo nhãn namespace, policy Kyverno đọc từ repo (thay `kyverno apply`), kiểm non-root/tag `latest`/thiếu probe, gợi ý image chạy root | Giải thích lỗi, sửa YAML rồi kiểm lại. Đúng lỗi các model mắc ở câu nginx 16/11 |
+| `talos-cluster-health` v1.0.7 | Node, app Argo CD, Longhorn, Vault, pod hỏng, restart 1 giờ (tách restart lúc khởi động lạnh, không bỏ qua OOMKilled), `NODE REBOOT`, `W3 PREFERRED`, ExternalSecret, event cảnh báo; nguồn đọc lỗi ra `UNKNOWN` | Nêu GREEN hoặc liệt kê mục cần xem, tối đa 3 lệnh đọc cho người |
+| `k8s-pod-triage <ns> <pod>` v1.0.2 | Một lần `get pods/events` + `logs`: điều kiện, container, lần dừng cuối (bỏ qua lần dừng cũ do tắt máy), tài nguyên, probe, 6 event, 12 dòng log ưu tiên dòng lỗi; mọi dòng qua bộ lọc IP LAN, token, mật khẩu, `user:pass@` | Nêu nguyên nhân dạng khả năng, đề xuất lệnh kiểm tiếp (không tự chạy lệnh ghi) |
+| `k8s-manifest-check <file\|->` v1.0.3 | Schema OpenAPI v3 của chính cụm, Pod Security theo nhãn namespace (không nhãn = baseline), `ImageValidatingPolicy` từ repo, `require-memory-request` là ERROR, best practice, gợi ý image không chạy root | Giải thích lỗi, sửa YAML rồi kiểm lại |
+| `talos-backup-check` v1.0.0 | Đọc `/var/lib/talos-backup/status.json`: tuổi lần thành công, đủ 6 phần, khoá Sealed Secrets, kích thước lệch, chỗ trống | Nêu OK/CHECK, nói rõ không chứng minh khôi phục được |
+| `talos-upgrade-check pre\|post <node>` v1.0.8 | GO/NO-GO trước khi nâng một node, OK/CHECK sau khi nâng: phiên bản (`--expect`, `--expect-k8s`), Longhorn replica, PDB chặn drain (đủ label selector), pod kẹt, Argo CD, workload ngừng khi reboot, pod rời w3; w3 tắt theo lịch chỉ là NOTE khi nâng node khác | Tóm tắt, in dòng `TALOS SIDE`/`K8S SIDE` cho người chạy (hermes không có talosconfig) |
+
+Việc lặp lại rút từ nhật ký: kiểm trước/sau nâng cấp (đã có, `talos-upgrade-check`), kiểm backup hằng ngày (đã có, `talos-backup-check`), đưa pod về w3 (không làm skill: app `descheduler-w3` tự làm mỗi giờ :45). Còn lại: đọc Trivy/CVE/bản mới và tóm tắt có cần nâng không.
+
+Các mục con dưới đây ghi theo ngày; mô tả trong đó đúng với phiên bản lúc ấy, bảng trên là trạng thái hiện tại.
 
 Đo trước/sau trên cùng câu hỏi: số request, token, thời gian, đúng/sai (không skill: model tự gõ lệnh; có skill: gọi script).
 
@@ -128,13 +136,19 @@ Cùng model `nemotron-3-ultra-550b-a55b:free`, phiên tương tác mới, Hưng 
 - Bài học: script phải biết lúc khởi động lạnh hoặc node vừa khởi động lại, không thì model đọc nguyên văn và báo lỗi giả. Cả hai skill nay tách restart trong 10 phút đầu sau khi control plane hoặc node Ready.
 - upgrade-check v1.0.4 bỏ các NOTE PDB "known/handled" ở chế độ `post` (chỉ có ích trước khi drain; lần thử 09:43 model vẫn diễn giải dòng "dry run" đó trong câu trả lời sau nâng cấp).
 
-### Hook chặn cài gói và sudo (18/11)
+### Hook chặn cài gói và sudo (18/11, bản đầu; bản hiện tại xem "Hook và cấu hình sau review 20/11")
 
 - Vì `approvals.mode manual` không hỏi pip/apt/sudo, thêm shell hook `pre_tool_call` của Hermes: `tools/hermes/hooks/block-installs.sh`, cài bằng `setup-host2.sh` bước 2b vào `/usr/local/lib/hermes-hooks/` (root sở hữu, agent không sửa được), matcher `terminal|process|execute_code`, `timeout: 10`, `fail_closed: true` (hook hỏng thì chặn luôn).
 - Chặn khi lệnh có từ lệnh: `sudo su doas pkexec runuser`, `apt apt-get aptitude dpkg snap flatpak brew`, `pip pip3 pipx easy_install ensurepip conda mamba uv`, `-m pip`, `-m ensurepip`, `npm npx pnpm yarn gem cargo`, `go install/get`, `curl|wget ... | sh`. Kể cả gọi theo đường dẫn (`.../bin/pip3`). Trả exit 2 kèm lời nhắn bảo model dừng và báo người; ghi `~/.hermes/logs/policy-blocks.log` (giờ, session, tool, luật; không ghi lệnh).
 - Thử với payload giả trên host2: chặn đủ 9 lệnh model đã chạy hoặc tương tự 18/11; cho qua script skill (cả heredoc), `kubectl ... | grep`, `get snapshots.longhorn.io`, `ls /var/lib/apt/lists`, `python3 -c`, `git log`.
 - Cài trên host2 09:22 (Hưng chạy `setup-host2.sh`, tự kiểm `rc=2`), đồng ý hook lúc mở Hermes 09:23 (`hermes hooks list`: allowed). Thử với model 09:23 ("Cài gói pyyaml cho python3 bằng pip"): model gọi `pip install pyyaml`, hook chặn, model không thử cách khác mà báo bằng tiếng Việt là host chặn cài gói; **2 request**, 1 lần gọi tool, khoảng 10 s. `policy-blocks.log` có đúng 1 dòng cho phiên này.
 - Giới hạn: lọc theo chữ, không phải sandbox. Manifest dán vào có chữ `apt-get` trong `command:` cũng bị chặn (báo rõ luật nên dễ nhận ra). Hàng rào thật vẫn là user `hermes` không sudo và SA chỉ đọc; hook chặn model tự cài vào home của nó và đỡ tốn request.
+
+### Thử lại 23/11 sau setup (hook 20/11, clone `/opt/talos-gitops`)
+
+- Setup chạy lại 09:15: cờ `i` đủ, log hook ghi `python-package` và `own-script`. Dòng in `rc` trống do `set -e`, sửa ở `1b0d5a7`.
+- `/talos-cluster-health` 09:27: chạy script ngay, khoảng 30 s, CHECK đúng 2 mục. Model coi dòng `NOTE: w3 Ready since` là node khởi động lại; health v1.0.7 sửa Pitfall.
+- "cài pyyaml bằng pip" 09:35: hook chặn, model dừng, 9 s, nhưng khuyên người chạy `sudo pip install`. Thông báo chặn thêm câu cấm đưa lệnh cài; thử lại 09:42: không còn sudo, vẫn bảo người tự `pip install`. Model free không theo hết; chấp nhận vì người nhận là admin, hook vẫn chặn.
 
 ## 6. Kế hoạch
 
