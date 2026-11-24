@@ -21,7 +21,11 @@ Lịch w3 (Cloud Scheduler): bật 08:15, **T4 tắt 10:40**.
 - **Không dán vào chat AI:** nội dung kubeconfig, talosconfig, machine config, Secret, token, mật khẩu, file `~/talos-kvm/*` và IP LAN công ty. Secret chỉ xem tên và loại.
 - Mỗi lệnh trên host2 bọc dạng `ssh kvm-host2 'date +%T; export KUBECONFIG=~/talos-kvm/kubeconfig TALOSCONFIG=~/talos-kvm/talosconfig; ...'`. Không lồng nháy kép hai tầng.
 - **Lệnh READ** (`kubectl get/describe/logs`, `talosctl get/logs`, `tcpdump` đọc gói) thì chạy thoải mái.
-- **Lệnh CHANGE** chỉ gồm những lệnh ghi trong các việc dưới đây. Lệnh nào khác thì dừng lại, nhắn Hưng.
+- **Phúc có quyền CHANGE hôm nay** (Hưng cho phép 24/11). Ví dụ: scale, restart pod/rollout, start/stop/reset w3 bằng `gcloud`, chạy backup, tắt cụm. Trước mỗi lệnh CHANGE:
+  - AI phải nói lệnh làm gì, ảnh hưởng gì và cách lùi;
+  - kiểm trước, kiểm sau;
+  - ghi giờ chạy và kết quả vào file ghi chú.
+- Việc lớn khó lùi thì nhắn Hưng trước: xoá PVC/volume, `helm upgrade` hay rollback, nâng Talos/Kubernetes, `talosctl reboot` hay `reset`, sửa Terraform.
 - Không bao giờ:
   - chạy `talosctl apply-config` hay SSH vào node Talos;
   - restart `libvirtd` hay `libvirt-guests`;
@@ -57,15 +61,15 @@ Mục tiêu: biết w3 đã về chưa. Nếu chưa, gom đủ bằng chứng đ
      Khi dán vào chat thì xoá các IP công ty trong output đi.
    - Kiểm VM w3 trên GCP: `gcloud compute instances describe w3 --zone asia-southeast1-b --format="value(status)"`.
    - Ghi lại có gói trả về hay không, và cùng giờ đó mạng công ty có gì lạ không.
-   - Không thử `reset` hay stop/start w3 nữa: hôm 23/11 làm hai lần đều không đỡ. Để Hưng quyết định.
+   - Hôm 23/11 đã `reset` và stop/start w3 hai lần, đều không đỡ. Nếu muốn thử lại thì ghi bằng chứng trước, rồi chụp gói lại sau khi thử để so sánh.
 
 ## Việc 2 – Bù backup Keycloak và đưa cụm về bình thường (chỉ khi w3 đã Ready)
 
 1. Kiểm app `monitoring` và `victoria-logs` đã Synced/Healthy chưa (lệnh của việc 0). Prometheus phải ở trên w3: `kubectl -n monitoring get pods -o wide | grep prometheus-kps`.
 2. Kiểm Velero: `kubectl -n velero get deploy velero`.
    - Nếu `0/0`: Argo CD sẽ tự trả về 1 (selfHeal). Chờ 5 phút rồi kiểm lại.
-   - Nếu vẫn 0 thì ghi lại, **không tự scale**.
-3. **Chạy lại backup (CHANGE, đã được giao):**
+   - Nếu vẫn 0 thì scale lên 1: `kubectl -n velero scale deploy velero --replicas=1`.
+3. **Chạy lại backup (CHANGE):**
    ```bash
    ssh -t kvm-host2 'date +%T; sudo systemctl start talos-etcd-backup.service; systemctl status talos-etcd-backup.service --no-pager | tail -5; date +%T'
    ```
@@ -91,7 +95,7 @@ Mục tiêu: biết w3 đã về chưa. Nếu chưa, gom đủ bằng chứng đ
 2. Chạy lại lệnh kiểm `/proc/*/maps` (mục 2 của file kế hoạch; lệnh đầy đủ Hưng gửi riêng). Mọi dòng phải là `: 0`.
 3. Ghi kết quả để Hưng sửa `trivyignore.yaml` vào 27/11.
 
-## Việc 5 – Tắt cụm cuối buổi (CHANGE, đã được giao)
+## Việc 5 – Tắt cụm cuối buổi (CHANGE)
 
 Làm trước khi Phúc về. Thứ tự lệnh như sau:
 
