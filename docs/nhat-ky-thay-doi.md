@@ -4,6 +4,25 @@ Ghi mỗi thay đổi về hạ tầng, cấu hình cụm hoặc ứng dụng: n
 
 Thay đổi nằm ngoài repo này (host2, cấu hình Talos) cũng ghi ở đây, vì repo không chứa file cấu hình Talos (có secret).
 
+## 26/11/2026
+
+| Thay đổi | Lý do | Commit |
+|---|---|---|
+| Bù backup: tạm gỡ `spec.syncPolicy.automated` ở app `root` và `velero` (09:06; chỉ tắt selfHeal lúc 09:02 không đủ: root vẫn tự sync và trả spec app velero, Velero về 1/1 sau 3 phút), scale Velero 0 để kc-backup (64Mi) có chỗ, chạy `talos-etcd-backup.service` 09:12:36–09:13:50: **success**, đủ etcd (73,7 MB), pg_dump Keycloak, snapshot Vault, bundle offsite lên B2 và GCS. `last_ok` 20/11 → 26/11 09:13:50. Bật lại automated ở root 09:14, root trả automated cho velero, Velero 1/1, hai app Synced | Backup Keycloak/Vault/offsite lỗi từ 20/11 vì w1/w2 98 % RAM request khi w3 NotReady | ngoài repo |
+| Firewall GCP: bật `log_config` (INCLUDE_ALL_METADATA) cho rule `talos-w3-kubespan` qua Terraform (`infra/gcp/network.tf`, plan 1 change, apply khoảng 09:30). Thêm rule tạm `talos-w3-kubespan-probe` (UDP từ mọi nguồn, có log, priority 1100) 09:46, mở rộng cổng 51820/443/4500/53 lúc 10:00, gỡ sau khi thử | Tìm bằng chứng UDP 51820 từ công ty có tới GCP không | commit này |
+| Kết luận w3/KubeSpan: tcpdump host2 09:36 và 09:53: gói handshake WireGuard (UDP 148 byte) rời host2 tới IP ngoài của w3 cổng 51820, không có gói về. Firewall log GCP 09:30–10:00: **0 dòng** cho các gói này, kể cả ở rule cho mọi nguồn. Thử 10:00:24 bằng `nc -u` gửi chữ thường từ host2: 3/3 gói tới GCP ở mỗi cổng 51820, 443, 4500, 53 (cổng 51820 khớp rule chính, tức IP nguồn đúng `office_cidrs`). Vậy mạng công ty không chặn theo cổng hay IP mà lọc theo nội dung gói WireGuard (DPI). Đổi cổng không giúp. Hướng sửa (chưa làm): đưa WireGuard qua đường hầm che giấu, ví dụ relay trên jenkins-1 (cùng VPC) nhận TCP/TLS 443 rồi chuyển UDP tới w3:51820, host2 chạy đầu kia và w3 quảng bá endpoint qua relay; hoặc tạm sống không có w3 (giảm request RAM w1/w2) | Sự cố w3 từ 23/11 | – |
+| CVE hạn 30/11: soạn sẵn diff `platform/image-scan/image-scan.yaml` để làm 27/11: 2 mục Longhorn (libexpat1, uv) gia hạn tới 31/12 (chưa có Longhorn 1.13.1, kiểm 25/11); mục brotli (flannel) tới 15/12, sửa bằng nâng Talos v1.14.7 (24/11, kèm flannel v0.28.11) rồi `upgrade-k8s`, sau khi w3 về. `/proc/*/maps` 25/11: 7/8 pod không nạp thư viện (flannel trên w3 không exec được) | [ke-hoach-cve-30-11.md](ke-hoach-cve-30-11.md) | – |
+
+## 25/11/2026
+
+| Thay đổi | Lý do | Commit |
+|---|---|---|
+| Phúc vận hành (Hưng nghỉ). 08:43–08:52 NTP chưa đồng bộ vì host2 chưa qua portal; đăng nhập portal bằng Firefox khoảng 08:55, 09:01 `synchronized: yes`, UDP 123 ra/về bình thường | Bàn giao [ban-giao-2026-11-25-phuc.md](ban-giao-2026-11-25-phuc.md) | ngoài repo |
+| w3 NotReady. KubeSpan từ cp1: w3 `unknown`, RX 0, `lastHandshakeTime` 0001-01-01 (chưa handshake lần nào); PeerSpec w3 có cả IP nội bộ 10.148.0.4 và IP ngoài, KubeSpanEndpoint chỉ có w1, w2. tcpdump host2 09:13:32–09:13:52 (bỏ lưu lượng 10.10.10.0/24): w1, w2 gửi tới IP ngoài của w3, cp1 gửi tới 10.148.0.4 (vô ích), gói đã NAT ra card ngoài, 0 gói về. Phúc không reset w3 (23/11 thử 2 lần không đỡ) | Ghi lại, chuyển Hưng | ngoài repo |
+| Backup tay 09:23: lỗi, pod `kc-backup` Pending (request 64Mi, w1 3370Mi / w2 3858Mi = 98 %, không preempt được). etcd OK (73,7 MB); Keycloak, Vault, offsite OK gần nhất vẫn 20/11. Job `image-scan-29926245` 09:45 Pending vì thiếu RAM (request 256Mi), chưa có lần quét nào sau Argo CD v3.6.2 | Hệ quả w3 NotReady | ngoài repo |
+| Kiểm CVE: Longhorn chưa có 1.13.1; Talos v1.14.7 phát hành 24/11 kèm flannel v0.28.11. `/proc/*/maps`: 7/8 pod ra 0, flannel trên w3 không exec được (timeout tới kubelet w3) | Chuẩn bị hạn 30/11 | – |
+| Tắt cụm: `talos-cluster-stop.sh` 10:01–10:04 dừng vì backup lỗi (etcd OK 10:01). Tắt bằng `--skip-backup-check` 10:18:35–10:20:21 (Hưng đồng ý): 3 volume Longhorn detached, cp1/w1/w2 shut off, w3 không trả lời nên để Cloud Scheduler 10:40. host2 poweroff 10:21:39 | Cuối buổi | ngoài repo |
+
 ## 23/11/2026
 
 | Thay đổi | Lý do | Commit |

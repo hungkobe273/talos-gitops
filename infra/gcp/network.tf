@@ -89,4 +89,8 @@ resource "google_compute_firewall" "talos_w3_kubespan" {
     ports    = ["51820"]
     protocol = "udp"
   }
+  # 26/11: log matches to see whether office UDP 51820 reaches GCP.
+  log_config {
+    metadata = "INCLUDE_ALL_METADATA"
+  }
 }
