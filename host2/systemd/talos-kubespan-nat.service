@@ -1,0 +1,26 @@
+# KubeSpan NAT to w3 (GCP), added 26/11/2026.
+# libvirt's MASQUERADE keeps the same source ports (51820/37050/18972) for the
+# node -> w3 UDP 51820 flows. On 23/11 those flows got stuck somewhere between the
+# office and GCP (packets left host2, w3 never answered) and, since KubeSpan sends
+# every 5 s, the stale state never expired; reset or stop/start of w3 did not help.
+# This rule goes before libvirt's chain and picks random ports in 41000-41999, so
+# every start of host2 opens fresh flows. Matches on port, not on w3's IP, because
+# w3's external IP changes on every stop/start.
+# Install: sudo cp host2/systemd/talos-kubespan-nat.service /etc/systemd/system/
+#          sudo systemctl daemon-reload && sudo systemctl enable --now talos-kubespan-nat.service
+[Unit]
+Description=Random NAT source ports for KubeSpan UDP 51820 to w3 (GCP)
+After=network-online.target libvirtd.service
+Wants=network-online.target
+
+[Service]
+Type=oneshot
+RemainAfterExit=yes
+# Drop the hand-made rule of 26/11 if it is still there (by w3 IP), ignore errors.
+ExecStartPre=-/bin/sh -c 'iptables -t nat -S POSTROUTING | grep -- "--to-ports 41000-41999" | grep -- "-d " | sed "s/^-A/-D/" | xargs -r -L1 iptables -t nat'
+ExecStart=/bin/sh -c 'iptables -t nat -C POSTROUTING -s 10.10.10.0/24 ! -d 10.10.10.0/24 -p udp --dport 51820 -j MASQUERADE --to-ports 41000-41999 --random 2>/dev/null || iptables -t nat -I POSTROUTING 1 -s 10.10.10.0/24 ! -d 10.10.10.0/24 -p udp --dport 51820 -j MASQUERADE --to-ports 41000-41999 --random'
+ExecStartPost=-/usr/sbin/conntrack -D -p udp --dport 51820 --orig-src 10.10.10.0/24
+ExecStop=-/sbin/iptables -t nat -D POSTROUTING -s 10.10.10.0/24 ! -d 10.10.10.0/24 -p udp --dport 51820 -j MASQUERADE --to-ports 41000-41999 --random
+
+[Install]
+WantedBy=multi-user.target
