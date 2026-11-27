@@ -60,7 +60,9 @@ if [[ $CP == yes ]]; then
 fi
 
 # --- pod CSI tren node nay
-CSI=$(kubectl -n longhorn-system get pod -o wide --no-headers | awk -v n="$NAME" '$1~/^csi-(attacher|provisioner)-/ && $7==n{print $1}')
+# 27/11: by field selector, not column 7 of -o wide: RESTARTS "2 (11d ago)" shifts the columns,
+# the CSI pods were not found and the drain of w1 timed out on their PDB.
+CSI=$(kubectl -n longhorn-system get pod --field-selector spec.nodeName="$NAME" -o name | sed 's|^pod/||' | grep -E '^csi-(attacher|provisioner)-' || true)
 if [[ -n $CSI ]]; then
   say "pod CSI tren $NAME: $CSI"
   run kubectl -n longhorn-system delete pod $CSI
