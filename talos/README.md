@@ -18,6 +18,7 @@ không có secret): mọi giá trị khớp.
 | `statichost-keycloak.yaml` | x | x | x | | `keycloak.talos.internal` → host2 (21/10). IP để chỗ trống `HOST2_LAN_IP` vì repo public (từ 15/11), thay bằng IP LAN của host2 trước khi áp; giá trị đang chạy: `talosctl -n <node> read /etc/hosts` |
 | `local-path.yaml` | | x | x | x | UserVolume cho local-path-provisioner (20/10) |
 | `kubespan.yaml` | x | x | x | x | KubeSpan, MTU 1380, học thêm endpoint sau NAT (30/10) |
+| `kubespan-filter-onprem.yaml` | x | x | x | | KubeSpan bỏ endpoint 10.148.0.0/20 (IP nội bộ GCP của w3, vô ích từ on-prem), chỉ thử IP ngoài (27/11, sự cố w3 từ 23/11). Không áp cho w3 |
 | `flannel-csum.yaml` | x | x | x | x | Tắt checksum offload trên `flannel.1` (VXLAN trong WireGuard, 30/10) |
 | `longhorn.yaml` | | x | x | | `UserVolumeConfig` `longhorn` kiểu `disk` trên `/dev/vdb` (đĩa qcow2 20G riêng), mount `/var/mnt/longhorn` cho Longhorn (06/11) |
 
