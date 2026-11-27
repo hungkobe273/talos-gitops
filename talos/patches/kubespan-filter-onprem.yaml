@@ -1,0 +1,12 @@
+# On-prem nodes only (cp1, w1, w2), 27/11/2026.
+# w3 advertises its GCP-internal address (10.148.0.0/20) as a KubeSpan endpoint. From on-prem it
+# is unreachable, but KubeSpan still rotates onto it and the NAT state for the external endpoint
+# expires meanwhile (sự cố w3 từ 23/11). Drop those endpoints so only the external one is tried.
+# Endpoints of the on-prem nodes (10.10.10.0/24) stay allowed.
+apiVersion: v1alpha1
+kind: KubeSpanConfig
+filters:
+  endpoints:
+    - 0.0.0.0/0
+    - "!10.148.0.0/20"
+    - ::/0
