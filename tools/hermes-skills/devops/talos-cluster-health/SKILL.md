@@ -1,7 +1,7 @@
 ---
 name: talos-cluster-health
 description: Check the health of the talos-kvm Kubernetes cluster (nodes, Argo CD apps, Longhorn volumes, Vault, pods, restarts, ExternalSecrets, warning events) with one read-only script. Use for "is the cluster OK", morning checks, after a cold start or an upgrade.
-version: 1.0.7
+version: 1.0.8
 platforms: [linux]
 metadata:
   hermes:
@@ -20,7 +20,7 @@ Write the whole answer in the user's language: if the user wrote Vietnamese, ans
 1. Run `bash scripts/cluster-health.sh` right away, as your first tool call. Do not open or read the script files first; this page is all you need. Do not run other kubectl commands before or after it: the script already collects everything in one pass. Run it only once.
 2. Read the first line: `GREEN` means nothing to do; say so in one sentence.
 3. If it says `CHECK n item(s)`, list only the lines that are not OK, in the user's language. Add a cause only when a Pitfall below names that exact line; otherwise say the cause is not in the output.
-4. Suggest at most 3 read-only follow-up commands (for example `kubectl describe pod`, `kubectl logs --previous`). Never run write commands (apply, delete, rollout restart, scale); propose them for a human.
+4. Suggest at most 3 read-only follow-up commands (for example `kubectl describe pod`). Suggest `kubectl logs --previous` only when the output shows a restart of that pod: with 0 restarts there is no previous container and the command fails. Never run write commands (apply, delete, rollout restart, scale); propose them for a human.
 
 ## Pitfalls
 - Exit code 2 / `API: UNREACHABLE`: the cluster is off (host2 powered off, or the morning cold start has not finished, often until about 09:00) or the kubeconfig is wrong. Do not retry in a loop.
@@ -30,6 +30,8 @@ Write the whole answer in the user's language: if the user wrote Vietnamese, ans
 - Warning events are counts by reason and object only; the script cannot tell why they happened. Do not guess a cause
   (no "rollout", "cold start" or "expected" unless the output itself shows a restart or a recent cold start).
   Say the count and the object, and suggest `kubectl -n <ns> describe pod <pod>` for a human to read the probe message.
+- `Unhealthy` events count failed probes, they do not say the pod is down now; the `PODS:` line does. If it says
+  `0 not healthy`, write "the probe failed N times in 30 minutes, the pod is Ready now", never "the pod is unhealthy".
 - w3 runs on GCP 08:15–17:15 Mon–Fri and also stops at 10:40 on Monday and Wednesday; outside those hours w3 NotReady is the schedule, not a fault. Pods that keep data on w3 (Prometheus, VictoriaLogs) then stay Pending or Terminating until w3 is back.
 - `UNKNOWN (kubectl get failed or timed out)`: that part could not be read, so nothing is known about it; never call it healthy. Often a slow API right after a cold start: suggest re-running in a few minutes.
 - `NODE REBOOT: <node> Ready since HH:MM, long after the control plane`: that worker came up more than 30 minutes after the cold start, so it rebooted or was restarted by hand. Restarts on it are counted, not excused. Report it; the cause is not in the output. This applies only to lines that start with `NODE REBOOT`. A `NOTE: w3 Ready since ...` line is not a reboot: w3 runs on GCP on its own schedule and often comes up after the cold start; mention it at most as a note and do not say w3 rebooted.

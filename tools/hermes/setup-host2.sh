@@ -10,7 +10,7 @@ H=hermes
 HH=/home/hermes
 SRC=/opt/talos-gitops                       # skills + hook source, root-owned, read-only for hermes
 REPO=https://github.com/hungkobe273/talos-gitops.git
-LOCKED="$HH/.hermes/config.yaml $HH/.hermes/shell-hooks-allowlist.json"
+LOCKED="$HH/.hermes/config.yaml $HH/.hermes/shell-hooks-allowlist.json $HH/.hermes/SOUL.md"
 run() { sudo -u "$H" -H env PATH="$HH/.local/bin:/usr/local/bin:/usr/bin:/bin" "$@"; }
 
 # 0. (20/11) Unlock the files step 5 locks, so `hermes config set` below can write.
@@ -45,8 +45,12 @@ run hermes config set telemetry.shared_metrics.send false
 run hermes config set telegram.require_mention true
 # Keep terminal, file, skills, todo, memory, session_search, clarify. The rest is not needed for
 # cluster checks and would send more data or spend more requests.
-run hermes tools disable web browser code_execution vision image_gen tts cronjob computer_use \
-  delegation connections
+# (27/11) Toolsets are per platform: the Telegram gateway had all of them on (web, browser,
+# code_execution, cronjob...) while only cli was locked down. Same set for both.
+for p in cli telegram; do
+  run hermes tools disable --platform "$p" web browser code_execution vision image_gen tts cronjob \
+    computer_use delegation connections
+done
 
 # 2b. (18/11) Policy hook: block package installs and sudo/su before any terminal command runs.
 #     approvals.mode manual does not ask for pip/apt/sudo. Root-owned copy so the agent cannot edit
@@ -77,6 +81,10 @@ printf 'apiVersion: v1\nkind: Config\nclusters:\n- name: talos-kvm\n  cluster:\n
 unset token
 install -m 600 -o "$H" -g "$H" "$K" "$HH/.kube/config"
 
+# 3b. (27/11) Persona: default text plus what this deployment can and cannot do. Asked "what can you
+#     do" over Telegram, the model listed web, email and browser work. Locked in step 4.
+install -m 600 -o "$H" -g "$H" "$SRC/tools/hermes/SOUL.md" "$HH/.hermes/SOUL.md"
+
 # 4. (20/11) Lock Hermes config and the hook consent list. ~/.hermes is the agent's own directory, so
 #    a root-owned file there could still be renamed or replaced; the immutable flag stops that too.
 #    Hermes only reads config.yaml at runtime (unchanged since 18/11 across many sessions).
@@ -93,7 +101,8 @@ echo "policy hook pip blocked (expect rc=2): $(printf '{"tool_name":"terminal","
 run hermes hooks list 2>&1 | grep -E 'block-installs' || echo "policy hook NOT configured"
 echo "OPENROUTER_API_KEY set: $(run sh -c 'grep -c "^OPENROUTER_API_KEY=..*" ~/.hermes/.env || true')"
 echo "skills dir: $(run hermes config get skills.external_dirs); clone $(git -C "$SRC" log --oneline -1)"
-echo "immutable flag (expect ----i---- on both):"; lsattr $LOCKED
+echo "immutable flag (expect ----i---- on all):"; lsattr $LOCKED
+for p in cli telegram; do echo "toolsets on ($p, expect 7): $(run hermes tools list --platform $p | grep -c '✓ enabled')"; done
 echo "own script blocked (expect rc=2): $(printf '{"tool_name":"terminal","tool_input":{"command":"bash /tmp/x.sh"}}' | run /usr/local/lib/hermes-hooks/block-installs.sh >/dev/null 2>&1 && echo rc=0 || echo rc=$?)"
 echo "skill run allowed (expect rc=0): $(printf '{"tool_name":"terminal","tool_input":{"command":"bash scripts/cluster-health.sh"}}' | run /usr/local/lib/hermes-hooks/block-installs.sh >/dev/null 2>&1 && echo rc=0 || echo rc=$?)"
 run bash -c "cd $SRC/tools/hermes-skills/devops/talos-cluster-health && bash scripts/cluster-health.sh | head -1" || true
