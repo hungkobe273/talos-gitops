@@ -1,6 +1,6 @@
 # Kế hoạch nâng Talos v1.14.6 -> v1.14.7
 
-Soạn 27/11/2026. Chưa chạy.
+Soạn 27/11/2026. **Đã làm xong 27/11 10:34–12:05**, xem nhật ký 27/11 (w1 cần chạy 2 lần vì lỗi tìm pod CSI trong script, đã sửa).
 
 ## 1. Vì sao
 
