@@ -4,10 +4,16 @@
 # Usage on host2: cd ~/talos-gitops && git pull -q --rebase && sudo bash tools/hermes/set-telegram.sh
 # The token is read without echo: not in argv, shell history or any log. Re-running replaces both lines.
 # Only the listed user IDs may talk to the bot (Hermes denies everyone else, DMs and groups).
+# Adding people later: re-run, press Enter at the token prompt to keep the current token, and give
+# the FULL list of IDs (it replaces the old list). Then: sudo systemctl restart hermes-gateway
 set -eu
 ENV=/home/hermes/.hermes/.env
 [ -f "$ENV" ] || { echo "missing $ENV (install Hermes first)" >&2; exit 1; }
-read -rsp "Telegram bot token (from @BotFather): " t </dev/tty; echo
+read -rsp "Telegram bot token (from @BotFather, Enter = keep current): " t </dev/tty; echo
+if [ -z "$t" ]; then
+  t=$(sed -n 's/^TELEGRAM_BOT_TOKEN=//p' "$ENV" | tail -1)
+  [ -n "$t" ] || { echo "no token set yet, nothing written" >&2; exit 1; }
+fi
 case "$t" in [0-9]*:*) ;; *) echo "does not look like a bot token (<digits>:<text>), nothing written" >&2; exit 1 ;; esac
 read -rp "Allowed Telegram user IDs, comma-separated (from @userinfobot): " u </dev/tty
 case "$u" in ''|*[!0-9,]*) echo "user IDs must be digits separated by commas, nothing written" >&2; exit 1 ;; esac
