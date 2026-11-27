@@ -198,3 +198,16 @@ Không câu nào chặn bước 1 của mục 6. Nếu anh chưa trả lời, em
 
 - **Mặc định nếu anh chưa trả lời:** 1A, 2A, 3A. Chiều 17/11 có thể cài luôn, không tốn tiền.
 - **Nếu anh muốn đo nhanh và dùng qua Telegram:** 1B, 2A, 3B. Cần 10 USD và một bot mới.
+
+## Telegram (27/11/2026)
+
+Anh muốn thử Hermes qua Telegram (trước đây chỉ CLI, đáp án 3A). Cách làm:
+
+- Bot riêng cho Hermes, không dùng chung bot cảnh báo. Hưng tạo bằng @BotFather (`/newbot`).
+- `TELEGRAM_ALLOWED_USERS`: chỉ user ID Telegram của Hưng và anh. Hermes từ chối mọi người khác (DM và nhóm). Không thêm bot vào nhóm.
+- Long polling: host2 chỉ gọi ra Telegram, không mở cổng vào, không webhook.
+- Chạy bằng `host2/systemd/hermes-gateway.service` dưới user `hermes`: cùng quyền chỉ đọc, cùng hook chặn cài đặt như CLI. Token và danh sách user ghi vào `~hermes/.hermes/.env` bằng `tools/hermes/set-telegram.sh` (không echo, không vào repo).
+- Duyệt lệnh: Hermes hỏi trong chat, trả lời `yes`/`no`.
+- Dữ liệu: câu hỏi và câu trả lời đi qua Telegram và model free trên OpenRouter. Không gửi secret, IP, cấu hình công ty.
+- Giới hạn: OpenRouter free 50 request/ngày cho cả tài khoản (CLI và Telegram chung), khoảng 15–20 câu.
+- Tắt: `sudo systemctl disable --now hermes-gateway`; lộ token: `/revoke` trong @BotFather.

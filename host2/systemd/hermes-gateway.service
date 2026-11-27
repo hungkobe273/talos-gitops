@@ -1,0 +1,25 @@
+# Hermes Agent Telegram gateway on host2 (27/11/2026). Long polling: outbound HTTPS to Telegram
+# only, no inbound port. Runs as user hermes (read-only kubeconfig, policy hook), same as the CLI.
+# Token + allowed users: sudo bash tools/hermes/set-telegram.sh. Log: ~hermes/.hermes/logs/gateway.log
+# Install: sudo cp host2/systemd/hermes-gateway.service /etc/systemd/system/
+#          sudo systemctl daemon-reload && sudo systemctl enable --now hermes-gateway.service
+# Stop (bot goes silent): sudo systemctl disable --now hermes-gateway.service
+[Unit]
+Description=Hermes Agent Telegram gateway (user hermes)
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+User=hermes
+Group=hermes
+WorkingDirectory=/home/hermes
+Environment=HOME=/home/hermes
+Environment=PATH=/home/hermes/.local/bin:/usr/local/bin:/usr/bin:/bin
+# No --accept-hooks: the policy hook is already in shell-hooks-allowlist.json (locked); new hooks must not auto-accept.
+ExecStart=/home/hermes/.local/bin/hermes gateway run --replace
+Restart=on-failure
+RestartSec=30
+NoNewPrivileges=yes
+
+[Install]
+WantedBy=multi-user.target
