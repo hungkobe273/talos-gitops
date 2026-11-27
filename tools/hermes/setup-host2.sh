@@ -39,6 +39,10 @@ run hermes config set approvals.mode manual
 run hermes config set skills.external_dirs '["/opt/talos-gitops/tools/hermes-skills"]'
 run hermes config set telemetry.shared_metrics.enabled false
 run hermes config set telemetry.shared_metrics.send false
+# (27/11) Telegram group: answer only when tagged or replied to. The bot is a group admin (it must
+# see mentions, Telegram privacy mode only passes /commands), so without this it would answer every
+# message in the group and burn the 50 free requests a day.
+run hermes config set telegram.require_mention true
 # Keep terminal, file, skills, todo, memory, session_search, clarify. The rest is not needed for
 # cluster checks and would send more data or spend more requests.
 run hermes tools disable web browser code_execution vision image_gen tts cronjob computer_use \
