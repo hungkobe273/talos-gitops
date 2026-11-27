@@ -211,3 +211,12 @@ Anh muốn thử Hermes qua Telegram (trước đây chỉ CLI, đáp án 3A). C
 - Dữ liệu: câu hỏi và câu trả lời đi qua Telegram và model free trên OpenRouter. Không gửi secret, IP, cấu hình công ty.
 - Giới hạn: OpenRouter free 50 request/ngày cho cả tài khoản (CLI và Telegram chung), khoảng 15–20 câu.
 - Tắt: `sudo systemctl disable --now hermes-gateway`; lộ token: `/revoke` trong @BotFather.
+
+## Báo cáo log hằng ngày (đề xuất 27/11, chưa làm)
+
+Anh muốn agent đọc log tập trung (VictoriaLogs) và báo thông tin hữu ích lên group mỗi ngày.
+
+- Skill `talos-log-report`: script chỉ đọc, 24 giờ qua: lỗi/cảnh báo theo namespace và app so với hôm trước, khoảng 10 mẫu lỗi nhiều nhất, lỗi mới, pod log bất thường; 30–40 dòng. Che IP, email, chuỗi giống token, URL trước khi đưa cho model; mỗi mẫu tối đa khoảng 160 ký tự.
+- RBAC: thêm `services/proxy` get chỉ cho `observability/vl-victoria-logs-single-server` (`resourceNames`) vào `hermes-readonly`.
+- Lịch: job định kỳ của Hermes 16:30 T2–T6 (trước backup 16:45, w3 còn bật), Hưng tạo qua CLI, gửi vào group (home channel); cron trong chat vẫn tắt. Khoảng 2–3 request/ngày. Cần thử: job định kỳ có chạy được lệnh khi `approvals.mode manual` không; nếu không thì timer systemd gửi số liệu thẳng qua bot, không AI.
+- Kiểm trước: dòng log mẫu 27/11 có `_time` lệch khoảng 2,5 giờ về sau so với giờ thật (có thể node lệch đồng hồ).
