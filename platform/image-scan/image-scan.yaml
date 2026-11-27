@@ -62,11 +62,11 @@ data:
   trivyignore.yaml: |
     vulnerabilities:
       - id: SUSE-SU-2026:4619-1
-        statement: "libexpat1 in Longhorn v1.13.0 images (5). No Longhorn 1.13.1 yet (checked 13/11); upgrade when released."
-        expired_at: 2026-11-30
+        statement: "libexpat1 in Longhorn v1.13.0 images (5). No Longhorn 1.13.1 yet (checked 13/11); upgrade when released. Rechecked 27/11: still none; /proc/*/maps 25/11: no process loads libexpat. Extended to 31/12."
+        expired_at: 2026-12-31
       - id: GHSA-hq85-5cpj-mr62
-        statement: "uv in longhorn-instance-manager v1.13.0. Same as above."
-        expired_at: 2026-11-30
+        statement: "uv in longhorn-instance-manager v1.13.0. Same as above; uv is not in PATH and never runs. Extended to 31/12."
+        expired_at: 2026-12-31
       - id: CVE-2026-113425
         statement: "Use-after-free in the mail proxy module. nginx-unprivileged 1.30.6 in gcp-tools tunnel-proxy. Fixed in nginx 1.30.7/1.31.9, no nginxinc image with it yet (checked 20/11). The proxy config has plain HTTP listen + proxy_pass only: no mail, http2, http3 or ssl. Bump the tag when 1.30.7-alpine-slim exists."
         expired_at: 2026-12-11
@@ -80,8 +80,8 @@ data:
         statement: "Use-after-free in HTTP/2. nginx-unprivileged 1.30.6 in gcp-tools tunnel-proxy. Fixed in nginx 1.30.7/1.31.9, no nginxinc image with it yet (checked 20/11). The proxy config has plain HTTP listen + proxy_pass only: no mail, http2, http3 or ssl. Bump the tag when 1.30.7-alpine-slim exists."
         expired_at: 2026-12-11
       - id: CVE-2026-111497
-        statement: "brotli-libs in siderolabs/flannel 0.28.9, shipped with Talos v1.14.2. Talos v1.14.6 (flannel v0.28.10) still has it (Trivy 13/11); host2 talos-upstream-check.timer reports newer releases."
-        expired_at: 2026-11-30
+        statement: "brotli-libs in siderolabs/flannel 0.28.9, shipped with Talos v1.14.2. Talos v1.14.6 (flannel v0.28.10) still has it (Trivy 13/11); host2 talos-upstream-check.timer reports newer releases. Fix: Talos v1.14.7 (24/11) ships flannel v0.28.11; upgrade nodes, then talosctl upgrade-k8s (flannel changes only there), once w3 is stable. flannel is Go, does not load libbrotli."
+        expired_at: 2026-12-15
   scan.sh: |
     #!/bin/sh
     # One failed pull must not hide the other results: only CRITICAL (exit 10) fails the Job.
