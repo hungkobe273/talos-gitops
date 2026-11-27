@@ -15,6 +15,7 @@ Thay đổi nằm ngoài repo này (host2, cấu hình Talos) cũng ghi ở đâ
 | Backup bù 09:47:00–09:47:50: **success** (etcd, Keycloak, Vault, offsite B2 và GCS), `last_ok` 26/11 09:13 → 27/11 09:47:46 | Có RAM lại khi w3 Ready | ngoài repo |
 | `talos/README.md`: thêm dòng `kubespan-filter-onprem.yaml` (cp1, w1, w2; không w3) vào bảng patch để lần dựng lại có bộ lọc. Chưa chép machine config mới về `~/talos-kvm/<node>.yaml` (bước 4 README, Hưng làm) | Giữ cách sửa w3 | commit này |
 | Kiểm sau khi w3 về: app image-scan Synced tới e72c755, Healthy (annotation tracking mất khi áp tay đã được Argo trả lại). 09:54 `rollout restart` argo-rollouts, argocd-repo-server, kps operator (đang trên w2): cả 3 về w3. App velero Degraded chỉ do backup `velero-daily-20261125014536` PartiallyFailed (2 lỗi, lúc w3 NotReady); các bản 25/11 02:30, 26/11, 27/11 Completed; để TTL tự xoá | Trả RAM cho w1/w2 | – |
+| Thử khởi động lại có bộ lọc endpoint: `talos-cluster-stop.sh` 10:03:26–10:04:37 (backup 09:47 còn mới), host2 reboot 10:04:55, lên 10:05:17 (NTP tự đồng bộ), VM tự bật, bật w3 bằng gcloud 10:07:40. Kết quả: w1 `up` 10:08:17 (+37 s), cp1 10:08:48 (+1 phút), w2 10:16:34 (+9 phút), w3 Ready. 26/11 không bộ lọc: sau 40 phút chỉ 1 node. Bộ lọc giữ được qua lần khởi động lại | Kiểm cách sửa w3 | – |
 | Soạn kế hoạch nâng Talos v1.14.7 + `upgrade-k8s` cho flannel, chưa chạy | [ke-hoach-talos-1.14.7.md](ke-hoach-talos-1.14.7.md) | commit này |
 
 ## 26/11/2026
