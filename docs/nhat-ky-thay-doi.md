@@ -4,6 +4,14 @@ Ghi mỗi thay đổi về hạ tầng, cấu hình cụm hoặc ứng dụng: n
 
 Thay đổi nằm ngoài repo này (host2, cấu hình Talos) cũng ghi ở đây, vì repo không chứa file cấu hình Talos (có secret).
 
+## 27/11/2026
+
+| Thay đổi | Lý do | Commit |
+|---|---|---|
+| Kiểm 09:01: unit `talos-kubespan-nat` active, luật NAT đứng đầu POSTROUTING. w3 NotReady; theo node status w3 có Ready một lúc và mất lúc 09:00:50. Cả 3 node on-prem thấy w3 `unknown`, RX 0, đang thử endpoint nội bộ 10.148.0.4 (vô ích từ on-prem); conntrack host2 5 luồng UDP 51820, đều UNREPLIED. Firewall log GCP 08:27–09:01 ghi nhiều luồng mới ALLOWED tới w3, cổng nguồn 34000–64000 (không phải 41000–41999): công ty còn một lớp NAT nữa đổi cổng, và gói **có tới GCP**. Serial w3: `reconfigured wireguard link peers: 3` mỗi 30 s | Sự cố w3 từ 23/11 | – |
+| CVE hạn 30/11: Longhorn vẫn chưa có 1.13.1 (kiểm 27/11). Gia hạn libexpat1, uv tới 31/12; brotli (flannel) tới 15/12, sửa bằng Talos v1.14.7. Dry-run server OK. Argo CD không sync được vì repo-server, application-controller nằm trên w3 (NotReady) | [ke-hoach-cve-30-11.md](ke-hoach-cve-30-11.md) | f194709 |
+| Soạn kế hoạch nâng Talos v1.14.7 + `upgrade-k8s` cho flannel, chưa chạy | [ke-hoach-talos-1.14.7.md](ke-hoach-talos-1.14.7.md) | commit này |
+
 ## 26/11/2026
 
 | Thay đổi | Lý do | Commit |
